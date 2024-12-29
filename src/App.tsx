@@ -1,21 +1,19 @@
-import React, { useState, useEffect } from 'react';
-import { Camera, Upload, User, List } from 'lucide-react';
+import React, { useState } from 'react';
+import { Camera, Upload, User, Grid, LogOut } from 'lucide-react';
 import { Camera as CameraComponent } from './components/Camera';
 import { ImageGrid } from './components/ImageGrid';
 import { useInventoryStore } from './store/inventory';
+import { Toaster } from 'react-hot-toast';
+import { LoadingOverlay } from './components/LoadingOverlay';
 
 function App() {
   const [showCamera, setShowCamera] = useState(false);
-  const { fetchItems, addItem } = useInventoryStore();
+  const { fetchItems, addItem, loading } = useInventoryStore();
+  const fileInputRef = React.useRef<HTMLInputElement>(null);
   
-  useEffect(() => {
-    fetchItems();
-  }, [fetchItems]);
-
   const handleCapture = async (imageSrc: string) => {
     setShowCamera(false);
-    // TODO: Integrate with AI service for object detection
-    await addItem(imageSrc, ['Detected Object 1', 'Detected Object 2']);
+    await addItem(imageSrc);
   };
 
   const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -24,24 +22,33 @@ function App() {
       const reader = new FileReader();
       reader.onloadend = async () => {
         const base64String = reader.result as string;
-        // TODO: Integrate with AI service for object detection
-        await addItem(base64String, ['Detected Object 1', 'Detected Object 2']);
+        await addItem(base64String);
       };
       reader.readAsDataURL(file);
+      // Reset input to allow selecting the same file again
+      event.target.value = '';
     }
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-black">
+      <Toaster position="top-center" />
+      
       {/* Header */}
-      <header className="fixed top-0 left-0 right-0 bg-white shadow-sm z-10">
+      <header className="fixed top-0 left-0 right-0 bg-black border-b border-zinc-800 z-10">
         <div className="max-w-7xl mx-auto px-4 h-16 flex items-center justify-between">
-          <button className="p-2 hover:bg-gray-100 rounded-full">
-            <User size={24} />
-          </button>
-          <button className="p-2 hover:bg-gray-100 rounded-full">
-            <List size={24} />
-          </button>
+          <h1 className="text-white font-semibold text-xl">Inventory</h1>
+          <div className="flex items-center gap-4">
+            <button className="p-2 hover:bg-zinc-800 rounded-full transition-colors">
+              <Grid size={24} className="text-white" />
+            </button>
+            <button className="p-2 hover:bg-zinc-800 rounded-full transition-colors">
+              <User size={24} className="text-white" />
+            </button>
+            <button className="p-2 hover:bg-zinc-800 rounded-full transition-colors">
+              <LogOut size={24} className="text-white" />
+            </button>
+          </div>
         </div>
       </header>
 
@@ -50,25 +57,32 @@ function App() {
         <ImageGrid />
       </main>
 
-      {/* Floating Action Buttons */}
-      <div className="fixed bottom-8 left-8">
-        <label className="inline-flex bg-blue-600 text-white shadow-lg rounded-full p-4 cursor-pointer hover:bg-blue-700 hover:shadow-xl transition-all">
+      {/* Action Buttons */}
+      <div className="fixed bottom-8 inset-x-0 flex justify-center gap-4">
+        <button
+          onClick={() => fileInputRef.current?.click()}
+          className="bg-zinc-800 hover:bg-zinc-700 text-white shadow-lg rounded-full p-4 transition-all"
+          aria-label="Upload photo"
+        >
           <Upload size={24} />
-          <input
-            type="file"
-            accept="image/*"
-            className="hidden"
-            onChange={handleFileUpload}
-          />
-        </label>
+        </button>
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept="image/*"
+          capture="environment"
+          className="hidden"
+          onChange={handleFileUpload}
+        />
+        
+        <button
+          onClick={() => setShowCamera(true)}
+          className="bg-zinc-800 hover:bg-zinc-700 text-white shadow-lg rounded-full p-4 transition-all"
+          aria-label="Take photo"
+        >
+          <Camera size={24} />
+        </button>
       </div>
-
-      <button
-        onClick={() => setShowCamera(true)}
-        className="fixed bottom-8 right-8 bg-blue-600 text-white shadow-lg rounded-full p-4 hover:bg-blue-700 hover:shadow-xl transition-all"
-      >
-        <Camera size={24} />
-      </button>
 
       {showCamera && (
         <CameraComponent
@@ -76,6 +90,8 @@ function App() {
           onClose={() => setShowCamera(false)}
         />
       )}
+      
+      {loading && <LoadingOverlay />}
     </div>
   );
 }
