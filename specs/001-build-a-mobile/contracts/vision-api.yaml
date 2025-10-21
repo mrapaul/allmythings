@@ -1,0 +1,602 @@
+openapi: 3.0.3
+info:
+  title: Home Inventory Vision API
+  description: |
+    Multi-provider ensemble object detection API for the Visual Home Inventory Manager mobile app.
+    This API orchestrates parallel requests to 4 vision providers (Meta Detectron2, Google Cloud Vision, AWS Rekognition, TensorFlow Serving)
+    and returns ensemble-fused detection results with spatial coordinates, achieving 92-95% accuracy through confidence fusion and label consensus.
+  version: 1.0.0
+  contact:
+    name: API Support
+    email: support@example.com
+
+servers:
+  - url: https://api.homeinventory.example.com/v1
+    description: Production
+  - url: https://staging-api.homeinventory.example.com/v1
+    description: Staging
+  - url: http://localhost:3000/v1
+    description: Local development
+
+tags:
+  - name: Vision
+    description: Object detection and image analysis
+  - name: Health
+    description: Service health and monitoring
+
+paths:
+  /health:
+    get:
+      summary: Health check
+      description: Returns service health status and provider availability
+      operationId: healthCheck
+      tags:
+        - Health
+      responses:
+        '200':
+          description: Service is healthy
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthResponse'
+        '503':
+          description: Service unavailable
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /detect:
+    post:
+      summary: Detect objects in photo
+      description: |
+        Upload a photo and receive ensemble-fused detected objects with spatial coordinates and labels.
+        The API sends requests to all 4 providers in parallel (Meta, Google, AWS, TensorFlow), then fuses results using weighted voting and label consensus for maximum accuracy.
+      operationId: detectObjects
+      tags:
+        - Vision
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required:
+                - image
+              properties:
+                image:
+                  type: string
+                  format: binary
+                  description: JPEG or PNG image (max 10MB)
+                minConfidence:
+                  type: number
+                  format: float
+                  minimum: 0
+                  maximum: 1
+                  default: 0.7
+                  description: Minimum confidence threshold for detections
+                maxResults:
+                  type: integer
+                  minimum: 1
+                  maximum: 50
+                  default: 20
+                  description: Maximum number of objects to return
+      responses:
+        '200':
+          description: Object detection successful
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DetectionResponse'
+              example:
+                success: true
+                ensembleMode: true
+                processingTimeMs: 3245
+                detections:
+                  - id: det_abc123
+                    label: Laptop
+                    confidence: 0.95
+                    boundingBox:
+                      x: 0.1
+                      y: 0.2
+                      width: 0.3
+                      height: 0.4
+                    imageWidth: 1920
+                    imageHeight: 1080
+                    ensembleDetails:
+                      providerAgreement: [meta, google, aws, tensorflow]
+                      confidenceByProvider:
+                        meta: 0.92
+                        google: 0.96
+                        aws: 0.94
+                        tensorflow: 0.95
+                      labelConsensus: true
+                  - id: det_def456
+                    label: Coffee Mug
+                    confidence: 0.89
+                    boundingBox:
+                      x: 0.6
+                      y: 0.7
+                      width: 0.15
+                      height: 0.2
+                    imageWidth: 1920
+                    imageHeight: 1080
+                    ensembleDetails:
+                      providerAgreement: [google, aws, tensorflow]
+                      confidenceByProvider:
+                        google: 0.88
+                        aws: 0.87
+                        tensorflow: 0.92
+                      labelConsensus: true
+                providerResults:
+                  - provider: meta
+                    success: true
+                    processingTimeMs: 3245
+                    detections:
+                      - id: meta_det_1
+                        label: Laptop
+                        confidence: 0.92
+                        boundingBox:
+                          x: 0.1
+                          y: 0.2
+                          width: 0.3
+                          height: 0.4
+                        imageWidth: 1920
+                        imageHeight: 1080
+                  - provider: google
+                    success: true
+                    processingTimeMs: 2847
+                    detections:
+                      - id: google_det_1
+                        label: Laptop
+                        confidence: 0.96
+                        boundingBox:
+                          x: 0.1
+                          y: 0.2
+                          width: 0.3
+                          height: 0.4
+                        imageWidth: 1920
+                        imageHeight: 1080
+                      - id: google_det_2
+                        label: Coffee Mug
+                        confidence: 0.88
+                        boundingBox:
+                          x: 0.6
+                          y: 0.7
+                          width: 0.15
+                          height: 0.2
+                        imageWidth: 1920
+                        imageHeight: 1080
+                  - provider: aws
+                    success: true
+                    processingTimeMs: 2950
+                    detections:
+                      - id: aws_det_1
+                        label: Laptop Computer
+                        confidence: 0.94
+                        boundingBox:
+                          x: 0.1
+                          y: 0.2
+                          width: 0.3
+                          height: 0.4
+                        imageWidth: 1920
+                        imageHeight: 1080
+                      - id: aws_det_2
+                        label: Mug
+                        confidence: 0.87
+                        boundingBox:
+                          x: 0.6
+                          y: 0.7
+                          width: 0.15
+                          height: 0.2
+                        imageWidth: 1920
+                        imageHeight: 1080
+                  - provider: tensorflow
+                    success: true
+                    processingTimeMs: 3100
+                    detections:
+                      - id: tf_det_1
+                        label: Laptop
+                        confidence: 0.95
+                        boundingBox:
+                          x: 0.1
+                          y: 0.2
+                          width: 0.3
+                          height: 0.4
+                        imageWidth: 1920
+                        imageHeight: 1080
+                      - id: tf_det_2
+                        label: Coffee Mug
+                        confidence: 0.92
+                        boundingBox:
+                          x: 0.6
+                          y: 0.7
+                          width: 0.15
+                          height: 0.2
+                        imageWidth: 1920
+                        imageHeight: 1080
+                ensembleMetrics:
+                  providersUsed: [meta, google, aws, tensorflow]
+                  averageConfidence: 0.92
+                  consensusRate: 0.95
+        '400':
+          description: Invalid request (bad image format, too large, etc.)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                success: false
+                error:
+                  code: INVALID_IMAGE
+                  message: Image must be JPEG or PNG format
+                  details:
+                    acceptedFormats: ['image/jpeg', 'image/png']
+        '413':
+          description: Image too large
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                success: false
+                error:
+                  code: IMAGE_TOO_LARGE
+                  message: Image size exceeds 10MB limit
+                  details:
+                    maxSizeBytes: 10485760
+        '429':
+          description: Rate limit exceeded
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                success: false
+                error:
+                  code: RATE_LIMIT_EXCEEDED
+                  message: Too many requests. Please try again later.
+                  details:
+                    retryAfterSeconds: 60
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '503':
+          description: All vision providers unavailable
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                success: false
+                error:
+                  code: PROVIDERS_UNAVAILABLE
+                  message: Vision detection temporarily unavailable
+                  details:
+                    providers:
+                      meta: circuit_open
+                      google: circuit_open
+                      aws: circuit_open
+                      tensorflow: circuit_open
+
+components:
+  schemas:
+    HealthResponse:
+      type: object
+      required:
+        - status
+        - timestamp
+        - providers
+      properties:
+        status:
+          type: string
+          enum: [healthy, degraded, unhealthy]
+          description: Overall service status
+        timestamp:
+          type: string
+          format: date-time
+          description: Health check timestamp
+        providers:
+          type: object
+          description: Status of each vision provider
+          properties:
+            meta:
+              $ref: '#/components/schemas/ProviderStatus'
+            google:
+              $ref: '#/components/schemas/ProviderStatus'
+            aws:
+              $ref: '#/components/schemas/ProviderStatus'
+            tensorflow:
+              $ref: '#/components/schemas/ProviderStatus'
+        uptime:
+          type: integer
+          description: Service uptime in seconds
+        version:
+          type: string
+          description: API version
+      example:
+        status: healthy
+        timestamp: '2025-10-18T10:30:00Z'
+        providers:
+          meta:
+            status: available
+            circuitState: closed
+            lastCheckMs: 120
+          google:
+            status: available
+            circuitState: closed
+            lastCheckMs: 50
+          aws:
+            status: available
+            circuitState: closed
+            lastCheckMs: 75
+          tensorflow:
+            status: available
+            circuitState: closed
+            lastCheckMs: 95
+        uptime: 86400
+        version: 1.0.0
+
+    ProviderStatus:
+      type: object
+      required:
+        - status
+        - circuitState
+      properties:
+        status:
+          type: string
+          enum: [available, degraded, unavailable]
+        circuitState:
+          type: string
+          enum: [closed, open, half_open]
+          description: Circuit breaker state
+        lastCheckMs:
+          type: integer
+          description: Last health check latency in milliseconds
+        errorRate:
+          type: number
+          format: float
+          description: Recent error rate (0-1)
+
+    DetectionResponse:
+      type: object
+      required:
+        - success
+        - ensembleMode
+        - processingTimeMs
+        - detections
+        - providerResults
+      properties:
+        success:
+          type: boolean
+          description: Whether detection was successful
+        ensembleMode:
+          type: boolean
+          description: Whether ensemble fusion was used (true) or single provider fallback (false)
+          example: true
+        processingTimeMs:
+          type: integer
+          description: Total processing time in milliseconds (max of parallel providers)
+          example: 3245
+        detections:
+          type: array
+          description: Final ensemble-fused detected objects
+          items:
+            $ref: '#/components/schemas/Detection'
+        providerResults:
+          type: array
+          description: Individual provider results for debugging/analytics
+          items:
+            $ref: '#/components/schemas/ProviderResult'
+        ensembleMetrics:
+          type: object
+          description: Ensemble fusion metrics
+          properties:
+            providersUsed:
+              type: array
+              items:
+                type: string
+                enum: [meta, google, aws, tensorflow]
+              example: [meta, google, aws, tensorflow]
+            averageConfidence:
+              type: number
+              format: float
+              example: 0.89
+            consensusRate:
+              type: number
+              format: float
+              description: Percentage of detections with multi-provider agreement
+              example: 0.85
+
+    ProviderResult:
+      type: object
+      required:
+        - provider
+        - success
+        - processingTimeMs
+      properties:
+        provider:
+          type: string
+          enum: [meta, google, aws, tensorflow]
+          description: Provider name
+          example: google
+        success:
+          type: boolean
+          description: Whether this provider succeeded
+          example: true
+        processingTimeMs:
+          type: integer
+          description: Processing time for this provider
+          example: 2847
+        detections:
+          type: array
+          description: Detections from this provider
+          items:
+            $ref: '#/components/schemas/Detection'
+        error:
+          type: string
+          description: Error message if provider failed
+          example: "Circuit breaker open"
+
+    Detection:
+      type: object
+      required:
+        - id
+        - label
+        - confidence
+        - boundingBox
+        - imageWidth
+        - imageHeight
+      properties:
+        id:
+          type: string
+          description: Unique identifier for this detection
+          example: det_abc123
+        label:
+          type: string
+          description: Auto-generated object label (ensemble-fused if multiple providers)
+          example: Laptop
+        confidence:
+          type: number
+          format: float
+          minimum: 0
+          maximum: 1
+          description: Detection confidence score (ensemble-weighted if multiple providers)
+          example: 0.95
+        boundingBox:
+          $ref: '#/components/schemas/BoundingBox'
+        imageWidth:
+          type: integer
+          description: Original image width in pixels
+          example: 1920
+        imageHeight:
+          type: integer
+          description: Original image height in pixels
+          example: 1080
+        ensembleDetails:
+          type: object
+          description: Ensemble fusion details for this detection
+          properties:
+            providerAgreement:
+              type: array
+              description: Which providers detected this object
+              items:
+                type: string
+                enum: [meta, google, aws, tensorflow]
+              example: [meta, google, aws]
+            confidenceByProvider:
+              type: object
+              description: Individual provider confidence scores
+              additionalProperties:
+                type: number
+                format: float
+              example:
+                meta: 0.92
+                google: 0.95
+                aws: 0.88
+            labelConsensus:
+              type: boolean
+              description: Whether all providers agreed on the label
+              example: true
+        alternativeLabels:
+          type: array
+          description: Alternative label suggestions from providers
+          items:
+            type: object
+            required:
+              - label
+              - confidence
+            properties:
+              label:
+                type: string
+              confidence:
+                type: number
+                format: float
+              provider:
+                type: string
+                enum: [meta, google, aws, tensorflow]
+
+    BoundingBox:
+      type: object
+      required:
+        - x
+        - y
+        - width
+        - height
+      description: Normalized bounding box coordinates (0-1 range)
+      properties:
+        x:
+          type: number
+          format: float
+          minimum: 0
+          maximum: 1
+          description: Normalized x-coordinate of top-left corner
+          example: 0.1
+        y:
+          type: number
+          format: float
+          minimum: 0
+          maximum: 1
+          description: Normalized y-coordinate of top-left corner
+          example: 0.2
+        width:
+          type: number
+          format: float
+          minimum: 0
+          maximum: 1
+          description: Normalized width
+          example: 0.3
+        height:
+          type: number
+          format: float
+          minimum: 0
+          maximum: 1
+          description: Normalized height
+          example: 0.4
+
+    ErrorResponse:
+      type: object
+      required:
+        - success
+        - error
+      properties:
+        success:
+          type: boolean
+          enum: [false]
+        error:
+          type: object
+          required:
+            - code
+            - message
+          properties:
+            code:
+              type: string
+              description: Machine-readable error code
+              enum:
+                - INVALID_IMAGE
+                - IMAGE_TOO_LARGE
+                - UNSUPPORTED_FORMAT
+                - RATE_LIMIT_EXCEEDED
+                - PROVIDERS_UNAVAILABLE
+                - INTERNAL_ERROR
+                - DETECTION_FAILED
+            message:
+              type: string
+              description: Human-readable error message
+            details:
+              type: object
+              description: Additional error context
+              additionalProperties: true
+
+  securitySchemes:
+    ApiKeyAuth:
+      type: apiKey
+      in: header
+      name: X-API-Key
+      description: API key for authentication (future use)
+
+security:
+  - ApiKeyAuth: []
