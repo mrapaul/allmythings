@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'dart:io';
 import '../../application/providers/inventory_providers.dart';
+import '../common/custom_app_bar.dart'; // Added import
 import '../items/item_detail_screen.dart';
 
 /// Instagram-style search screen
@@ -27,8 +28,8 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
     final searchResults = ref.watch(searchResultsProvider(_query));
 
     return Scaffold(
-      appBar: AppBar(
-        title: Container(
+      appBar: CustomAppBar(
+        titleWidget: Container(
           height: 40,
           decoration: BoxDecoration(
             color: const Color(0xFFFAFAFA),

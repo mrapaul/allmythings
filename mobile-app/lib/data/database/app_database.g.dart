@@ -12,89 +12,138 @@ class $InventoryItemsTable extends InventoryItems
   static const VerificationMeta _idMeta = const VerificationMeta('id');
   @override
   late final GeneratedColumn<int> id = GeneratedColumn<int>(
-      'id', aliasedName, false,
-      hasAutoIncrement: true,
-      type: DriftSqlType.int,
-      requiredDuringInsert: false,
-      defaultConstraints:
-          GeneratedColumn.constraintIsAlways('PRIMARY KEY AUTOINCREMENT'));
-  static const VerificationMeta _photoPathMeta =
-      const VerificationMeta('photoPath');
+    'id',
+    aliasedName,
+    false,
+    hasAutoIncrement: true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'PRIMARY KEY AUTOINCREMENT',
+    ),
+  );
+  static const VerificationMeta _photoPathMeta = const VerificationMeta(
+    'photoPath',
+  );
   @override
   late final GeneratedColumn<String> photoPath = GeneratedColumn<String>(
-      'photo_path', aliasedName, false,
-      type: DriftSqlType.string, requiredDuringInsert: true);
-  static const VerificationMeta _thumbnailPathMeta =
-      const VerificationMeta('thumbnailPath');
+    'photo_path',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _thumbnailPathMeta = const VerificationMeta(
+    'thumbnailPath',
+  );
   @override
   late final GeneratedColumn<String> thumbnailPath = GeneratedColumn<String>(
-      'thumbnail_path', aliasedName, false,
-      type: DriftSqlType.string, requiredDuringInsert: true);
-  static const VerificationMeta _detectionDataMeta =
-      const VerificationMeta('detectionData');
+    'thumbnail_path',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _detectionDataMeta = const VerificationMeta(
+    'detectionData',
+  );
   @override
   late final GeneratedColumn<String> detectionData = GeneratedColumn<String>(
-      'detection_data', aliasedName, false,
-      type: DriftSqlType.string, requiredDuringInsert: true);
-  static const VerificationMeta _createdAtMeta =
-      const VerificationMeta('createdAt');
+    'detection_data',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _createdAtMeta = const VerificationMeta(
+    'createdAt',
+  );
   @override
   late final GeneratedColumn<DateTime> createdAt = GeneratedColumn<DateTime>(
-      'created_at', aliasedName, false,
-      type: DriftSqlType.dateTime, requiredDuringInsert: true);
-  static const VerificationMeta _updatedAtMeta =
-      const VerificationMeta('updatedAt');
+    'created_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _updatedAtMeta = const VerificationMeta(
+    'updatedAt',
+  );
   @override
   late final GeneratedColumn<DateTime> updatedAt = GeneratedColumn<DateTime>(
-      'updated_at', aliasedName, false,
-      type: DriftSqlType.dateTime, requiredDuringInsert: true);
+    'updated_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: true,
+  );
   @override
-  List<GeneratedColumn> get $columns =>
-      [id, photoPath, thumbnailPath, detectionData, createdAt, updatedAt];
+  List<GeneratedColumn> get $columns => [
+    id,
+    photoPath,
+    thumbnailPath,
+    detectionData,
+    createdAt,
+    updatedAt,
+  ];
   @override
   String get aliasedName => _alias ?? actualTableName;
   @override
   String get actualTableName => $name;
   static const String $name = 'inventory_items';
   @override
-  VerificationContext validateIntegrity(Insertable<InventoryItem> instance,
-      {bool isInserting = false}) {
+  VerificationContext validateIntegrity(
+    Insertable<InventoryItem> instance, {
+    bool isInserting = false,
+  }) {
     final context = VerificationContext();
     final data = instance.toColumns(true);
     if (data.containsKey('id')) {
       context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
     }
     if (data.containsKey('photo_path')) {
-      context.handle(_photoPathMeta,
-          photoPath.isAcceptableOrUnknown(data['photo_path']!, _photoPathMeta));
+      context.handle(
+        _photoPathMeta,
+        photoPath.isAcceptableOrUnknown(data['photo_path']!, _photoPathMeta),
+      );
     } else if (isInserting) {
       context.missing(_photoPathMeta);
     }
     if (data.containsKey('thumbnail_path')) {
       context.handle(
+        _thumbnailPathMeta,
+        thumbnailPath.isAcceptableOrUnknown(
+          data['thumbnail_path']!,
           _thumbnailPathMeta,
-          thumbnailPath.isAcceptableOrUnknown(
-              data['thumbnail_path']!, _thumbnailPathMeta));
+        ),
+      );
     } else if (isInserting) {
       context.missing(_thumbnailPathMeta);
     }
     if (data.containsKey('detection_data')) {
       context.handle(
+        _detectionDataMeta,
+        detectionData.isAcceptableOrUnknown(
+          data['detection_data']!,
           _detectionDataMeta,
-          detectionData.isAcceptableOrUnknown(
-              data['detection_data']!, _detectionDataMeta));
+        ),
+      );
     } else if (isInserting) {
       context.missing(_detectionDataMeta);
     }
     if (data.containsKey('created_at')) {
-      context.handle(_createdAtMeta,
-          createdAt.isAcceptableOrUnknown(data['created_at']!, _createdAtMeta));
+      context.handle(
+        _createdAtMeta,
+        createdAt.isAcceptableOrUnknown(data['created_at']!, _createdAtMeta),
+      );
     } else if (isInserting) {
       context.missing(_createdAtMeta);
     }
     if (data.containsKey('updated_at')) {
-      context.handle(_updatedAtMeta,
-          updatedAt.isAcceptableOrUnknown(data['updated_at']!, _updatedAtMeta));
+      context.handle(
+        _updatedAtMeta,
+        updatedAt.isAcceptableOrUnknown(data['updated_at']!, _updatedAtMeta),
+      );
     } else if (isInserting) {
       context.missing(_updatedAtMeta);
     }
@@ -107,18 +156,30 @@ class $InventoryItemsTable extends InventoryItems
   InventoryItem map(Map<String, dynamic> data, {String? tablePrefix}) {
     final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
     return InventoryItem(
-      id: attachedDatabase.typeMapping
-          .read(DriftSqlType.int, data['${effectivePrefix}id'])!,
-      photoPath: attachedDatabase.typeMapping
-          .read(DriftSqlType.string, data['${effectivePrefix}photo_path'])!,
-      thumbnailPath: attachedDatabase.typeMapping
-          .read(DriftSqlType.string, data['${effectivePrefix}thumbnail_path'])!,
-      detectionData: attachedDatabase.typeMapping
-          .read(DriftSqlType.string, data['${effectivePrefix}detection_data'])!,
-      createdAt: attachedDatabase.typeMapping
-          .read(DriftSqlType.dateTime, data['${effectivePrefix}created_at'])!,
-      updatedAt: attachedDatabase.typeMapping
-          .read(DriftSqlType.dateTime, data['${effectivePrefix}updated_at'])!,
+      id: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}id'],
+      )!,
+      photoPath: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}photo_path'],
+      )!,
+      thumbnailPath: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}thumbnail_path'],
+      )!,
+      detectionData: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}detection_data'],
+      )!,
+      createdAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}created_at'],
+      )!,
+      updatedAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}updated_at'],
+      )!,
     );
   }
 
@@ -146,13 +207,14 @@ class InventoryItem extends DataClass implements Insertable<InventoryItem> {
 
   /// Timestamp when item was last modified
   final DateTime updatedAt;
-  const InventoryItem(
-      {required this.id,
-      required this.photoPath,
-      required this.thumbnailPath,
-      required this.detectionData,
-      required this.createdAt,
-      required this.updatedAt});
+  const InventoryItem({
+    required this.id,
+    required this.photoPath,
+    required this.thumbnailPath,
+    required this.detectionData,
+    required this.createdAt,
+    required this.updatedAt,
+  });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
     final map = <String, Expression>{};
@@ -176,8 +238,10 @@ class InventoryItem extends DataClass implements Insertable<InventoryItem> {
     );
   }
 
-  factory InventoryItem.fromJson(Map<String, dynamic> json,
-      {ValueSerializer? serializer}) {
+  factory InventoryItem.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
     serializer ??= driftRuntimeOptions.defaultSerializer;
     return InventoryItem(
       id: serializer.fromJson<int>(json['id']),
@@ -201,21 +265,21 @@ class InventoryItem extends DataClass implements Insertable<InventoryItem> {
     };
   }
 
-  InventoryItem copyWith(
-          {int? id,
-          String? photoPath,
-          String? thumbnailPath,
-          String? detectionData,
-          DateTime? createdAt,
-          DateTime? updatedAt}) =>
-      InventoryItem(
-        id: id ?? this.id,
-        photoPath: photoPath ?? this.photoPath,
-        thumbnailPath: thumbnailPath ?? this.thumbnailPath,
-        detectionData: detectionData ?? this.detectionData,
-        createdAt: createdAt ?? this.createdAt,
-        updatedAt: updatedAt ?? this.updatedAt,
-      );
+  InventoryItem copyWith({
+    int? id,
+    String? photoPath,
+    String? thumbnailPath,
+    String? detectionData,
+    DateTime? createdAt,
+    DateTime? updatedAt,
+  }) => InventoryItem(
+    id: id ?? this.id,
+    photoPath: photoPath ?? this.photoPath,
+    thumbnailPath: thumbnailPath ?? this.thumbnailPath,
+    detectionData: detectionData ?? this.detectionData,
+    createdAt: createdAt ?? this.createdAt,
+    updatedAt: updatedAt ?? this.updatedAt,
+  );
   InventoryItem copyWithCompanion(InventoryItemsCompanion data) {
     return InventoryItem(
       id: data.id.present ? data.id.value : this.id,
@@ -246,7 +310,13 @@ class InventoryItem extends DataClass implements Insertable<InventoryItem> {
 
   @override
   int get hashCode => Object.hash(
-      id, photoPath, thumbnailPath, detectionData, createdAt, updatedAt);
+    id,
+    photoPath,
+    thumbnailPath,
+    detectionData,
+    createdAt,
+    updatedAt,
+  );
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
@@ -281,11 +351,11 @@ class InventoryItemsCompanion extends UpdateCompanion<InventoryItem> {
     required String detectionData,
     required DateTime createdAt,
     required DateTime updatedAt,
-  })  : photoPath = Value(photoPath),
-        thumbnailPath = Value(thumbnailPath),
-        detectionData = Value(detectionData),
-        createdAt = Value(createdAt),
-        updatedAt = Value(updatedAt);
+  }) : photoPath = Value(photoPath),
+       thumbnailPath = Value(thumbnailPath),
+       detectionData = Value(detectionData),
+       createdAt = Value(createdAt),
+       updatedAt = Value(updatedAt);
   static Insertable<InventoryItem> custom({
     Expression<int>? id,
     Expression<String>? photoPath,
@@ -304,13 +374,14 @@ class InventoryItemsCompanion extends UpdateCompanion<InventoryItem> {
     });
   }
 
-  InventoryItemsCompanion copyWith(
-      {Value<int>? id,
-      Value<String>? photoPath,
-      Value<String>? thumbnailPath,
-      Value<String>? detectionData,
-      Value<DateTime>? createdAt,
-      Value<DateTime>? updatedAt}) {
+  InventoryItemsCompanion copyWith({
+    Value<int>? id,
+    Value<String>? photoPath,
+    Value<String>? thumbnailPath,
+    Value<String>? detectionData,
+    Value<DateTime>? createdAt,
+    Value<DateTime>? updatedAt,
+  }) {
     return InventoryItemsCompanion(
       id: id ?? this.id,
       photoPath: photoPath ?? this.photoPath,
@@ -367,36 +438,57 @@ class $LabelsTable extends Labels with TableInfo<$LabelsTable, Label> {
   static const VerificationMeta _idMeta = const VerificationMeta('id');
   @override
   late final GeneratedColumn<int> id = GeneratedColumn<int>(
-      'id', aliasedName, false,
-      hasAutoIncrement: true,
-      type: DriftSqlType.int,
-      requiredDuringInsert: false,
-      defaultConstraints:
-          GeneratedColumn.constraintIsAlways('PRIMARY KEY AUTOINCREMENT'));
+    'id',
+    aliasedName,
+    false,
+    hasAutoIncrement: true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'PRIMARY KEY AUTOINCREMENT',
+    ),
+  );
   static const VerificationMeta _itemIdMeta = const VerificationMeta('itemId');
   @override
   late final GeneratedColumn<int> itemId = GeneratedColumn<int>(
-      'item_id', aliasedName, false,
-      type: DriftSqlType.int,
-      requiredDuringInsert: true,
-      defaultConstraints: GeneratedColumn.constraintIsAlways(
-          'REFERENCES inventory_items (id) ON DELETE CASCADE'));
+    'item_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'REFERENCES inventory_items (id) ON DELETE CASCADE',
+    ),
+  );
   static const VerificationMeta _keyMeta = const VerificationMeta('key');
   @override
   late final GeneratedColumn<String> key = GeneratedColumn<String>(
-      'key', aliasedName, true,
-      type: DriftSqlType.string, requiredDuringInsert: false);
+    'key',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
   static const VerificationMeta _valueMeta = const VerificationMeta('value');
   @override
   late final GeneratedColumn<String> value = GeneratedColumn<String>(
-      'value', aliasedName, false,
-      type: DriftSqlType.string, requiredDuringInsert: true);
-  static const VerificationMeta _createdAtMeta =
-      const VerificationMeta('createdAt');
+    'value',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _createdAtMeta = const VerificationMeta(
+    'createdAt',
+  );
   @override
   late final GeneratedColumn<DateTime> createdAt = GeneratedColumn<DateTime>(
-      'created_at', aliasedName, false,
-      type: DriftSqlType.dateTime, requiredDuringInsert: true);
+    'created_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: true,
+  );
   @override
   List<GeneratedColumn> get $columns => [id, itemId, key, value, createdAt];
   @override
@@ -405,32 +497,42 @@ class $LabelsTable extends Labels with TableInfo<$LabelsTable, Label> {
   String get actualTableName => $name;
   static const String $name = 'labels';
   @override
-  VerificationContext validateIntegrity(Insertable<Label> instance,
-      {bool isInserting = false}) {
+  VerificationContext validateIntegrity(
+    Insertable<Label> instance, {
+    bool isInserting = false,
+  }) {
     final context = VerificationContext();
     final data = instance.toColumns(true);
     if (data.containsKey('id')) {
       context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
     }
     if (data.containsKey('item_id')) {
-      context.handle(_itemIdMeta,
-          itemId.isAcceptableOrUnknown(data['item_id']!, _itemIdMeta));
+      context.handle(
+        _itemIdMeta,
+        itemId.isAcceptableOrUnknown(data['item_id']!, _itemIdMeta),
+      );
     } else if (isInserting) {
       context.missing(_itemIdMeta);
     }
     if (data.containsKey('key')) {
       context.handle(
-          _keyMeta, key.isAcceptableOrUnknown(data['key']!, _keyMeta));
+        _keyMeta,
+        key.isAcceptableOrUnknown(data['key']!, _keyMeta),
+      );
     }
     if (data.containsKey('value')) {
       context.handle(
-          _valueMeta, value.isAcceptableOrUnknown(data['value']!, _valueMeta));
+        _valueMeta,
+        value.isAcceptableOrUnknown(data['value']!, _valueMeta),
+      );
     } else if (isInserting) {
       context.missing(_valueMeta);
     }
     if (data.containsKey('created_at')) {
-      context.handle(_createdAtMeta,
-          createdAt.isAcceptableOrUnknown(data['created_at']!, _createdAtMeta));
+      context.handle(
+        _createdAtMeta,
+        createdAt.isAcceptableOrUnknown(data['created_at']!, _createdAtMeta),
+      );
     } else if (isInserting) {
       context.missing(_createdAtMeta);
     }
@@ -441,22 +543,32 @@ class $LabelsTable extends Labels with TableInfo<$LabelsTable, Label> {
   Set<GeneratedColumn> get $primaryKey => {id};
   @override
   List<Set<GeneratedColumn>> get uniqueKeys => [
-        {itemId, key, value},
-      ];
+    {itemId, key, value},
+  ];
   @override
   Label map(Map<String, dynamic> data, {String? tablePrefix}) {
     final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
     return Label(
-      id: attachedDatabase.typeMapping
-          .read(DriftSqlType.int, data['${effectivePrefix}id'])!,
-      itemId: attachedDatabase.typeMapping
-          .read(DriftSqlType.int, data['${effectivePrefix}item_id'])!,
-      key: attachedDatabase.typeMapping
-          .read(DriftSqlType.string, data['${effectivePrefix}key']),
-      value: attachedDatabase.typeMapping
-          .read(DriftSqlType.string, data['${effectivePrefix}value'])!,
-      createdAt: attachedDatabase.typeMapping
-          .read(DriftSqlType.dateTime, data['${effectivePrefix}created_at'])!,
+      id: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}id'],
+      )!,
+      itemId: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}item_id'],
+      )!,
+      key: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}key'],
+      ),
+      value: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}value'],
+      )!,
+      createdAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}created_at'],
+      )!,
     );
   }
 
@@ -481,12 +593,13 @@ class Label extends DataClass implements Insertable<Label> {
 
   /// Timestamp when label was added
   final DateTime createdAt;
-  const Label(
-      {required this.id,
-      required this.itemId,
-      this.key,
-      required this.value,
-      required this.createdAt});
+  const Label({
+    required this.id,
+    required this.itemId,
+    this.key,
+    required this.value,
+    required this.createdAt,
+  });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
     final map = <String, Expression>{};
@@ -510,8 +623,10 @@ class Label extends DataClass implements Insertable<Label> {
     );
   }
 
-  factory Label.fromJson(Map<String, dynamic> json,
-      {ValueSerializer? serializer}) {
+  factory Label.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
     serializer ??= driftRuntimeOptions.defaultSerializer;
     return Label(
       id: serializer.fromJson<int>(json['id']),
@@ -533,19 +648,19 @@ class Label extends DataClass implements Insertable<Label> {
     };
   }
 
-  Label copyWith(
-          {int? id,
-          int? itemId,
-          Value<String?> key = const Value.absent(),
-          String? value,
-          DateTime? createdAt}) =>
-      Label(
-        id: id ?? this.id,
-        itemId: itemId ?? this.itemId,
-        key: key.present ? key.value : this.key,
-        value: value ?? this.value,
-        createdAt: createdAt ?? this.createdAt,
-      );
+  Label copyWith({
+    int? id,
+    int? itemId,
+    Value<String?> key = const Value.absent(),
+    String? value,
+    DateTime? createdAt,
+  }) => Label(
+    id: id ?? this.id,
+    itemId: itemId ?? this.itemId,
+    key: key.present ? key.value : this.key,
+    value: value ?? this.value,
+    createdAt: createdAt ?? this.createdAt,
+  );
   Label copyWithCompanion(LabelsCompanion data) {
     return Label(
       id: data.id.present ? data.id.value : this.id,
@@ -600,9 +715,9 @@ class LabelsCompanion extends UpdateCompanion<Label> {
     this.key = const Value.absent(),
     required String value,
     required DateTime createdAt,
-  })  : itemId = Value(itemId),
-        value = Value(value),
-        createdAt = Value(createdAt);
+  }) : itemId = Value(itemId),
+       value = Value(value),
+       createdAt = Value(createdAt);
   static Insertable<Label> custom({
     Expression<int>? id,
     Expression<int>? itemId,
@@ -619,12 +734,13 @@ class LabelsCompanion extends UpdateCompanion<Label> {
     });
   }
 
-  LabelsCompanion copyWith(
-      {Value<int>? id,
-      Value<int>? itemId,
-      Value<String?>? key,
-      Value<String>? value,
-      Value<DateTime>? createdAt}) {
+  LabelsCompanion copyWith({
+    Value<int>? id,
+    Value<int>? itemId,
+    Value<String?>? key,
+    Value<String>? value,
+    Value<DateTime>? createdAt,
+  }) {
     return LabelsCompanion(
       id: id ?? this.id,
       itemId: itemId ?? this.itemId,
@@ -668,67 +784,296 @@ class LabelsCompanion extends UpdateCompanion<Label> {
   }
 }
 
+class $LabelSearchFtsTable extends LabelSearchFts
+    with TableInfo<$LabelSearchFtsTable, LabelSearchEntry> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $LabelSearchFtsTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _valueMeta = const VerificationMeta('value');
+  @override
+  late final GeneratedColumn<String> value = GeneratedColumn<String>(
+    'value',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _labelIdMeta = const VerificationMeta(
+    'labelId',
+  );
+  @override
+  late final GeneratedColumn<int> labelId = GeneratedColumn<int>(
+    'label_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [value, labelId];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'label_search_fts';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<LabelSearchEntry> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('value')) {
+      context.handle(
+        _valueMeta,
+        value.isAcceptableOrUnknown(data['value']!, _valueMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_valueMeta);
+    }
+    if (data.containsKey('label_id')) {
+      context.handle(
+        _labelIdMeta,
+        labelId.isAcceptableOrUnknown(data['label_id']!, _labelIdMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_labelIdMeta);
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => const {};
+  @override
+  LabelSearchEntry map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return LabelSearchEntry(
+      value: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}value'],
+      )!,
+      labelId: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}label_id'],
+      )!,
+    );
+  }
+
+  @override
+  $LabelSearchFtsTable createAlias(String alias) {
+    return $LabelSearchFtsTable(attachedDatabase, alias);
+  }
+}
+
+class LabelSearchEntry extends DataClass
+    implements Insertable<LabelSearchEntry> {
+  /// Label value indexed for full-text search
+  final String value;
+
+  /// Reference to labels(id) for result joining (not indexed for FTS)
+  final int labelId;
+  const LabelSearchEntry({required this.value, required this.labelId});
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['value'] = Variable<String>(value);
+    map['label_id'] = Variable<int>(labelId);
+    return map;
+  }
+
+  LabelSearchFtsCompanion toCompanion(bool nullToAbsent) {
+    return LabelSearchFtsCompanion(
+      value: Value(value),
+      labelId: Value(labelId),
+    );
+  }
+
+  factory LabelSearchEntry.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return LabelSearchEntry(
+      value: serializer.fromJson<String>(json['value']),
+      labelId: serializer.fromJson<int>(json['labelId']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'value': serializer.toJson<String>(value),
+      'labelId': serializer.toJson<int>(labelId),
+    };
+  }
+
+  LabelSearchEntry copyWith({String? value, int? labelId}) => LabelSearchEntry(
+    value: value ?? this.value,
+    labelId: labelId ?? this.labelId,
+  );
+  LabelSearchEntry copyWithCompanion(LabelSearchFtsCompanion data) {
+    return LabelSearchEntry(
+      value: data.value.present ? data.value.value : this.value,
+      labelId: data.labelId.present ? data.labelId.value : this.labelId,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('LabelSearchEntry(')
+          ..write('value: $value, ')
+          ..write('labelId: $labelId')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(value, labelId);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is LabelSearchEntry &&
+          other.value == this.value &&
+          other.labelId == this.labelId);
+}
+
+class LabelSearchFtsCompanion extends UpdateCompanion<LabelSearchEntry> {
+  final Value<String> value;
+  final Value<int> labelId;
+  final Value<int> rowid;
+  const LabelSearchFtsCompanion({
+    this.value = const Value.absent(),
+    this.labelId = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  LabelSearchFtsCompanion.insert({
+    required String value,
+    required int labelId,
+    this.rowid = const Value.absent(),
+  }) : value = Value(value),
+       labelId = Value(labelId);
+  static Insertable<LabelSearchEntry> custom({
+    Expression<String>? value,
+    Expression<int>? labelId,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (value != null) 'value': value,
+      if (labelId != null) 'label_id': labelId,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  LabelSearchFtsCompanion copyWith({
+    Value<String>? value,
+    Value<int>? labelId,
+    Value<int>? rowid,
+  }) {
+    return LabelSearchFtsCompanion(
+      value: value ?? this.value,
+      labelId: labelId ?? this.labelId,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (value.present) {
+      map['value'] = Variable<String>(value.value);
+    }
+    if (labelId.present) {
+      map['label_id'] = Variable<int>(labelId.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('LabelSearchFtsCompanion(')
+          ..write('value: $value, ')
+          ..write('labelId: $labelId, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
 abstract class _$AppDatabase extends GeneratedDatabase {
   _$AppDatabase(QueryExecutor e) : super(e);
   $AppDatabaseManager get managers => $AppDatabaseManager(this);
   late final $InventoryItemsTable inventoryItems = $InventoryItemsTable(this);
   late final $LabelsTable labels = $LabelsTable(this);
+  late final $LabelSearchFtsTable labelSearchFts = $LabelSearchFtsTable(this);
   @override
   Iterable<TableInfo<Table, Object?>> get allTables =>
       allSchemaEntities.whereType<TableInfo<Table, Object?>>();
   @override
-  List<DatabaseSchemaEntity> get allSchemaEntities => [inventoryItems, labels];
+  List<DatabaseSchemaEntity> get allSchemaEntities => [
+    inventoryItems,
+    labels,
+    labelSearchFts,
+  ];
   @override
-  StreamQueryUpdateRules get streamUpdateRules => const StreamQueryUpdateRules(
-        [
-          WritePropagation(
-            on: TableUpdateQuery.onTableName('inventory_items',
-                limitUpdateKind: UpdateKind.delete),
-            result: [
-              TableUpdate('labels', kind: UpdateKind.delete),
-            ],
-          ),
-        ],
-      );
+  StreamQueryUpdateRules get streamUpdateRules => const StreamQueryUpdateRules([
+    WritePropagation(
+      on: TableUpdateQuery.onTableName(
+        'inventory_items',
+        limitUpdateKind: UpdateKind.delete,
+      ),
+      result: [TableUpdate('labels', kind: UpdateKind.delete)],
+    ),
+  ]);
 }
 
-typedef $$InventoryItemsTableCreateCompanionBuilder = InventoryItemsCompanion
-    Function({
-  Value<int> id,
-  required String photoPath,
-  required String thumbnailPath,
-  required String detectionData,
-  required DateTime createdAt,
-  required DateTime updatedAt,
-});
-typedef $$InventoryItemsTableUpdateCompanionBuilder = InventoryItemsCompanion
-    Function({
-  Value<int> id,
-  Value<String> photoPath,
-  Value<String> thumbnailPath,
-  Value<String> detectionData,
-  Value<DateTime> createdAt,
-  Value<DateTime> updatedAt,
-});
+typedef $$InventoryItemsTableCreateCompanionBuilder =
+    InventoryItemsCompanion Function({
+      Value<int> id,
+      required String photoPath,
+      required String thumbnailPath,
+      required String detectionData,
+      required DateTime createdAt,
+      required DateTime updatedAt,
+    });
+typedef $$InventoryItemsTableUpdateCompanionBuilder =
+    InventoryItemsCompanion Function({
+      Value<int> id,
+      Value<String> photoPath,
+      Value<String> thumbnailPath,
+      Value<String> detectionData,
+      Value<DateTime> createdAt,
+      Value<DateTime> updatedAt,
+    });
 
 final class $$InventoryItemsTableReferences
     extends BaseReferences<_$AppDatabase, $InventoryItemsTable, InventoryItem> {
   $$InventoryItemsTableReferences(
-      super.$_db, super.$_table, super.$_typedResult);
+    super.$_db,
+    super.$_table,
+    super.$_typedResult,
+  );
 
   static MultiTypedResultKey<$LabelsTable, List<Label>> _labelsRefsTable(
-          _$AppDatabase db) =>
-      MultiTypedResultKey.fromTable(db.labels,
-          aliasName:
-              $_aliasNameGenerator(db.inventoryItems.id, db.labels.itemId));
+    _$AppDatabase db,
+  ) => MultiTypedResultKey.fromTable(
+    db.labels,
+    aliasName: $_aliasNameGenerator(db.inventoryItems.id, db.labels.itemId),
+  );
 
   $$LabelsTableProcessedTableManager get labelsRefs {
-    final manager = $$LabelsTableTableManager($_db, $_db.labels)
-        .filter((f) => f.itemId.id.sqlEquals($_itemColumn<int>('id')!));
+    final manager = $$LabelsTableTableManager(
+      $_db,
+      $_db.labels,
+    ).filter((f) => f.itemId.id.sqlEquals($_itemColumn<int>('id')!));
 
     final cache = $_typedResult.readTableOrNull(_labelsRefsTable($_db));
     return ProcessedTableManager(
-        manager.$state.copyWith(prefetchedData: cache));
+      manager.$state.copyWith(prefetchedData: cache),
+    );
   }
 }
 
@@ -742,41 +1087,57 @@ class $$InventoryItemsTableFilterComposer
     super.$removeJoinBuilderFromRootComposer,
   });
   ColumnFilters<int> get id => $composableBuilder(
-      column: $table.id, builder: (column) => ColumnFilters(column));
+    column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
 
   ColumnFilters<String> get photoPath => $composableBuilder(
-      column: $table.photoPath, builder: (column) => ColumnFilters(column));
+    column: $table.photoPath,
+    builder: (column) => ColumnFilters(column),
+  );
 
   ColumnFilters<String> get thumbnailPath => $composableBuilder(
-      column: $table.thumbnailPath, builder: (column) => ColumnFilters(column));
+    column: $table.thumbnailPath,
+    builder: (column) => ColumnFilters(column),
+  );
 
   ColumnFilters<String> get detectionData => $composableBuilder(
-      column: $table.detectionData, builder: (column) => ColumnFilters(column));
+    column: $table.detectionData,
+    builder: (column) => ColumnFilters(column),
+  );
 
   ColumnFilters<DateTime> get createdAt => $composableBuilder(
-      column: $table.createdAt, builder: (column) => ColumnFilters(column));
+    column: $table.createdAt,
+    builder: (column) => ColumnFilters(column),
+  );
 
   ColumnFilters<DateTime> get updatedAt => $composableBuilder(
-      column: $table.updatedAt, builder: (column) => ColumnFilters(column));
+    column: $table.updatedAt,
+    builder: (column) => ColumnFilters(column),
+  );
 
   Expression<bool> labelsRefs(
-      Expression<bool> Function($$LabelsTableFilterComposer f) f) {
+    Expression<bool> Function($$LabelsTableFilterComposer f) f,
+  ) {
     final $$LabelsTableFilterComposer composer = $composerBuilder(
-        composer: this,
-        getCurrentColumn: (t) => t.id,
-        referencedTable: $db.labels,
-        getReferencedColumn: (t) => t.itemId,
-        builder: (joinBuilder,
-                {$addJoinBuilderToRootComposer,
-                $removeJoinBuilderFromRootComposer}) =>
-            $$LabelsTableFilterComposer(
-              $db: $db,
-              $table: $db.labels,
-              $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
-              joinBuilder: joinBuilder,
-              $removeJoinBuilderFromRootComposer:
-                  $removeJoinBuilderFromRootComposer,
-            ));
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.labels,
+      getReferencedColumn: (t) => t.itemId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$LabelsTableFilterComposer(
+            $db: $db,
+            $table: $db.labels,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
     return f(composer);
   }
 }
@@ -791,24 +1152,34 @@ class $$InventoryItemsTableOrderingComposer
     super.$removeJoinBuilderFromRootComposer,
   });
   ColumnOrderings<int> get id => $composableBuilder(
-      column: $table.id, builder: (column) => ColumnOrderings(column));
+    column: $table.id,
+    builder: (column) => ColumnOrderings(column),
+  );
 
   ColumnOrderings<String> get photoPath => $composableBuilder(
-      column: $table.photoPath, builder: (column) => ColumnOrderings(column));
+    column: $table.photoPath,
+    builder: (column) => ColumnOrderings(column),
+  );
 
   ColumnOrderings<String> get thumbnailPath => $composableBuilder(
-      column: $table.thumbnailPath,
-      builder: (column) => ColumnOrderings(column));
+    column: $table.thumbnailPath,
+    builder: (column) => ColumnOrderings(column),
+  );
 
   ColumnOrderings<String> get detectionData => $composableBuilder(
-      column: $table.detectionData,
-      builder: (column) => ColumnOrderings(column));
+    column: $table.detectionData,
+    builder: (column) => ColumnOrderings(column),
+  );
 
   ColumnOrderings<DateTime> get createdAt => $composableBuilder(
-      column: $table.createdAt, builder: (column) => ColumnOrderings(column));
+    column: $table.createdAt,
+    builder: (column) => ColumnOrderings(column),
+  );
 
   ColumnOrderings<DateTime> get updatedAt => $composableBuilder(
-      column: $table.updatedAt, builder: (column) => ColumnOrderings(column));
+    column: $table.updatedAt,
+    builder: (column) => ColumnOrderings(column),
+  );
 }
 
 class $$InventoryItemsTableAnnotationComposer
@@ -827,10 +1198,14 @@ class $$InventoryItemsTableAnnotationComposer
       $composableBuilder(column: $table.photoPath, builder: (column) => column);
 
   GeneratedColumn<String> get thumbnailPath => $composableBuilder(
-      column: $table.thumbnailPath, builder: (column) => column);
+    column: $table.thumbnailPath,
+    builder: (column) => column,
+  );
 
   GeneratedColumn<String> get detectionData => $composableBuilder(
-      column: $table.detectionData, builder: (column) => column);
+    column: $table.detectionData,
+    builder: (column) => column,
+  );
 
   GeneratedColumn<DateTime> get createdAt =>
       $composableBuilder(column: $table.createdAt, builder: (column) => column);
@@ -839,42 +1214,51 @@ class $$InventoryItemsTableAnnotationComposer
       $composableBuilder(column: $table.updatedAt, builder: (column) => column);
 
   Expression<T> labelsRefs<T extends Object>(
-      Expression<T> Function($$LabelsTableAnnotationComposer a) f) {
+    Expression<T> Function($$LabelsTableAnnotationComposer a) f,
+  ) {
     final $$LabelsTableAnnotationComposer composer = $composerBuilder(
-        composer: this,
-        getCurrentColumn: (t) => t.id,
-        referencedTable: $db.labels,
-        getReferencedColumn: (t) => t.itemId,
-        builder: (joinBuilder,
-                {$addJoinBuilderToRootComposer,
-                $removeJoinBuilderFromRootComposer}) =>
-            $$LabelsTableAnnotationComposer(
-              $db: $db,
-              $table: $db.labels,
-              $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
-              joinBuilder: joinBuilder,
-              $removeJoinBuilderFromRootComposer:
-                  $removeJoinBuilderFromRootComposer,
-            ));
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.labels,
+      getReferencedColumn: (t) => t.itemId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$LabelsTableAnnotationComposer(
+            $db: $db,
+            $table: $db.labels,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
     return f(composer);
   }
 }
 
-class $$InventoryItemsTableTableManager extends RootTableManager<
-    _$AppDatabase,
-    $InventoryItemsTable,
-    InventoryItem,
-    $$InventoryItemsTableFilterComposer,
-    $$InventoryItemsTableOrderingComposer,
-    $$InventoryItemsTableAnnotationComposer,
-    $$InventoryItemsTableCreateCompanionBuilder,
-    $$InventoryItemsTableUpdateCompanionBuilder,
-    (InventoryItem, $$InventoryItemsTableReferences),
-    InventoryItem,
-    PrefetchHooks Function({bool labelsRefs})> {
+class $$InventoryItemsTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $InventoryItemsTable,
+          InventoryItem,
+          $$InventoryItemsTableFilterComposer,
+          $$InventoryItemsTableOrderingComposer,
+          $$InventoryItemsTableAnnotationComposer,
+          $$InventoryItemsTableCreateCompanionBuilder,
+          $$InventoryItemsTableUpdateCompanionBuilder,
+          (InventoryItem, $$InventoryItemsTableReferences),
+          InventoryItem,
+          PrefetchHooks Function({bool labelsRefs})
+        > {
   $$InventoryItemsTableTableManager(
-      _$AppDatabase db, $InventoryItemsTable table)
-      : super(TableManagerState(
+    _$AppDatabase db,
+    $InventoryItemsTable table,
+  ) : super(
+        TableManagerState(
           db: db,
           table: table,
           createFilteringComposer: () =>
@@ -883,43 +1267,45 @@ class $$InventoryItemsTableTableManager extends RootTableManager<
               $$InventoryItemsTableOrderingComposer($db: db, $table: table),
           createComputedFieldComposer: () =>
               $$InventoryItemsTableAnnotationComposer($db: db, $table: table),
-          updateCompanionCallback: ({
-            Value<int> id = const Value.absent(),
-            Value<String> photoPath = const Value.absent(),
-            Value<String> thumbnailPath = const Value.absent(),
-            Value<String> detectionData = const Value.absent(),
-            Value<DateTime> createdAt = const Value.absent(),
-            Value<DateTime> updatedAt = const Value.absent(),
-          }) =>
-              InventoryItemsCompanion(
-            id: id,
-            photoPath: photoPath,
-            thumbnailPath: thumbnailPath,
-            detectionData: detectionData,
-            createdAt: createdAt,
-            updatedAt: updatedAt,
-          ),
-          createCompanionCallback: ({
-            Value<int> id = const Value.absent(),
-            required String photoPath,
-            required String thumbnailPath,
-            required String detectionData,
-            required DateTime createdAt,
-            required DateTime updatedAt,
-          }) =>
-              InventoryItemsCompanion.insert(
-            id: id,
-            photoPath: photoPath,
-            thumbnailPath: thumbnailPath,
-            detectionData: detectionData,
-            createdAt: createdAt,
-            updatedAt: updatedAt,
-          ),
+          updateCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                Value<String> photoPath = const Value.absent(),
+                Value<String> thumbnailPath = const Value.absent(),
+                Value<String> detectionData = const Value.absent(),
+                Value<DateTime> createdAt = const Value.absent(),
+                Value<DateTime> updatedAt = const Value.absent(),
+              }) => InventoryItemsCompanion(
+                id: id,
+                photoPath: photoPath,
+                thumbnailPath: thumbnailPath,
+                detectionData: detectionData,
+                createdAt: createdAt,
+                updatedAt: updatedAt,
+              ),
+          createCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                required String photoPath,
+                required String thumbnailPath,
+                required String detectionData,
+                required DateTime createdAt,
+                required DateTime updatedAt,
+              }) => InventoryItemsCompanion.insert(
+                id: id,
+                photoPath: photoPath,
+                thumbnailPath: thumbnailPath,
+                detectionData: detectionData,
+                createdAt: createdAt,
+                updatedAt: updatedAt,
+              ),
           withReferenceMapper: (p0) => p0
-              .map((e) => (
-                    e.readTable(table),
-                    $$InventoryItemsTableReferences(db, table, e)
-                  ))
+              .map(
+                (e) => (
+                  e.readTable(table),
+                  $$InventoryItemsTableReferences(db, table, e),
+                ),
+              )
               .toList(),
           prefetchHooksCallback: ({labelsRefs = false}) {
             return PrefetchHooks(
@@ -929,51 +1315,62 @@ class $$InventoryItemsTableTableManager extends RootTableManager<
               getPrefetchedDataCallback: (items) async {
                 return [
                   if (labelsRefs)
-                    await $_getPrefetchedData<InventoryItem,
-                            $InventoryItemsTable, Label>(
-                        currentTable: table,
-                        referencedTable: $$InventoryItemsTableReferences
-                            ._labelsRefsTable(db),
-                        managerFromTypedResult: (p0) =>
-                            $$InventoryItemsTableReferences(db, table, p0)
-                                .labelsRefs,
-                        referencedItemsForCurrentItem: (item,
-                                referencedItems) =>
-                            referencedItems.where((e) => e.itemId == item.id),
-                        typedResults: items)
+                    await $_getPrefetchedData<
+                      InventoryItem,
+                      $InventoryItemsTable,
+                      Label
+                    >(
+                      currentTable: table,
+                      referencedTable: $$InventoryItemsTableReferences
+                          ._labelsRefsTable(db),
+                      managerFromTypedResult: (p0) =>
+                          $$InventoryItemsTableReferences(
+                            db,
+                            table,
+                            p0,
+                          ).labelsRefs,
+                      referencedItemsForCurrentItem: (item, referencedItems) =>
+                          referencedItems.where((e) => e.itemId == item.id),
+                      typedResults: items,
+                    ),
                 ];
               },
             );
           },
-        ));
+        ),
+      );
 }
 
-typedef $$InventoryItemsTableProcessedTableManager = ProcessedTableManager<
-    _$AppDatabase,
-    $InventoryItemsTable,
-    InventoryItem,
-    $$InventoryItemsTableFilterComposer,
-    $$InventoryItemsTableOrderingComposer,
-    $$InventoryItemsTableAnnotationComposer,
-    $$InventoryItemsTableCreateCompanionBuilder,
-    $$InventoryItemsTableUpdateCompanionBuilder,
-    (InventoryItem, $$InventoryItemsTableReferences),
-    InventoryItem,
-    PrefetchHooks Function({bool labelsRefs})>;
-typedef $$LabelsTableCreateCompanionBuilder = LabelsCompanion Function({
-  Value<int> id,
-  required int itemId,
-  Value<String?> key,
-  required String value,
-  required DateTime createdAt,
-});
-typedef $$LabelsTableUpdateCompanionBuilder = LabelsCompanion Function({
-  Value<int> id,
-  Value<int> itemId,
-  Value<String?> key,
-  Value<String> value,
-  Value<DateTime> createdAt,
-});
+typedef $$InventoryItemsTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $InventoryItemsTable,
+      InventoryItem,
+      $$InventoryItemsTableFilterComposer,
+      $$InventoryItemsTableOrderingComposer,
+      $$InventoryItemsTableAnnotationComposer,
+      $$InventoryItemsTableCreateCompanionBuilder,
+      $$InventoryItemsTableUpdateCompanionBuilder,
+      (InventoryItem, $$InventoryItemsTableReferences),
+      InventoryItem,
+      PrefetchHooks Function({bool labelsRefs})
+    >;
+typedef $$LabelsTableCreateCompanionBuilder =
+    LabelsCompanion Function({
+      Value<int> id,
+      required int itemId,
+      Value<String?> key,
+      required String value,
+      required DateTime createdAt,
+    });
+typedef $$LabelsTableUpdateCompanionBuilder =
+    LabelsCompanion Function({
+      Value<int> id,
+      Value<int> itemId,
+      Value<String?> key,
+      Value<String> value,
+      Value<DateTime> createdAt,
+    });
 
 final class $$LabelsTableReferences
     extends BaseReferences<_$AppDatabase, $LabelsTable, Label> {
@@ -981,17 +1378,21 @@ final class $$LabelsTableReferences
 
   static $InventoryItemsTable _itemIdTable(_$AppDatabase db) =>
       db.inventoryItems.createAlias(
-          $_aliasNameGenerator(db.labels.itemId, db.inventoryItems.id));
+        $_aliasNameGenerator(db.labels.itemId, db.inventoryItems.id),
+      );
 
   $$InventoryItemsTableProcessedTableManager get itemId {
     final $_column = $_itemColumn<int>('item_id')!;
 
-    final manager = $$InventoryItemsTableTableManager($_db, $_db.inventoryItems)
-        .filter((f) => f.id.sqlEquals($_column));
+    final manager = $$InventoryItemsTableTableManager(
+      $_db,
+      $_db.inventoryItems,
+    ).filter((f) => f.id.sqlEquals($_column));
     final item = $_typedResult.readTableOrNull(_itemIdTable($_db));
     if (item == null) return manager;
     return ProcessedTableManager(
-        manager.$state.copyWith(prefetchedData: [item]));
+      manager.$state.copyWith(prefetchedData: [item]),
+    );
   }
 }
 
@@ -1005,34 +1406,45 @@ class $$LabelsTableFilterComposer
     super.$removeJoinBuilderFromRootComposer,
   });
   ColumnFilters<int> get id => $composableBuilder(
-      column: $table.id, builder: (column) => ColumnFilters(column));
+    column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
 
   ColumnFilters<String> get key => $composableBuilder(
-      column: $table.key, builder: (column) => ColumnFilters(column));
+    column: $table.key,
+    builder: (column) => ColumnFilters(column),
+  );
 
   ColumnFilters<String> get value => $composableBuilder(
-      column: $table.value, builder: (column) => ColumnFilters(column));
+    column: $table.value,
+    builder: (column) => ColumnFilters(column),
+  );
 
   ColumnFilters<DateTime> get createdAt => $composableBuilder(
-      column: $table.createdAt, builder: (column) => ColumnFilters(column));
+    column: $table.createdAt,
+    builder: (column) => ColumnFilters(column),
+  );
 
   $$InventoryItemsTableFilterComposer get itemId {
     final $$InventoryItemsTableFilterComposer composer = $composerBuilder(
-        composer: this,
-        getCurrentColumn: (t) => t.itemId,
-        referencedTable: $db.inventoryItems,
-        getReferencedColumn: (t) => t.id,
-        builder: (joinBuilder,
-                {$addJoinBuilderToRootComposer,
-                $removeJoinBuilderFromRootComposer}) =>
-            $$InventoryItemsTableFilterComposer(
-              $db: $db,
-              $table: $db.inventoryItems,
-              $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
-              joinBuilder: joinBuilder,
-              $removeJoinBuilderFromRootComposer:
-                  $removeJoinBuilderFromRootComposer,
-            ));
+      composer: this,
+      getCurrentColumn: (t) => t.itemId,
+      referencedTable: $db.inventoryItems,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$InventoryItemsTableFilterComposer(
+            $db: $db,
+            $table: $db.inventoryItems,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
     return composer;
   }
 }
@@ -1047,34 +1459,45 @@ class $$LabelsTableOrderingComposer
     super.$removeJoinBuilderFromRootComposer,
   });
   ColumnOrderings<int> get id => $composableBuilder(
-      column: $table.id, builder: (column) => ColumnOrderings(column));
+    column: $table.id,
+    builder: (column) => ColumnOrderings(column),
+  );
 
   ColumnOrderings<String> get key => $composableBuilder(
-      column: $table.key, builder: (column) => ColumnOrderings(column));
+    column: $table.key,
+    builder: (column) => ColumnOrderings(column),
+  );
 
   ColumnOrderings<String> get value => $composableBuilder(
-      column: $table.value, builder: (column) => ColumnOrderings(column));
+    column: $table.value,
+    builder: (column) => ColumnOrderings(column),
+  );
 
   ColumnOrderings<DateTime> get createdAt => $composableBuilder(
-      column: $table.createdAt, builder: (column) => ColumnOrderings(column));
+    column: $table.createdAt,
+    builder: (column) => ColumnOrderings(column),
+  );
 
   $$InventoryItemsTableOrderingComposer get itemId {
     final $$InventoryItemsTableOrderingComposer composer = $composerBuilder(
-        composer: this,
-        getCurrentColumn: (t) => t.itemId,
-        referencedTable: $db.inventoryItems,
-        getReferencedColumn: (t) => t.id,
-        builder: (joinBuilder,
-                {$addJoinBuilderToRootComposer,
-                $removeJoinBuilderFromRootComposer}) =>
-            $$InventoryItemsTableOrderingComposer(
-              $db: $db,
-              $table: $db.inventoryItems,
-              $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
-              joinBuilder: joinBuilder,
-              $removeJoinBuilderFromRootComposer:
-                  $removeJoinBuilderFromRootComposer,
-            ));
+      composer: this,
+      getCurrentColumn: (t) => t.itemId,
+      referencedTable: $db.inventoryItems,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$InventoryItemsTableOrderingComposer(
+            $db: $db,
+            $table: $db.inventoryItems,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
     return composer;
   }
 }
@@ -1102,39 +1525,46 @@ class $$LabelsTableAnnotationComposer
 
   $$InventoryItemsTableAnnotationComposer get itemId {
     final $$InventoryItemsTableAnnotationComposer composer = $composerBuilder(
-        composer: this,
-        getCurrentColumn: (t) => t.itemId,
-        referencedTable: $db.inventoryItems,
-        getReferencedColumn: (t) => t.id,
-        builder: (joinBuilder,
-                {$addJoinBuilderToRootComposer,
-                $removeJoinBuilderFromRootComposer}) =>
-            $$InventoryItemsTableAnnotationComposer(
-              $db: $db,
-              $table: $db.inventoryItems,
-              $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
-              joinBuilder: joinBuilder,
-              $removeJoinBuilderFromRootComposer:
-                  $removeJoinBuilderFromRootComposer,
-            ));
+      composer: this,
+      getCurrentColumn: (t) => t.itemId,
+      referencedTable: $db.inventoryItems,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$InventoryItemsTableAnnotationComposer(
+            $db: $db,
+            $table: $db.inventoryItems,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
     return composer;
   }
 }
 
-class $$LabelsTableTableManager extends RootTableManager<
-    _$AppDatabase,
-    $LabelsTable,
-    Label,
-    $$LabelsTableFilterComposer,
-    $$LabelsTableOrderingComposer,
-    $$LabelsTableAnnotationComposer,
-    $$LabelsTableCreateCompanionBuilder,
-    $$LabelsTableUpdateCompanionBuilder,
-    (Label, $$LabelsTableReferences),
-    Label,
-    PrefetchHooks Function({bool itemId})> {
+class $$LabelsTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $LabelsTable,
+          Label,
+          $$LabelsTableFilterComposer,
+          $$LabelsTableOrderingComposer,
+          $$LabelsTableAnnotationComposer,
+          $$LabelsTableCreateCompanionBuilder,
+          $$LabelsTableUpdateCompanionBuilder,
+          (Label, $$LabelsTableReferences),
+          Label,
+          PrefetchHooks Function({bool itemId})
+        > {
   $$LabelsTableTableManager(_$AppDatabase db, $LabelsTable table)
-      : super(TableManagerState(
+    : super(
+        TableManagerState(
           db: db,
           table: table,
           createFilteringComposer: () =>
@@ -1143,44 +1573,47 @@ class $$LabelsTableTableManager extends RootTableManager<
               $$LabelsTableOrderingComposer($db: db, $table: table),
           createComputedFieldComposer: () =>
               $$LabelsTableAnnotationComposer($db: db, $table: table),
-          updateCompanionCallback: ({
-            Value<int> id = const Value.absent(),
-            Value<int> itemId = const Value.absent(),
-            Value<String?> key = const Value.absent(),
-            Value<String> value = const Value.absent(),
-            Value<DateTime> createdAt = const Value.absent(),
-          }) =>
-              LabelsCompanion(
-            id: id,
-            itemId: itemId,
-            key: key,
-            value: value,
-            createdAt: createdAt,
-          ),
-          createCompanionCallback: ({
-            Value<int> id = const Value.absent(),
-            required int itemId,
-            Value<String?> key = const Value.absent(),
-            required String value,
-            required DateTime createdAt,
-          }) =>
-              LabelsCompanion.insert(
-            id: id,
-            itemId: itemId,
-            key: key,
-            value: value,
-            createdAt: createdAt,
-          ),
+          updateCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                Value<int> itemId = const Value.absent(),
+                Value<String?> key = const Value.absent(),
+                Value<String> value = const Value.absent(),
+                Value<DateTime> createdAt = const Value.absent(),
+              }) => LabelsCompanion(
+                id: id,
+                itemId: itemId,
+                key: key,
+                value: value,
+                createdAt: createdAt,
+              ),
+          createCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                required int itemId,
+                Value<String?> key = const Value.absent(),
+                required String value,
+                required DateTime createdAt,
+              }) => LabelsCompanion.insert(
+                id: id,
+                itemId: itemId,
+                key: key,
+                value: value,
+                createdAt: createdAt,
+              ),
           withReferenceMapper: (p0) => p0
-              .map((e) =>
-                  (e.readTable(table), $$LabelsTableReferences(db, table, e)))
+              .map(
+                (e) =>
+                    (e.readTable(table), $$LabelsTableReferences(db, table, e)),
+              )
               .toList(),
           prefetchHooksCallback: ({itemId = false}) {
             return PrefetchHooks(
               db: db,
               explicitlyWatchedTables: [],
-              addJoins: <
-                  T extends TableManagerState<
+              addJoins:
+                  <
+                    T extends TableManagerState<
                       dynamic,
                       dynamic,
                       dynamic,
@@ -1191,39 +1624,197 @@ class $$LabelsTableTableManager extends RootTableManager<
                       dynamic,
                       dynamic,
                       dynamic,
-                      dynamic>>(state) {
-                if (itemId) {
-                  state = state.withJoin(
-                    currentTable: table,
-                    currentColumn: table.itemId,
-                    referencedTable: $$LabelsTableReferences._itemIdTable(db),
-                    referencedColumn:
-                        $$LabelsTableReferences._itemIdTable(db).id,
-                  ) as T;
-                }
+                      dynamic
+                    >
+                  >(state) {
+                    if (itemId) {
+                      state =
+                          state.withJoin(
+                                currentTable: table,
+                                currentColumn: table.itemId,
+                                referencedTable: $$LabelsTableReferences
+                                    ._itemIdTable(db),
+                                referencedColumn: $$LabelsTableReferences
+                                    ._itemIdTable(db)
+                                    .id,
+                              )
+                              as T;
+                    }
 
-                return state;
-              },
+                    return state;
+                  },
               getPrefetchedDataCallback: (items) async {
                 return [];
               },
             );
           },
-        ));
+        ),
+      );
 }
 
-typedef $$LabelsTableProcessedTableManager = ProcessedTableManager<
-    _$AppDatabase,
-    $LabelsTable,
-    Label,
-    $$LabelsTableFilterComposer,
-    $$LabelsTableOrderingComposer,
-    $$LabelsTableAnnotationComposer,
-    $$LabelsTableCreateCompanionBuilder,
-    $$LabelsTableUpdateCompanionBuilder,
-    (Label, $$LabelsTableReferences),
-    Label,
-    PrefetchHooks Function({bool itemId})>;
+typedef $$LabelsTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $LabelsTable,
+      Label,
+      $$LabelsTableFilterComposer,
+      $$LabelsTableOrderingComposer,
+      $$LabelsTableAnnotationComposer,
+      $$LabelsTableCreateCompanionBuilder,
+      $$LabelsTableUpdateCompanionBuilder,
+      (Label, $$LabelsTableReferences),
+      Label,
+      PrefetchHooks Function({bool itemId})
+    >;
+typedef $$LabelSearchFtsTableCreateCompanionBuilder =
+    LabelSearchFtsCompanion Function({
+      required String value,
+      required int labelId,
+      Value<int> rowid,
+    });
+typedef $$LabelSearchFtsTableUpdateCompanionBuilder =
+    LabelSearchFtsCompanion Function({
+      Value<String> value,
+      Value<int> labelId,
+      Value<int> rowid,
+    });
+
+class $$LabelSearchFtsTableFilterComposer
+    extends Composer<_$AppDatabase, $LabelSearchFtsTable> {
+  $$LabelSearchFtsTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<String> get value => $composableBuilder(
+    column: $table.value,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get labelId => $composableBuilder(
+    column: $table.labelId,
+    builder: (column) => ColumnFilters(column),
+  );
+}
+
+class $$LabelSearchFtsTableOrderingComposer
+    extends Composer<_$AppDatabase, $LabelSearchFtsTable> {
+  $$LabelSearchFtsTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<String> get value => $composableBuilder(
+    column: $table.value,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get labelId => $composableBuilder(
+    column: $table.labelId,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$LabelSearchFtsTableAnnotationComposer
+    extends Composer<_$AppDatabase, $LabelSearchFtsTable> {
+  $$LabelSearchFtsTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<String> get value =>
+      $composableBuilder(column: $table.value, builder: (column) => column);
+
+  GeneratedColumn<int> get labelId =>
+      $composableBuilder(column: $table.labelId, builder: (column) => column);
+}
+
+class $$LabelSearchFtsTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $LabelSearchFtsTable,
+          LabelSearchEntry,
+          $$LabelSearchFtsTableFilterComposer,
+          $$LabelSearchFtsTableOrderingComposer,
+          $$LabelSearchFtsTableAnnotationComposer,
+          $$LabelSearchFtsTableCreateCompanionBuilder,
+          $$LabelSearchFtsTableUpdateCompanionBuilder,
+          (
+            LabelSearchEntry,
+            BaseReferences<
+              _$AppDatabase,
+              $LabelSearchFtsTable,
+              LabelSearchEntry
+            >,
+          ),
+          LabelSearchEntry,
+          PrefetchHooks Function()
+        > {
+  $$LabelSearchFtsTableTableManager(
+    _$AppDatabase db,
+    $LabelSearchFtsTable table,
+  ) : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$LabelSearchFtsTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$LabelSearchFtsTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$LabelSearchFtsTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback:
+              ({
+                Value<String> value = const Value.absent(),
+                Value<int> labelId = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => LabelSearchFtsCompanion(
+                value: value,
+                labelId: labelId,
+                rowid: rowid,
+              ),
+          createCompanionCallback:
+              ({
+                required String value,
+                required int labelId,
+                Value<int> rowid = const Value.absent(),
+              }) => LabelSearchFtsCompanion.insert(
+                value: value,
+                labelId: labelId,
+                rowid: rowid,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $$LabelSearchFtsTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $LabelSearchFtsTable,
+      LabelSearchEntry,
+      $$LabelSearchFtsTableFilterComposer,
+      $$LabelSearchFtsTableOrderingComposer,
+      $$LabelSearchFtsTableAnnotationComposer,
+      $$LabelSearchFtsTableCreateCompanionBuilder,
+      $$LabelSearchFtsTableUpdateCompanionBuilder,
+      (
+        LabelSearchEntry,
+        BaseReferences<_$AppDatabase, $LabelSearchFtsTable, LabelSearchEntry>,
+      ),
+      LabelSearchEntry,
+      PrefetchHooks Function()
+    >;
 
 class $AppDatabaseManager {
   final _$AppDatabase _db;
@@ -1232,4 +1823,6 @@ class $AppDatabaseManager {
       $$InventoryItemsTableTableManager(_db, _db.inventoryItems);
   $$LabelsTableTableManager get labels =>
       $$LabelsTableTableManager(_db, _db.labels);
+  $$LabelSearchFtsTableTableManager get labelSearchFts =>
+      $$LabelSearchFtsTableTableManager(_db, _db.labelSearchFts);
 }

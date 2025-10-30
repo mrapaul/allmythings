@@ -5,6 +5,7 @@ import 'package:image_picker/image_picker.dart';
 import 'package:permission_handler/permission_handler.dart';
 import '../../application/providers/detection_providers.dart';
 import '../../application/providers/inventory_providers.dart';
+import '../detection/detection_results_screen.dart';
 import '../theme/app_theme.dart';
 
 /// Instagram/TikTok-inspired camera screen
@@ -145,24 +146,12 @@ class _CameraScreenState extends ConsumerState<CameraScreen> {
         initial: () {},
         loading: () {},
         success: (response) {
-          // Refresh inventory
-          ref.invalidate(inventoryItemsProvider);
-
-          // Show success and go back
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(
-                '${response.detections.length} item(s) added',
-                style: const TextStyle(color: Colors.white),
-              ),
-              backgroundColor: AppTheme.accentGreen,
-              behavior: SnackBarBehavior.floating,
-              duration: const Duration(seconds: 2),
+          if (!mounted) return;
+          Navigator.of(context).pushReplacement(
+            MaterialPageRoute(
+              builder: (context) => DetectionResultsScreen(detectionResponse: response),
             ),
           );
-
-          // Navigate back to home
-          Navigator.pop(context);
         },
         error: (failure) {
           ScaffoldMessenger.of(context).showSnackBar(
@@ -172,6 +161,8 @@ class _CameraScreenState extends ConsumerState<CameraScreen> {
               behavior: SnackBarBehavior.floating,
             ),
           );
+          if (!mounted) return;
+          Navigator.pop(context); // Pop camera screen on error
         },
       );
     } finally {

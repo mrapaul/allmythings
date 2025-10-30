@@ -1,4 +1,5 @@
 import 'package:freezed_annotation/freezed_annotation.dart';
+import 'dart:convert'; // Added for jsonEncode
 import 'bounding_box.dart';
 import 'ensemble_details.dart';
 import 'alternative_label.dart';
@@ -31,4 +32,7 @@ class Detection with _$Detection {
 
   factory Detection.fromJson(Map<String, dynamic> json) =>
       _$DetectionFromJson(json);
+
+  // Helper to convert to JSON string
+  String toJsonString() => jsonEncode(toJson());
 }

@@ -1,141 +1,168 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../../application/providers/detection_providers.dart';
+import 'dart:io';
 import '../../application/providers/inventory_providers.dart';
-import '../../application/state/detection_state.dart';
-import '../common/loading_indicator.dart';
-import '../common/error_view.dart';
+import '../../domain/models/detection_response.dart';
+import '../theme/app_theme.dart';
+import '../common/custom_app_bar.dart'; // Added import
 
-/// Screen showing detection results
 class DetectionResultsScreen extends ConsumerWidget {
-  const DetectionResultsScreen({super.key});
+  final DetectionResponse detectionResponse;
+
+  const DetectionResultsScreen({super.key, required this.detectionResponse});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final detectionState = ref.watch(detectionNotifierProvider);
-
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Detection Results'),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.close),
-            onPressed: () {
-              ref.read(detectionNotifierProvider.notifier).reset();
-              Navigator.of(context).pop();
-            },
-          ),
-        ],
-      ),
-      body: detectionState.when(
-        initial: () => const Center(
-          child: Text('No detection data'),
+      appBar: CustomAppBar(
+        title: 'Detection Results',
+        leading: IconButton(
+          icon: const Icon(Icons.close),
+          onPressed: () => Navigator.pop(context), // Go back without saving
         ),
-        loading: () => const LoadingIndicator(),
-        success: (response) {
-          if (response.detections.isEmpty) {
-            return ErrorView(
-              message: 'No objects detected in the photo.\n\nTry:\n'
-                  '• Better lighting\n'
-                  '• Clearer focus\n'
-                  '• Different angle',
-              onRetry: () => Navigator.of(context).pop(),
-            );
-          }
-
-          return ListView(
+      ), // Replaced AppBar
+      body: Column(
+        children: [
+          // Detection info header
+          Container(
+            width: double.infinity,
             padding: const EdgeInsets.all(16),
-            children: [
-              // Summary card
-              Card(
-                child: Padding(
-                  padding: const EdgeInsets.all(16),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Found ${response.detections.length} object(s)',
-                        style: Theme.of(context).textTheme.titleLarge,
-                      ),
-                      const SizedBox(height: 8),
-                      Text(
-                        'Ensemble Mode: ${response.ensembleMode}',
-                        style: Theme.of(context).textTheme.bodyMedium,
-                      ),
-                      Text(
-                        'Processing Time: ${response.processingTimeMs}ms',
-                        style: Theme.of(context).textTheme.bodyMedium,
-                      ),
-                      Text(
-                        'Providers Used: ${response.ensembleMetrics.providersUsed}',
-                        style: Theme.of(context).textTheme.bodyMedium,
-                      ),
-                      Text(
-                        'Average Confidence: ${(response.ensembleMetrics.averageConfidence * 100).toStringAsFixed(1)}%',
-                        style: Theme.of(context).textTheme.bodyMedium,
-                      ),
-                    ],
+            decoration: BoxDecoration(
+              color: AppTheme.surfaceLight,
+              border: Border(
+                bottom: BorderSide(color: AppTheme.borderLight),
+              ),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Detection Complete',
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.w600,
+                    color: AppTheme.textPrimary,
                   ),
                 ),
-              ),
+                const SizedBox(height: 4),
+                Text(
+                  'Processing time: ${detectionResponse.processingTimeMs}ms',
+                  style: TextStyle(
+                    fontSize: 14,
+                    color: AppTheme.textSecondary,
+                  ),
+                ),
+                Text(
+                  'Ensemble mode: ${detectionResponse.ensembleMode}',
+                  style: TextStyle(
+                    fontSize: 14,
+                    color: AppTheme.textSecondary,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          Expanded(
+            flex: 3,
+            child: Padding(
+              padding: const EdgeInsets.all(16.0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Detected Objects (${detectionResponse.detections.length})',
+                    style: const TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  Expanded(
+                    child: ListView.builder(
+                      itemCount: detectionResponse.detections.length,
+                      itemBuilder: (context, index) {
+                        final detection = detectionResponse.detections[index];
+                        return Card(
+                          margin: const EdgeInsets.only(bottom: 8),
+                          child: Padding(
+                            padding: const EdgeInsets.all(12.0),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  detection.label,
+                                  style: const TextStyle(
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                                const SizedBox(height: 4),
+                                Text(
+                                  'Confidence: ${(detection.confidence * 100).toStringAsFixed(1)}%',
+                                  style: TextStyle(
+                                    fontSize: 14,
+                                    color: Colors.grey[600],
+                                  ),
+                                ),
+                                Text(
+                                  'Providers: ${detectionResponse.ensembleMetrics.providersUsed}',
+                                  style: TextStyle(
+                                    fontSize: 14,
+                                    color: Colors.grey[600],
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        );
+                      },
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton(
+                      onPressed: () async {
+                        // Save items to inventory
+                        // Note: Items are already saved by the detection process
+                        // This is just for UI feedback
 
-              const SizedBox(height: 16),
+                        // Invalidate stats provider to update profile screen
+                        ref.invalidate(inventoryStatsProvider);
 
-              // Detection list
-              ...response.detections.map((detection) {
-                return Card(
-                  margin: const EdgeInsets.only(bottom: 12),
-                  child: ListTile(
-                    leading: CircleAvatar(
-                      backgroundColor: Colors.green,
-                      child: Text(
-                        '${(detection.confidence * 100).toStringAsFixed(0)}%',
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 12,
-                          fontWeight: FontWeight.bold,
+                        if (!context.mounted) return;
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text(
+                              '${detectionResponse.detections.length} item(s) added',
+                              style: const TextStyle(color: Colors.white),
+                            ),
+                            backgroundColor: AppTheme.accentGreen,
+                            behavior: SnackBarBehavior.floating,
+                            duration: const Duration(seconds: 2),
+                          ),
+                        );
+                        // Navigate back to home (pop twice: results screen, then camera screen)
+                        Navigator.of(context).popUntil((route) => route.isFirst);
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppTheme.primaryBlack,
+                        padding: const EdgeInsets.symmetric(vertical: 16),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(8),
                         ),
                       ),
+                      child: const Text(
+                        'Save Items',
+                        style: TextStyle(fontSize: 18, color: Colors.white),
+                      ),
                     ),
-                    title: Text(
-                      detection.label,
-                      style: const TextStyle(fontWeight: FontWeight.bold),
-                    ),
-                    subtitle: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'Provider Agreement: ${detection.ensembleDetails.providerAgreement}/4',
-                        ),
-                        Text(
-                          'Consensus: ${detection.ensembleDetails.labelConsensus}',
-                        ),
-                      ],
-                    ),
-                    trailing: const Icon(Icons.check_circle, color: Colors.green),
                   ),
-                );
-              }),
-
-              const SizedBox(height: 24),
-
-              // Action buttons
-              ElevatedButton(
-                onPressed: () {
-                  ref.read(detectionNotifierProvider.notifier).reset();
-                  ref.invalidate(inventoryItemsProvider);
-                  // Pop back to camera, then pop back to main navigation (home)
-                  Navigator.of(context).popUntil((route) => route.isFirst);
-                },
-                child: const Text('Done'),
+                ],
               ),
-            ],
-          );
-        },
-        error: (failure) => ErrorView(
-          message: failure.message,
-          onRetry: () => Navigator.of(context).pop(),
-        ),
+            ),
+          ),
+        ],
       ),
     );
   }

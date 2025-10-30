@@ -1,6 +1,8 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../data/database/app_database.dart';
 import '../../data/repositories/inventory_repository.dart';
+import '../../domain/models/detection_response.dart';
+import '../../domain/models/detection.dart';
 import 'database_provider.dart';
 
 // Export InventoryStats from repository
@@ -12,27 +14,52 @@ final inventoryRepositoryProvider = Provider<InventoryRepository>((ref) {
   return InventoryRepository(database);
 });
 
-/// Provider for all inventory items
-final inventoryItemsProvider = FutureProvider<List<InventoryItem>>((ref) async {
-  try {
+/// Notifier for managing the list of inventory items
+class InventoryListNotifier extends AsyncNotifier<List<InventoryItem>> {
+  @override
+  Future<List<InventoryItem>> build() async {
     final repository = ref.watch(inventoryRepositoryProvider);
     final result = await repository.getAllItems();
 
     return result.fold(
       (failure) {
-        // On first run, database might not be initialized yet
-        // Return empty list instead of throwing
         print('Inventory load error: ${failure.message}');
-        return <InventoryItem>[];
+        return [];
       },
       (items) => items,
     );
-  } catch (e) {
-    // Catch any initialization errors and return empty list
-    print('Inventory provider error: $e');
-    return <InventoryItem>[];
   }
-});
+
+  Future<void> addItemFromDetection({
+    required String photoPath,
+    required String thumbnailPath,
+    required Detection detection,
+  }) async {
+    state = const AsyncValue.loading();
+    final repository = ref.read(inventoryRepositoryProvider);
+
+    final result = await repository.createItem(
+      photoPath: photoPath,
+      thumbnailPath: thumbnailPath,
+      detection: detection,
+    );
+
+    state = await AsyncValue.guard(() async {
+      return result.fold(
+        (failure) => throw Exception(failure.message),
+        (itemId) async {
+          // After adding, refresh the list from the database
+          return await build();
+        },
+      );
+    });
+  }
+}
+
+/// Provider for all inventory items
+final inventoryItemsProvider = AsyncNotifierProvider<InventoryListNotifier, List<InventoryItem>>(
+  InventoryListNotifier.new,
+);
 
 /// Provider for a single item by ID
 final inventoryItemProvider = FutureProvider.family<InventoryItem?, int>((ref, itemId) async {
@@ -81,13 +108,13 @@ final inventoryStatsProvider = FutureProvider<InventoryStats>((ref) async {
       (failure) {
         // Return default stats on error
         print('Stats load error: ${failure.message}');
-        return InventoryStats(totalItems: 0, totalLabels: 0, lastCaptured: null);
+        return InventoryStats(totalItems: 0, totalLabels: 0, totalCategories: 0, lastCaptured: null);
       },
       (stats) => stats,
     );
   } catch (e) {
     // Return default stats on any error
     print('Stats provider error: $e');
-    return InventoryStats(totalItems: 0, totalLabels: 0, lastCaptured: null);
+    return InventoryStats(totalItems: 0, totalLabels: 0, totalCategories: 0, lastCaptured: null);
   }
 });

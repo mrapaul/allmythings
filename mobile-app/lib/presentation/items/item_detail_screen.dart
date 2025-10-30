@@ -5,6 +5,8 @@ import 'dart:convert';
 import '../../application/providers/inventory_providers.dart';
 import '../../domain/models/detection.dart';
 import '../common/loading_indicator.dart';
+import '../common/custom_app_bar.dart'; // Added import
+import '../theme/app_theme.dart';
 import 'edit_labels_screen.dart';
 
 /// Instagram-style item detail screen
@@ -20,10 +22,13 @@ class ItemDetailScreen extends ConsumerWidget {
 
     return Scaffold(
       backgroundColor: Colors.black,
-      appBar: AppBar(
+      appBar: CustomAppBar(
         backgroundColor: Colors.black,
         foregroundColor: Colors.white,
-        elevation: 0,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back_ios),
+          onPressed: () => Navigator.pop(context),
+        ),
         actions: [
           IconButton(
             icon: const Icon(Icons.more_horiz),
@@ -32,7 +37,7 @@ class ItemDetailScreen extends ConsumerWidget {
             },
           ),
         ],
-      ),
+      ), // Replaced AppBar
       body: itemAsync.when(
         data: (item) {
           if (item == null) {
@@ -114,12 +119,21 @@ class ItemDetailScreen extends ConsumerWidget {
                             runSpacing: 8,
                             children: labels.map((label) {
                               return Chip(
+                                backgroundColor: AppTheme.surfaceLight,
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(8),
+                                  side: BorderSide(color: AppTheme.textTertiary.withOpacity(0.2)),
+                                ),
                                 label: Text(
                                   label.key != null
                                       ? '${label.key}: ${label.value}'
                                       : label.value,
+                                  style: const TextStyle(
+                                    color: AppTheme.textPrimary,
+                                    fontWeight: FontWeight.w500,
+                                  ),
                                 ),
-                                backgroundColor: Colors.grey[100],
+                                visualDensity: VisualDensity.compact,
                               );
                             }).toList(),
                           );
@@ -153,7 +167,7 @@ class ItemDetailScreen extends ConsumerWidget {
 
   Widget _buildDetectionInfo(String detectionDataJson) {
     try {
-      final detectionData = jsonDecode(detectionDataJson);
+      final detectionData = jsonDecode(detectionDataJson) as Map<String, dynamic>;
       final detection = Detection.fromJson(detectionData);
 
       return Column(

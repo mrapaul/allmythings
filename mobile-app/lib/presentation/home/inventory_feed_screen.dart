@@ -7,6 +7,7 @@ import '../../data/database/app_database.dart';
 import '../../domain/models/detection.dart';
 import '../common/loading_indicator.dart';
 import '../common/error_view.dart';
+import '../common/custom_app_bar.dart'; // Added import
 import '../items/item_detail_screen.dart';
 import '../theme/app_theme.dart';
 
@@ -19,11 +20,41 @@ class InventoryFeedScreen extends ConsumerWidget {
     final inventoryState = ref.watch(inventoryItemsProvider);
 
     return Scaffold(
+      appBar: const CustomAppBar(title: 'Home Inventory'), // Added CustomAppBar
       body: inventoryState.when(
         data: (items) {
           // Always show grid, even when empty
           if (items.isEmpty) {
-            return const SizedBox.shrink();
+            return Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(
+                    Icons.camera_alt_rounded,
+                    size: 80,
+                    color: AppTheme.textTertiary.withOpacity(0.5),
+                  ),
+                  const SizedBox(height: 16),
+                  Text(
+                    'No Items Yet',
+                    style: TextStyle(
+                      fontSize: 22,
+                      fontWeight: FontWeight.bold,
+                      color: AppTheme.textPrimary.withOpacity(0.7),
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    'Tap the camera icon to add your first item!',
+                    style: TextStyle(
+                      fontSize: 16,
+                      color: AppTheme.textSecondary.withOpacity(0.7),
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                ],
+              ),
+            );
           }
 
           return RefreshIndicator(
@@ -42,7 +73,7 @@ class InventoryFeedScreen extends ConsumerWidget {
                   ),
                   sliver: SliverGrid(
                     gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                      crossAxisCount: 2,
+                      crossAxisCount: 3,
                       crossAxisSpacing: 12,
                       mainAxisSpacing: 12,
                       childAspectRatio: 0.85,
@@ -247,7 +278,7 @@ class _ModernInventoryCardState extends State<_ModernInventoryCard>
     // Extract label from detection data
     String labelText = 'Unknown';
     try {
-      final detectionJson = jsonDecode(widget.item.detectionData);
+      final detectionJson = jsonDecode(widget.item.detectionData) as Map<String, dynamic>;
       final detection = Detection.fromJson(detectionJson);
       labelText = detection.label;
     } catch (e) {

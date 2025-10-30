@@ -49,6 +49,41 @@ class InventoryRepository {
     }
   }
 
+  /// Add multiple inventory items
+  Future<Either<Failure, List<int>>> addItems(List<InventoryItem> items) async {
+    try {
+      final List<int> itemIds = [];
+      for (final item in items) {
+        final itemId = await _database.into(_database.inventoryItems).insert(
+          InventoryItemsCompanion.insert(
+            photoPath: item.photoPath,
+            thumbnailPath: item.thumbnailPath,
+            detectionData: item.detectionData,
+            createdAt: item.createdAt,
+            updatedAt: item.updatedAt,
+          ),
+        );
+        itemIds.add(itemId);
+
+        // Create initial label from detection data
+        // Assuming detectionData is a JSON string of a Detection object
+        final detection = Detection.fromJson(jsonDecode(item.detectionData) as Map<String, dynamic>);
+        await _database.into(_database.labels).insert(
+          LabelsCompanion.insert(
+            itemId: itemId,
+            value: detection.label,
+            createdAt: DateTime.now(),
+          ),
+        );
+      }
+      return right(itemIds);
+    } catch (e) {
+      return left(
+        Failure.storage(message: 'Failed to add inventory items: $e'),
+      );
+    }
+  }
+
   /// Get all inventory items
   Future<Either<Failure, List<InventoryItem>>> getAllItems() async {
     try {
@@ -110,29 +145,40 @@ class InventoryRepository {
     }
   }
 
-  /// Search items using LIKE query on labels
+  /// Search items using FTS5 query on labels
   Future<Either<Failure, List<InventoryItem>>> searchItems(String query) async {
     try {
       if (query.trim().isEmpty) {
         return getAllItems();
       }
 
-      // Search labels using LIKE
-      final searchPattern = '%${query.trim()}%';
+      // Search labels using FTS5
+      final ftsResults = await (_database.select(_database.labelSearchFts)
+            ..where((tbl) => (tbl.value as TextColumn).match(query)))
+          .get();
+
+      if (ftsResults.isEmpty) {
+        return right([]);
+      }
+
+      // Get unique label IDs from FTS results
+      final labelIds = ftsResults.map((r) => r.labelId).toSet();
+
+      // Get labels from label IDs
       final labels = await (_database.select(_database.labels)
-            ..where((t) => t.value.like(searchPattern)))
+            ..where((tbl) => tbl.id.isIn(labelIds)))
           .get();
 
       if (labels.isEmpty) {
         return right([]);
       }
 
-      // Get unique item IDs
+      // Get unique item IDs from labels
       final itemIds = labels.map((l) => l.itemId).toSet().toList();
 
       // Get items
       final items = await (_database.select(_database.inventoryItems)
-            ..where((t) => t.id.isIn(itemIds))
+            ..where((tbl) => tbl.id.isIn(itemIds))
             ..orderBy([(t) => OrderingTerm.desc(t.createdAt)]))
           .get();
 
@@ -172,7 +218,7 @@ class InventoryRepository {
   Future<Either<Failure, void>> updateLabel({
     required int labelId,
     String? key,
-    String? value,
+    required String? value,
   }) async {
     try {
       await (_database.update(_database.labels)
@@ -225,10 +271,17 @@ class InventoryRepository {
             ..limit(1))
           .getSingleOrNull();
 
+      // Calculate estimated categories: count unique labels where key is null or 'Category'
+      final categoryLabels = await (_database.select(_database.labels)
+            ..where((t) => t.key.isNull() | t.key.equals('Category')))
+          .get();
+      final totalCategories = categoryLabels.map((l) => l.value).toSet().length;
+
       return right(
         InventoryStats(
           totalItems: itemCount,
           totalLabels: labelCount,
+          totalCategories: totalCategories,
           lastCaptured: lastItem?.createdAt,
         ),
       );
@@ -244,11 +297,13 @@ class InventoryRepository {
 class InventoryStats {
   final int totalItems;
   final int totalLabels;
+  final int totalCategories;
   final DateTime? lastCaptured;
 
   InventoryStats({
     required this.totalItems,
     required this.totalLabels,
+    required this.totalCategories,
     this.lastCaptured,
   });
 }

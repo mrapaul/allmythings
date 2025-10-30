@@ -5,13 +5,13 @@ import 'package:path_provider/path_provider.dart';
 import 'package:path/path.dart' as p;
 import 'tables/inventory_items.dart';
 import 'tables/labels.dart';
-// import 'tables/label_search_fts.dart'; // Temporarily disabled
+import 'tables/label_search_fts.dart';
 
 part 'app_database.g.dart';
 
 /// Main database class for the Visual Home Inventory Manager
 @DriftDatabase(
-  tables: [InventoryItems, Labels], // Removed LabelSearchFts temporarily
+  tables: [InventoryItems, Labels, LabelSearchFts],
 )
 class AppDatabase extends _$AppDatabase {
   AppDatabase() : super(_openConnection());
@@ -23,7 +23,7 @@ class AppDatabase extends _$AppDatabase {
   MigrationStrategy get migration => MigrationStrategy(
         onCreate: (Migrator m) async {
           await m.createAll();
-          // await _createFtsTriggers(); // Disabled - no FTS for now
+          await _createFtsTriggers();
         },
         onUpgrade: (Migrator m, int from, int to) async {
           // Future migrations will go here

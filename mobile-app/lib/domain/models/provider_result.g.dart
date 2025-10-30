@@ -6,8 +6,8 @@ part of 'provider_result.dart';
 // JsonSerializableGenerator
 // **************************************************************************
 
-_$ProviderResultImpl _$$ProviderResultImplFromJson(Map<String, dynamic> json) =>
-    _$ProviderResultImpl(
+_ProviderResult _$ProviderResultFromJson(Map<String, dynamic> json) =>
+    _ProviderResult(
       provider: $enumDecode(_$VisionProviderEnumMap, json['provider']),
       success: json['success'] as bool,
       processingTimeMs: (json['processingTimeMs'] as num).toInt(),
@@ -17,8 +17,7 @@ _$ProviderResultImpl _$$ProviderResultImplFromJson(Map<String, dynamic> json) =>
       error: json['error'] as String?,
     );
 
-Map<String, dynamic> _$$ProviderResultImplToJson(
-        _$ProviderResultImpl instance) =>
+Map<String, dynamic> _$ProviderResultToJson(_ProviderResult instance) =>
     <String, dynamic>{
       'provider': _$VisionProviderEnumMap[instance.provider]!,
       'success': instance.success,

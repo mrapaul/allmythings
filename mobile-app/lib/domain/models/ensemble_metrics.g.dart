@@ -6,16 +6,14 @@ part of 'ensemble_metrics.dart';
 // JsonSerializableGenerator
 // **************************************************************************
 
-_$EnsembleMetricsImpl _$$EnsembleMetricsImplFromJson(
-        Map<String, dynamic> json) =>
-    _$EnsembleMetricsImpl(
+_EnsembleMetrics _$EnsembleMetricsFromJson(Map<String, dynamic> json) =>
+    _EnsembleMetrics(
       providersUsed: (json['providersUsed'] as num).toInt(),
       averageConfidence: (json['averageConfidence'] as num).toDouble(),
       consensusRate: (json['consensusRate'] as num).toDouble(),
     );
 
-Map<String, dynamic> _$$EnsembleMetricsImplToJson(
-        _$EnsembleMetricsImpl instance) =>
+Map<String, dynamic> _$EnsembleMetricsToJson(_EnsembleMetrics instance) =>
     <String, dynamic>{
       'providersUsed': instance.providersUsed,
       'averageConfidence': instance.averageConfidence,

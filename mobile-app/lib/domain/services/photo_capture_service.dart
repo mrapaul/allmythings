@@ -3,6 +3,7 @@ import 'package:camera/camera.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:path/path.dart' as p;
 import 'package:fpdart/fpdart.dart';
+import 'package:permission_handler/permission_handler.dart';
 import '../../core/errors/failures.dart';
 
 /// Service for capturing photos with camera
@@ -79,5 +80,25 @@ class PhotoCaptureService {
   Future<void> dispose() async {
     await _controller?.dispose();
     _controller = null;
+  }
+
+  /// Check if camera permission is granted
+  Future<bool> hasPermission() async {
+    final status = await Permission.camera.status;
+    return status == PermissionStatus.granted;
+  }
+
+  /// Request camera permission
+  Future<bool> requestPermission() async {
+    final status = await Permission.camera.request();
+    return status == PermissionStatus.granted;
+  }
+
+  /// Set flash mode
+  Future<void> setFlashMode(FlashMode mode) async {
+    if (_controller == null || !_controller!.value.isInitialized) {
+      return;
+    }
+    await _controller!.setFlashMode(mode);
   }
 }

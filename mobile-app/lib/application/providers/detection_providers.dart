@@ -1,12 +1,11 @@
 import 'dart:io';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../data/repositories/detection_repository.dart';
-import '../../data/repositories/inventory_repository.dart';
 import '../../data/remote/api_client.dart';
 import '../../domain/services/photo_capture_service.dart';
 import '../../domain/services/image_processing_service.dart';
 import '../state/detection_state.dart';
-import 'database_provider.dart';
+import 'inventory_providers.dart';
 
 /// Provider for detection repository
 final detectionRepositoryProvider = Provider<DetectionRepository>((ref) {
@@ -14,11 +13,7 @@ final detectionRepositoryProvider = Provider<DetectionRepository>((ref) {
   return DetectionRepository(apiClient);
 });
 
-/// Provider for inventory repository
-final inventoryRepositoryProvider = Provider<InventoryRepository>((ref) {
-  final database = ref.watch(databaseProvider);
-  return InventoryRepository(database);
-});
+
 
 /// Provider for photo capture service
 final photoCaptureServiceProvider = Provider<PhotoCaptureService>((ref) {

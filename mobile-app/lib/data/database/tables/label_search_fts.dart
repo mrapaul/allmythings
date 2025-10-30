@@ -2,7 +2,7 @@ import 'package:drift/drift.dart';
 
 /// Virtual table for full-text search on label values using SQLite FTS5
 @DataClassName('LabelSearchEntry')
-class LabelSearchFts extends VirtualTable {
+class LabelSearchFts extends Table with VirtualTableMixin {
   /// Label value indexed for full-text search
   TextColumn get value => text()();
 

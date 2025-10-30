@@ -26,57 +26,68 @@ class _MainNavigationState extends ConsumerState<MainNavigation> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      extendBody: true,
       body: _screens[_currentIndex],
-      bottomNavigationBar: BottomNavigationBar(
-        currentIndex: _currentIndex,
-        onTap: (index) async {
-          // If camera button (index 1), open full-screen camera
-          if (index == 1) {
-            await Navigator.of(context).push(
-              MaterialPageRoute(
-                builder: (context) => const CameraScreen(),
-                fullscreenDialog: true,
-              ),
-            );
-            return;
-          }
-
-          // Otherwise navigate normally (adjust index for camera button)
-          setState(() {
-            _currentIndex = index > 1 ? index - 1 : index;
-          });
+      floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
+      floatingActionButton: FloatingActionButton(
+        onPressed: () async {
+          await Navigator.of(context).push(
+            MaterialPageRoute(
+              builder: (context) => const CameraScreen(),
+              fullscreenDialog: true,
+            ),
+          );
         },
-        type: BottomNavigationBarType.fixed,
-        backgroundColor: Colors.white,
-        selectedItemColor: AppTheme.primaryBlack,
-        unselectedItemColor: AppTheme.textSecondary,
-        showSelectedLabels: false,
-        showUnselectedLabels: false,
+        backgroundColor: AppTheme.primaryBlack,
+        shape: const CircleBorder(),
+        child: const Icon(Icons.add, color: Colors.white, size: 32),
+      ),
+      bottomNavigationBar: BottomAppBar(
+        shape: const CircularNotchedRectangle(),
+        notchMargin: 8.0,
+        color: Colors.white,
         elevation: 0,
-        items: const [
-          BottomNavigationBarItem(
-            icon: Icon(Icons.home_outlined),
-            activeIcon: Icon(Icons.home),
-            label: 'Home',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.add_circle_outline, size: 32),
-            activeIcon: Icon(Icons.add_circle, size: 32),
-            label: 'Camera',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.search_outlined),
-            activeIcon: Icon(Icons.search),
-            label: 'Search',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.person_outline),
-            activeIcon: Icon(Icons.person),
-            label: 'Profile',
-          ),
-        ],
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceAround,
+          children: <Widget>[
+            IconButton(
+              icon: Icon(
+                _currentIndex == 0 ? Icons.home : Icons.home_outlined,
+                color: _currentIndex == 0 ? AppTheme.primaryBlack : AppTheme.textSecondary,
+              ),
+              onPressed: () {
+                setState(() {
+                  _currentIndex = 0;
+                });
+              },
+            ),
+            IconButton(
+              icon: Icon(
+                _currentIndex == 1 ? Icons.search : Icons.search_outlined,
+                color: _currentIndex == 1 ? AppTheme.primaryBlack : AppTheme.textSecondary,
+              ),
+              onPressed: () {
+                setState(() {
+                  _currentIndex = 1;
+                });
+              },
+            ),
+            // Spacer for the FAB
+            const SizedBox(width: 48),
+            IconButton(
+              icon: Icon(
+                _currentIndex == 2 ? Icons.person : Icons.person_outline,
+                color: _currentIndex == 2 ? AppTheme.primaryBlack : AppTheme.textSecondary,
+              ),
+              onPressed: () {
+                setState(() {
+                  _currentIndex = 2;
+                });
+              },
+            ),
+          ],
+        ),
       ),
     );
   }
-
 }

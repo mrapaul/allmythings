@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../application/providers/inventory_providers.dart';
 import '../common/loading_indicator.dart';
+import '../common/custom_app_bar.dart'; // Added import
+import 'settings_screen.dart'; // Added import
 
 /// Profile screen with stats and settings
 class ProfileScreen extends ConsumerWidget {
@@ -12,9 +14,7 @@ class ProfileScreen extends ConsumerWidget {
     final statsAsync = ref.watch(inventoryStatsProvider);
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Profile'),
-      ),
+      appBar: const CustomAppBar(title: 'Profile'), // Replaced AppBar
       body: statsAsync.when(
         data: (stats) => SingleChildScrollView(
           child: Column(
@@ -64,7 +64,7 @@ class ProfileScreen extends ConsumerWidget {
                   ),
                   _StatCard(
                     label: 'Categories',
-                    value: _calculateCategories(stats).toString(),
+                    value: stats.totalCategories.toString(),
                     icon: Icons.category_outlined,
                   ),
                 ],
@@ -139,7 +139,12 @@ class ProfileScreen extends ConsumerWidget {
                 title: const Text('Settings'),
                 trailing: const Icon(Icons.chevron_right),
                 onTap: () {
-                  // TODO: Navigate to settings
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => const SettingsScreen(),
+                    ),
+                  );
                 },
               ),
               const Divider(),
@@ -166,11 +171,6 @@ class ProfileScreen extends ConsumerWidget {
         ),
       ),
     );
-  }
-
-  int _calculateCategories(InventoryStats stats) {
-    // Simple estimation - could be enhanced
-    return (stats.totalLabels / 3).ceil();
   }
 
   String _formatDateTime(DateTime dateTime) {
