@@ -1,103 +1,252 @@
-# Vision AI API Service
+# 🚀 Vision AI API Service
 
-Ensemble vision AI proxy service for the Visual Home Inventory Manager.
+> Ensemble vision AI proxy service for the Visual Home Inventory Manager.
 
-## Overview
+## 🌟 Features
 
-This Node.js/TypeScript API service provides:
-- Multi-provider ensemble vision AI (Meta Detectron2, Google Cloud Vision, AWS Rekognition, TensorFlow Serving)
-- Parallel provider execution with result fusion
-- Non-Maximum Suppression (NMS) for overlapping detections
-- Confidence-weighted voting and label consensus
-- Circuit breaker pattern for provider failover
-- Structured logging and error handling
+- **Multi-provider AI Vision** - Combines multiple AI providers for accurate object detection
+- **Fault Tolerance** - Circuit breaker pattern for graceful degradation
+- **High Performance** - Parallel execution of detection providers
+- **Smart Result Fusion** - Advanced algorithms for combining results
+- **Production Ready** - Structured logging, metrics, and health checks
 
-## Architecture
+## 🏗 Architecture
 
-```
-┌─────────────────────────────────────────┐
-│  Fastify API (Node.js + TypeScript)     │
-├─────────────────────────────────────────┤
-│  Vision Orchestrator Service            │
-│  ├─ Request Router                      │
-│  ├─ Parallel Executor (Promise.all)     │
-│  ├─ Result Aggregator                   │
-│  └─ Ensemble Fusion Engine              │
-├─────────────────────────────────────────┤
-│  Provider Adapters (Circuit Breakers)   │
-│  ├─ Meta API Adapter                    │
-│  ├─ Google Vision SDK                   │
-│  ├─ AWS Rekognition SDK                 │
-│  └─ TensorFlow Serving Client           │
-└─────────────────────────────────────────┘
+```mermaid
+graph TD
+    A[Client] --> B[Fastify API]
+    B --> C[Vision Orchestrator]
+    C --> D[Provider Adapters]
+    D --> E[Google Vision]
+    D --> F[AWS Rekognition]
+    D --> G[Meta Detectron2]
+    D --> H[TensorFlow Serving]
+    C --> I[Result Fusion]
+    I --> J[Response to Client]
 ```
 
-## Tech Stack
+### Core Components
 
-- **Runtime**: Node.js 20 LTS
-- **Language**: TypeScript 5.x
-- **Framework**: Fastify 4.x
-- **Validation**: Zod
-- **Logging**: Pino
-- **Testing**: Vitest + Supertest
+1. **API Layer** - Fastify-based REST API with request validation
+2. **Orchestrator** - Manages parallel execution and result aggregation
+3. **Provider Adapters** - Standardized interfaces for different AI providers
+4. **Fusion Engine** - Combines results using NMS and confidence weighting
+5. **Circuit Breakers** - Prevents cascading failures from provider issues
 
-## Prerequisites
+## 🛠 Tech Stack
+
+| Category        | Technologies                          |
+|-----------------|---------------------------------------|
+| Runtime         | Node.js 20 LTS                        |
+| Language        | TypeScript 5.x                        |
+| Web Framework   | Fastify 4.x                           |
+| AI Providers    | Google Vision, AWS Rekognition        |
+| Testing         | Vitest, Supertest                     |
+| Documentation   | OpenAPI/Swagger                       |
+| Container       | Docker                                |
+| CI/CD           | GitHub Actions                        |
+| Monitoring      | Prometheus, Grafana                   |
+| Logging         | Pino                                  |
+| Configuration   | dotenv                                |
+| Validation      | Zod                                   |
+
+## 🚀 Getting Started
+
+### Prerequisites
 
 - Node.js 20 LTS
 - npm 10+ or pnpm 8+
 - Google Cloud Platform account with Vision API enabled
-- AWS account with Rekognition access (optional)
+- (Optional) AWS account with Rekognition access
 
-## Quick Start
+### Installation
 
-```bash
-# Install dependencies
-npm install
+1. **Clone the repository**
+   ```bash
+   git clone https://github.com/yourusername/visual-home-inventory.git
+   cd visual-home-inventory/api-service
+   ```
 
-# Copy environment template
-cp .env.example .env
+2. **Install dependencies**
+   ```bash
+   npm install
+   # or
+   pnpm install
+   ```
 
-# Edit .env with your API keys
-# GOOGLE_CLOUD_PROJECT_ID=your-project-id
-# GOOGLE_APPLICATION_CREDENTIALS=./service-account-key.json
-# AWS_ACCESS_KEY_ID=your-key (optional)
-# AWS_SECRET_ACCESS_KEY=your-secret (optional)
+3. **Configure environment**
+   ```bash
+   cp .env.example .env
+   # Edit .env with your configuration
+   ```
 
-# Start development server
-npm run dev
+4. **Start the development server**
+   ```bash
+   npm run dev
+   ```
 
-# Server runs on http://localhost:3000
-```
+## ⚙️ Configuration
 
-## Environment Variables
-
-Create a `.env` file:
+### Required Environment Variables
 
 ```env
-# Server
+# Server Configuration
 PORT=3000
 NODE_ENV=development
+HOST=0.0.0.0
+LOG_LEVEL=info
 
 # Google Cloud Vision
 GOOGLE_CLOUD_PROJECT_ID=your-project-id
 GOOGLE_APPLICATION_CREDENTIALS=./service-account-key.json
 
-# AWS Rekognition (optional)
+# AWS Rekognition (Optional)
 AWS_ACCESS_KEY_ID=your-access-key
 AWS_SECRET_ACCESS_KEY=your-secret-key
 AWS_REGION=us-east-1
 
-# Ensemble Configuration
-ENSEMBLE_CONFIDENCE_THRESHOLD=0.7
-PROVIDER_TIMEOUT_MS=4000
-NMS_IOU_THRESHOLD=0.5
+# Circuit Breaker Settings
+CIRCUIT_BREAKER_THRESHOLD=0.5
+CIRCUIT_BREAKER_TIMEOUT=30000
 
-# Provider Weights
-META_WEIGHT=0.30
-GOOGLE_WEIGHT=0.30
-AWS_WEIGHT=0.25
-TENSORFLOW_WEIGHT=0.15
+# Performance Tuning
+MAX_CONCURRENT_REQUESTS=10
+REQUEST_TIMEOUT_MS=10000
+
+# Security
+RATE_LIMIT_WINDOW_MS=900000  # 15 minutes
+RATE_LIMIT_MAX=100           # Max requests per window
 ```
+
+## 📚 API Reference
+
+### Endpoints
+
+#### `POST /v1/detect`
+
+Detect objects in an image using ensemble AI.
+
+**Request**
+```http
+POST /v1/detect
+Content-Type: multipart/form-data
+```
+
+**Parameters**
+
+| Parameter | Type   | Required | Description                |
+|-----------|--------|----------|----------------------------|
+| image     | file   | Yes      | Image file to analyze      |
+| threshold | number | No       | Confidence threshold (0-1) |
+
+**Response**
+```json
+{
+  "success": true,
+  "processingTimeMs": 450,
+  "detections": [
+    {
+      "label": "laptop",
+      "confidence": 0.92,
+      "boundingBox": {"x": 0.1, "y": 0.2, "width": 0.3, "height": 0.4}
+    }
+  ],
+  "metrics": {
+    "providersUsed": ["google", "aws"],
+    "ensembleMode": "weighted_average",
+    "providerAgreement": 0.85
+  }
+}
+```
+
+#### `GET /v1/health`
+
+Check service health and provider status.
+
+**Response**
+```json
+{
+  "status": "healthy",
+  "timestamp": "2025-10-30T12:00:00Z",
+  "uptime": 3600,
+  "providers": {
+    "google": {"status": "healthy", "latencyMs": 120},
+    "aws": {"status": "healthy", "latencyMs": 180}
+  },
+  "metrics": {
+    "requests": 1500,
+    "avgResponseTime": 350,
+    "errorRate": 0.01
+  }
+}
+```
+
+## 🧪 Testing
+
+### Unit Tests
+```bash
+npm test
+```
+
+### Integration Tests
+```bash
+npm run test:integration
+```
+
+### E2E Tests
+```bash
+npm run test:e2e
+```
+
+### Test Coverage
+```bash
+npm run test:coverage
+```
+
+## 🚀 Deployment
+
+### Docker
+
+```bash
+# Build the image
+docker build -t vision-api .
+
+# Run the container
+docker run -p 3000:3000 --env-file .env vision-api
+```
+
+### Kubernetes
+
+```bash
+# Apply Kubernetes manifests
+kubectl apply -f k8s/
+```
+
+## 📊 Monitoring
+
+The service exposes the following endpoints for monitoring:
+
+- `GET /metrics` - Prometheus metrics
+- `GET /health` - Health check
+- `GET /status` - Service status
+
+## 🤝 Contributing
+
+1. Fork the repository
+2. Create your feature branch (`git checkout -b feature/AmazingFeature`)
+3. Commit your changes (`git commit -m 'Add some AmazingFeature'`)
+4. Push to the branch (`git push origin feature/AmazingFeature`)
+5. Open a Pull Request
+
+## 📄 License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+## 🙏 Acknowledgments
+
+- Fastify team for the amazing web framework
+- Google Cloud Vision and AWS Rekognition teams
+- Open-source community for valuable contributions
 
 ## API Endpoints
 

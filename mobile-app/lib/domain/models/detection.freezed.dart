@@ -13,15 +13,9 @@ part of 'detection.dart';
 T _$identity<T>(T value) => value;
 
 /// @nodoc
-mixin _$Detection {
+mixin _$Detection implements DiagnosticableTreeMixin {
 
-/// Unique identifier for this detection
- String get id;/// Primary label (after ensemble consensus)
- String get label;/// Final confidence score (after ensemble fusion)
- double get confidence;/// Bounding box coordinates
- BoundingBox get boundingBox;/// Ensemble voting details
- EnsembleDetails get ensembleDetails;/// Alternative labels from providers
- List<AlternativeLabel> get alternativeLabels;
+ String? get id; String get label; double get confidence;@BoundingBoxConverter() BoundingBox get boundingBox;@EnsembleDetailsConverter() EnsembleDetails get ensembleDetails;@AlternativeLabelListConverter() List<AlternativeLabel> get alternativeLabels;
 /// Create a copy of Detection
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
@@ -31,6 +25,12 @@ $DetectionCopyWith<Detection> get copyWith => _$DetectionCopyWithImpl<Detection>
   /// Serializes this Detection to a JSON map.
   Map<String, dynamic> toJson();
 
+@override
+void debugFillProperties(DiagnosticPropertiesBuilder properties) {
+  properties
+    ..add(DiagnosticsProperty('type', 'Detection'))
+    ..add(DiagnosticsProperty('id', id))..add(DiagnosticsProperty('label', label))..add(DiagnosticsProperty('confidence', confidence))..add(DiagnosticsProperty('boundingBox', boundingBox))..add(DiagnosticsProperty('ensembleDetails', ensembleDetails))..add(DiagnosticsProperty('alternativeLabels', alternativeLabels));
+}
 
 @override
 bool operator ==(Object other) {
@@ -42,7 +42,7 @@ bool operator ==(Object other) {
 int get hashCode => Object.hash(runtimeType,id,label,confidence,boundingBox,ensembleDetails,const DeepCollectionEquality().hash(alternativeLabels));
 
 @override
-String toString() {
+String toString({ DiagnosticLevel minLevel = DiagnosticLevel.info }) {
   return 'Detection(id: $id, label: $label, confidence: $confidence, boundingBox: $boundingBox, ensembleDetails: $ensembleDetails, alternativeLabels: $alternativeLabels)';
 }
 
@@ -54,7 +54,7 @@ abstract mixin class $DetectionCopyWith<$Res>  {
   factory $DetectionCopyWith(Detection value, $Res Function(Detection) _then) = _$DetectionCopyWithImpl;
 @useResult
 $Res call({
- String id, String label, double confidence, BoundingBox boundingBox, EnsembleDetails ensembleDetails, List<AlternativeLabel> alternativeLabels
+ String? id, String label, double confidence,@BoundingBoxConverter() BoundingBox boundingBox,@EnsembleDetailsConverter() EnsembleDetails ensembleDetails,@AlternativeLabelListConverter() List<AlternativeLabel> alternativeLabels
 });
 
 
@@ -71,10 +71,10 @@ class _$DetectionCopyWithImpl<$Res>
 
 /// Create a copy of Detection
 /// with the given fields replaced by the non-null parameter values.
-@pragma('vm:prefer-inline') @override $Res call({Object? id = null,Object? label = null,Object? confidence = null,Object? boundingBox = null,Object? ensembleDetails = null,Object? alternativeLabels = null,}) {
+@pragma('vm:prefer-inline') @override $Res call({Object? id = freezed,Object? label = null,Object? confidence = null,Object? boundingBox = null,Object? ensembleDetails = null,Object? alternativeLabels = null,}) {
   return _then(_self.copyWith(
-id: null == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
-as String,label: null == label ? _self.label : label // ignore: cast_nullable_to_non_nullable
+id: freezed == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
+as String?,label: null == label ? _self.label : label // ignore: cast_nullable_to_non_nullable
 as String,confidence: null == confidence ? _self.confidence : confidence // ignore: cast_nullable_to_non_nullable
 as double,boundingBox: null == boundingBox ? _self.boundingBox : boundingBox // ignore: cast_nullable_to_non_nullable
 as BoundingBox,ensembleDetails: null == ensembleDetails ? _self.ensembleDetails : ensembleDetails // ignore: cast_nullable_to_non_nullable
@@ -182,7 +182,7 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String id,  String label,  double confidence,  BoundingBox boundingBox,  EnsembleDetails ensembleDetails,  List<AlternativeLabel> alternativeLabels)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String? id,  String label,  double confidence, @BoundingBoxConverter()  BoundingBox boundingBox, @EnsembleDetailsConverter()  EnsembleDetails ensembleDetails, @AlternativeLabelListConverter()  List<AlternativeLabel> alternativeLabels)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _Detection() when $default != null:
 return $default(_that.id,_that.label,_that.confidence,_that.boundingBox,_that.ensembleDetails,_that.alternativeLabels);case _:
@@ -203,7 +203,7 @@ return $default(_that.id,_that.label,_that.confidence,_that.boundingBox,_that.en
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String id,  String label,  double confidence,  BoundingBox boundingBox,  EnsembleDetails ensembleDetails,  List<AlternativeLabel> alternativeLabels)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String? id,  String label,  double confidence, @BoundingBoxConverter()  BoundingBox boundingBox, @EnsembleDetailsConverter()  EnsembleDetails ensembleDetails, @AlternativeLabelListConverter()  List<AlternativeLabel> alternativeLabels)  $default,) {final _that = this;
 switch (_that) {
 case _Detection():
 return $default(_that.id,_that.label,_that.confidence,_that.boundingBox,_that.ensembleDetails,_that.alternativeLabels);case _:
@@ -223,7 +223,7 @@ return $default(_that.id,_that.label,_that.confidence,_that.boundingBox,_that.en
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String id,  String label,  double confidence,  BoundingBox boundingBox,  EnsembleDetails ensembleDetails,  List<AlternativeLabel> alternativeLabels)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String? id,  String label,  double confidence, @BoundingBoxConverter()  BoundingBox boundingBox, @EnsembleDetailsConverter()  EnsembleDetails ensembleDetails, @AlternativeLabelListConverter()  List<AlternativeLabel> alternativeLabels)?  $default,) {final _that = this;
 switch (_that) {
 case _Detection() when $default != null:
 return $default(_that.id,_that.label,_that.confidence,_that.boundingBox,_that.ensembleDetails,_that.alternativeLabels);case _:
@@ -237,24 +237,17 @@ return $default(_that.id,_that.label,_that.confidence,_that.boundingBox,_that.en
 /// @nodoc
 @JsonSerializable()
 
-class _Detection implements Detection {
-  const _Detection({required this.id, required this.label, required this.confidence, required this.boundingBox, required this.ensembleDetails, required final  List<AlternativeLabel> alternativeLabels}): _alternativeLabels = alternativeLabels;
+class _Detection with DiagnosticableTreeMixin implements Detection {
+  const _Detection({this.id, required this.label, required this.confidence, @BoundingBoxConverter() required this.boundingBox, @EnsembleDetailsConverter() required this.ensembleDetails, @AlternativeLabelListConverter() required final  List<AlternativeLabel> alternativeLabels}): _alternativeLabels = alternativeLabels;
   factory _Detection.fromJson(Map<String, dynamic> json) => _$DetectionFromJson(json);
 
-/// Unique identifier for this detection
-@override final  String id;
-/// Primary label (after ensemble consensus)
+@override final  String? id;
 @override final  String label;
-/// Final confidence score (after ensemble fusion)
 @override final  double confidence;
-/// Bounding box coordinates
-@override final  BoundingBox boundingBox;
-/// Ensemble voting details
-@override final  EnsembleDetails ensembleDetails;
-/// Alternative labels from providers
+@override@BoundingBoxConverter() final  BoundingBox boundingBox;
+@override@EnsembleDetailsConverter() final  EnsembleDetails ensembleDetails;
  final  List<AlternativeLabel> _alternativeLabels;
-/// Alternative labels from providers
-@override List<AlternativeLabel> get alternativeLabels {
+@override@AlternativeLabelListConverter() List<AlternativeLabel> get alternativeLabels {
   if (_alternativeLabels is EqualUnmodifiableListView) return _alternativeLabels;
   // ignore: implicit_dynamic_type
   return EqualUnmodifiableListView(_alternativeLabels);
@@ -271,6 +264,12 @@ _$DetectionCopyWith<_Detection> get copyWith => __$DetectionCopyWithImpl<_Detect
 Map<String, dynamic> toJson() {
   return _$DetectionToJson(this, );
 }
+@override
+void debugFillProperties(DiagnosticPropertiesBuilder properties) {
+  properties
+    ..add(DiagnosticsProperty('type', 'Detection'))
+    ..add(DiagnosticsProperty('id', id))..add(DiagnosticsProperty('label', label))..add(DiagnosticsProperty('confidence', confidence))..add(DiagnosticsProperty('boundingBox', boundingBox))..add(DiagnosticsProperty('ensembleDetails', ensembleDetails))..add(DiagnosticsProperty('alternativeLabels', alternativeLabels));
+}
 
 @override
 bool operator ==(Object other) {
@@ -282,7 +281,7 @@ bool operator ==(Object other) {
 int get hashCode => Object.hash(runtimeType,id,label,confidence,boundingBox,ensembleDetails,const DeepCollectionEquality().hash(_alternativeLabels));
 
 @override
-String toString() {
+String toString({ DiagnosticLevel minLevel = DiagnosticLevel.info }) {
   return 'Detection(id: $id, label: $label, confidence: $confidence, boundingBox: $boundingBox, ensembleDetails: $ensembleDetails, alternativeLabels: $alternativeLabels)';
 }
 
@@ -294,7 +293,7 @@ abstract mixin class _$DetectionCopyWith<$Res> implements $DetectionCopyWith<$Re
   factory _$DetectionCopyWith(_Detection value, $Res Function(_Detection) _then) = __$DetectionCopyWithImpl;
 @override @useResult
 $Res call({
- String id, String label, double confidence, BoundingBox boundingBox, EnsembleDetails ensembleDetails, List<AlternativeLabel> alternativeLabels
+ String? id, String label, double confidence,@BoundingBoxConverter() BoundingBox boundingBox,@EnsembleDetailsConverter() EnsembleDetails ensembleDetails,@AlternativeLabelListConverter() List<AlternativeLabel> alternativeLabels
 });
 
 
@@ -311,10 +310,10 @@ class __$DetectionCopyWithImpl<$Res>
 
 /// Create a copy of Detection
 /// with the given fields replaced by the non-null parameter values.
-@override @pragma('vm:prefer-inline') $Res call({Object? id = null,Object? label = null,Object? confidence = null,Object? boundingBox = null,Object? ensembleDetails = null,Object? alternativeLabels = null,}) {
+@override @pragma('vm:prefer-inline') $Res call({Object? id = freezed,Object? label = null,Object? confidence = null,Object? boundingBox = null,Object? ensembleDetails = null,Object? alternativeLabels = null,}) {
   return _then(_Detection(
-id: null == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
-as String,label: null == label ? _self.label : label // ignore: cast_nullable_to_non_nullable
+id: freezed == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
+as String?,label: null == label ? _self.label : label // ignore: cast_nullable_to_non_nullable
 as String,confidence: null == confidence ? _self.confidence : confidence // ignore: cast_nullable_to_non_nullable
 as double,boundingBox: null == boundingBox ? _self.boundingBox : boundingBox // ignore: cast_nullable_to_non_nullable
 as BoundingBox,ensembleDetails: null == ensembleDetails ? _self.ensembleDetails : ensembleDetails // ignore: cast_nullable_to_non_nullable

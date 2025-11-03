@@ -89,6 +89,7 @@ void main() {
           photoPath: tInventoryItem.photoPath,
           thumbnailPath: tInventoryItem.thumbnailPath,
           detection: tDetection,
+        );
         expect(result, const Right<Failure, int>(1));
         verify(mockDatabase.into(mockDatabase.inventoryItems)).called(1);
         verify(mockDatabase.into(mockDatabase.labels)).called(1);

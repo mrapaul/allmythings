@@ -11,36 +11,36 @@ part of 'ensemble_details.dart';
 
 // dart format off
 T _$identity<T>(T value) => value;
-
 /// @nodoc
-mixin _$EnsembleDetails {
+mixin _$EnsembleDetails implements DiagnosticableTreeMixin {
 
-/// Number of providers that detected this object
- int get providerAgreement;/// Confidence scores from each provider
- Map<VisionProvider, double> get confidenceByProvider;/// How providers agreed on the label (unanimous, majority, etc.)
- String get labelConsensus;
+ int get providersUsed; int get providerAgreement; String get labelConsensus; Map<VisionProvider, double> get confidenceByProvider;
 /// Create a copy of EnsembleDetails
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
 @pragma('vm:prefer-inline')
 $EnsembleDetailsCopyWith<EnsembleDetails> get copyWith => _$EnsembleDetailsCopyWithImpl<EnsembleDetails>(this as EnsembleDetails, _$identity);
 
-  /// Serializes this EnsembleDetails to a JSON map.
-  Map<String, dynamic> toJson();
 
+@override
+void debugFillProperties(DiagnosticPropertiesBuilder properties) {
+  properties
+    ..add(DiagnosticsProperty('type', 'EnsembleDetails'))
+    ..add(DiagnosticsProperty('providersUsed', providersUsed))..add(DiagnosticsProperty('providerAgreement', providerAgreement))..add(DiagnosticsProperty('labelConsensus', labelConsensus))..add(DiagnosticsProperty('confidenceByProvider', confidenceByProvider));
+}
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is EnsembleDetails&&(identical(other.providerAgreement, providerAgreement) || other.providerAgreement == providerAgreement)&&const DeepCollectionEquality().equals(other.confidenceByProvider, confidenceByProvider)&&(identical(other.labelConsensus, labelConsensus) || other.labelConsensus == labelConsensus));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is EnsembleDetails&&(identical(other.providersUsed, providersUsed) || other.providersUsed == providersUsed)&&(identical(other.providerAgreement, providerAgreement) || other.providerAgreement == providerAgreement)&&(identical(other.labelConsensus, labelConsensus) || other.labelConsensus == labelConsensus)&&const DeepCollectionEquality().equals(other.confidenceByProvider, confidenceByProvider));
 }
 
-@JsonKey(includeFromJson: false, includeToJson: false)
-@override
-int get hashCode => Object.hash(runtimeType,providerAgreement,const DeepCollectionEquality().hash(confidenceByProvider),labelConsensus);
 
 @override
-String toString() {
-  return 'EnsembleDetails(providerAgreement: $providerAgreement, confidenceByProvider: $confidenceByProvider, labelConsensus: $labelConsensus)';
+int get hashCode => Object.hash(runtimeType,providersUsed,providerAgreement,labelConsensus,const DeepCollectionEquality().hash(confidenceByProvider));
+
+@override
+String toString({ DiagnosticLevel minLevel = DiagnosticLevel.info }) {
+  return 'EnsembleDetails(providersUsed: $providersUsed, providerAgreement: $providerAgreement, labelConsensus: $labelConsensus, confidenceByProvider: $confidenceByProvider)';
 }
 
 
@@ -51,7 +51,7 @@ abstract mixin class $EnsembleDetailsCopyWith<$Res>  {
   factory $EnsembleDetailsCopyWith(EnsembleDetails value, $Res Function(EnsembleDetails) _then) = _$EnsembleDetailsCopyWithImpl;
 @useResult
 $Res call({
- int providerAgreement, Map<VisionProvider, double> confidenceByProvider, String labelConsensus
+ int providersUsed, int providerAgreement, String labelConsensus, Map<VisionProvider, double> confidenceByProvider
 });
 
 
@@ -68,12 +68,13 @@ class _$EnsembleDetailsCopyWithImpl<$Res>
 
 /// Create a copy of EnsembleDetails
 /// with the given fields replaced by the non-null parameter values.
-@pragma('vm:prefer-inline') @override $Res call({Object? providerAgreement = null,Object? confidenceByProvider = null,Object? labelConsensus = null,}) {
+@pragma('vm:prefer-inline') @override $Res call({Object? providersUsed = null,Object? providerAgreement = null,Object? labelConsensus = null,Object? confidenceByProvider = null,}) {
   return _then(_self.copyWith(
-providerAgreement: null == providerAgreement ? _self.providerAgreement : providerAgreement // ignore: cast_nullable_to_non_nullable
-as int,confidenceByProvider: null == confidenceByProvider ? _self.confidenceByProvider : confidenceByProvider // ignore: cast_nullable_to_non_nullable
-as Map<VisionProvider, double>,labelConsensus: null == labelConsensus ? _self.labelConsensus : labelConsensus // ignore: cast_nullable_to_non_nullable
-as String,
+providersUsed: null == providersUsed ? _self.providersUsed : providersUsed // ignore: cast_nullable_to_non_nullable
+as int,providerAgreement: null == providerAgreement ? _self.providerAgreement : providerAgreement // ignore: cast_nullable_to_non_nullable
+as int,labelConsensus: null == labelConsensus ? _self.labelConsensus : labelConsensus // ignore: cast_nullable_to_non_nullable
+as String,confidenceByProvider: null == confidenceByProvider ? _self.confidenceByProvider : confidenceByProvider // ignore: cast_nullable_to_non_nullable
+as Map<VisionProvider, double>,
   ));
 }
 
@@ -158,10 +159,10 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( int providerAgreement,  Map<VisionProvider, double> confidenceByProvider,  String labelConsensus)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( int providersUsed,  int providerAgreement,  String labelConsensus,  Map<VisionProvider, double> confidenceByProvider)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _EnsembleDetails() when $default != null:
-return $default(_that.providerAgreement,_that.confidenceByProvider,_that.labelConsensus);case _:
+return $default(_that.providersUsed,_that.providerAgreement,_that.labelConsensus,_that.confidenceByProvider);case _:
   return orElse();
 
 }
@@ -179,10 +180,10 @@ return $default(_that.providerAgreement,_that.confidenceByProvider,_that.labelCo
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( int providerAgreement,  Map<VisionProvider, double> confidenceByProvider,  String labelConsensus)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( int providersUsed,  int providerAgreement,  String labelConsensus,  Map<VisionProvider, double> confidenceByProvider)  $default,) {final _that = this;
 switch (_that) {
 case _EnsembleDetails():
-return $default(_that.providerAgreement,_that.confidenceByProvider,_that.labelConsensus);case _:
+return $default(_that.providersUsed,_that.providerAgreement,_that.labelConsensus,_that.confidenceByProvider);case _:
   throw StateError('Unexpected subclass');
 
 }
@@ -199,10 +200,10 @@ return $default(_that.providerAgreement,_that.confidenceByProvider,_that.labelCo
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( int providerAgreement,  Map<VisionProvider, double> confidenceByProvider,  String labelConsensus)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( int providersUsed,  int providerAgreement,  String labelConsensus,  Map<VisionProvider, double> confidenceByProvider)?  $default,) {final _that = this;
 switch (_that) {
 case _EnsembleDetails() when $default != null:
-return $default(_that.providerAgreement,_that.confidenceByProvider,_that.labelConsensus);case _:
+return $default(_that.providersUsed,_that.providerAgreement,_that.labelConsensus,_that.confidenceByProvider);case _:
   return null;
 
 }
@@ -211,25 +212,22 @@ return $default(_that.providerAgreement,_that.confidenceByProvider,_that.labelCo
 }
 
 /// @nodoc
-@JsonSerializable()
 
-class _EnsembleDetails implements EnsembleDetails {
-  const _EnsembleDetails({required this.providerAgreement, required final  Map<VisionProvider, double> confidenceByProvider, required this.labelConsensus}): _confidenceByProvider = confidenceByProvider;
-  factory _EnsembleDetails.fromJson(Map<String, dynamic> json) => _$EnsembleDetailsFromJson(json);
 
-/// Number of providers that detected this object
+class _EnsembleDetails with DiagnosticableTreeMixin implements EnsembleDetails {
+  const _EnsembleDetails({required this.providersUsed, required this.providerAgreement, required this.labelConsensus, required final  Map<VisionProvider, double> confidenceByProvider}): _confidenceByProvider = confidenceByProvider;
+  
+
+@override final  int providersUsed;
 @override final  int providerAgreement;
-/// Confidence scores from each provider
+@override final  String labelConsensus;
  final  Map<VisionProvider, double> _confidenceByProvider;
-/// Confidence scores from each provider
 @override Map<VisionProvider, double> get confidenceByProvider {
   if (_confidenceByProvider is EqualUnmodifiableMapView) return _confidenceByProvider;
   // ignore: implicit_dynamic_type
   return EqualUnmodifiableMapView(_confidenceByProvider);
 }
 
-/// How providers agreed on the label (unanimous, majority, etc.)
-@override final  String labelConsensus;
 
 /// Create a copy of EnsembleDetails
 /// with the given fields replaced by the non-null parameter values.
@@ -237,23 +235,26 @@ class _EnsembleDetails implements EnsembleDetails {
 @pragma('vm:prefer-inline')
 _$EnsembleDetailsCopyWith<_EnsembleDetails> get copyWith => __$EnsembleDetailsCopyWithImpl<_EnsembleDetails>(this, _$identity);
 
+
 @override
-Map<String, dynamic> toJson() {
-  return _$EnsembleDetailsToJson(this, );
+void debugFillProperties(DiagnosticPropertiesBuilder properties) {
+  properties
+    ..add(DiagnosticsProperty('type', 'EnsembleDetails'))
+    ..add(DiagnosticsProperty('providersUsed', providersUsed))..add(DiagnosticsProperty('providerAgreement', providerAgreement))..add(DiagnosticsProperty('labelConsensus', labelConsensus))..add(DiagnosticsProperty('confidenceByProvider', confidenceByProvider));
 }
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is _EnsembleDetails&&(identical(other.providerAgreement, providerAgreement) || other.providerAgreement == providerAgreement)&&const DeepCollectionEquality().equals(other._confidenceByProvider, _confidenceByProvider)&&(identical(other.labelConsensus, labelConsensus) || other.labelConsensus == labelConsensus));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is _EnsembleDetails&&(identical(other.providersUsed, providersUsed) || other.providersUsed == providersUsed)&&(identical(other.providerAgreement, providerAgreement) || other.providerAgreement == providerAgreement)&&(identical(other.labelConsensus, labelConsensus) || other.labelConsensus == labelConsensus)&&const DeepCollectionEquality().equals(other._confidenceByProvider, _confidenceByProvider));
 }
 
-@JsonKey(includeFromJson: false, includeToJson: false)
-@override
-int get hashCode => Object.hash(runtimeType,providerAgreement,const DeepCollectionEquality().hash(_confidenceByProvider),labelConsensus);
 
 @override
-String toString() {
-  return 'EnsembleDetails(providerAgreement: $providerAgreement, confidenceByProvider: $confidenceByProvider, labelConsensus: $labelConsensus)';
+int get hashCode => Object.hash(runtimeType,providersUsed,providerAgreement,labelConsensus,const DeepCollectionEquality().hash(_confidenceByProvider));
+
+@override
+String toString({ DiagnosticLevel minLevel = DiagnosticLevel.info }) {
+  return 'EnsembleDetails(providersUsed: $providersUsed, providerAgreement: $providerAgreement, labelConsensus: $labelConsensus, confidenceByProvider: $confidenceByProvider)';
 }
 
 
@@ -264,7 +265,7 @@ abstract mixin class _$EnsembleDetailsCopyWith<$Res> implements $EnsembleDetails
   factory _$EnsembleDetailsCopyWith(_EnsembleDetails value, $Res Function(_EnsembleDetails) _then) = __$EnsembleDetailsCopyWithImpl;
 @override @useResult
 $Res call({
- int providerAgreement, Map<VisionProvider, double> confidenceByProvider, String labelConsensus
+ int providersUsed, int providerAgreement, String labelConsensus, Map<VisionProvider, double> confidenceByProvider
 });
 
 
@@ -281,12 +282,13 @@ class __$EnsembleDetailsCopyWithImpl<$Res>
 
 /// Create a copy of EnsembleDetails
 /// with the given fields replaced by the non-null parameter values.
-@override @pragma('vm:prefer-inline') $Res call({Object? providerAgreement = null,Object? confidenceByProvider = null,Object? labelConsensus = null,}) {
+@override @pragma('vm:prefer-inline') $Res call({Object? providersUsed = null,Object? providerAgreement = null,Object? labelConsensus = null,Object? confidenceByProvider = null,}) {
   return _then(_EnsembleDetails(
-providerAgreement: null == providerAgreement ? _self.providerAgreement : providerAgreement // ignore: cast_nullable_to_non_nullable
-as int,confidenceByProvider: null == confidenceByProvider ? _self._confidenceByProvider : confidenceByProvider // ignore: cast_nullable_to_non_nullable
-as Map<VisionProvider, double>,labelConsensus: null == labelConsensus ? _self.labelConsensus : labelConsensus // ignore: cast_nullable_to_non_nullable
-as String,
+providersUsed: null == providersUsed ? _self.providersUsed : providersUsed // ignore: cast_nullable_to_non_nullable
+as int,providerAgreement: null == providerAgreement ? _self.providerAgreement : providerAgreement // ignore: cast_nullable_to_non_nullable
+as int,labelConsensus: null == labelConsensus ? _self.labelConsensus : labelConsensus // ignore: cast_nullable_to_non_nullable
+as String,confidenceByProvider: null == confidenceByProvider ? _self._confidenceByProvider : confidenceByProvider // ignore: cast_nullable_to_non_nullable
+as Map<VisionProvider, double>,
   ));
 }
 

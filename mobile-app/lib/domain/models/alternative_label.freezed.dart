@@ -11,35 +11,35 @@ part of 'alternative_label.dart';
 
 // dart format off
 T _$identity<T>(T value) => value;
-
 /// @nodoc
-mixin _$AlternativeLabel {
+mixin _$AlternativeLabel implements DiagnosticableTreeMixin {
 
-/// Alternative label name
- String get label;/// Confidence score for this label (0-1)
- double get confidence;/// Which provider suggested this label
- VisionProvider get provider;
+ String get label; double get confidence; VisionProvider get provider;
 /// Create a copy of AlternativeLabel
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
 @pragma('vm:prefer-inline')
 $AlternativeLabelCopyWith<AlternativeLabel> get copyWith => _$AlternativeLabelCopyWithImpl<AlternativeLabel>(this as AlternativeLabel, _$identity);
 
-  /// Serializes this AlternativeLabel to a JSON map.
-  Map<String, dynamic> toJson();
 
+@override
+void debugFillProperties(DiagnosticPropertiesBuilder properties) {
+  properties
+    ..add(DiagnosticsProperty('type', 'AlternativeLabel'))
+    ..add(DiagnosticsProperty('label', label))..add(DiagnosticsProperty('confidence', confidence))..add(DiagnosticsProperty('provider', provider));
+}
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is AlternativeLabel&&(identical(other.label, label) || other.label == label)&&(identical(other.confidence, confidence) || other.confidence == confidence)&&(identical(other.provider, provider) || other.provider == provider));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is AlternativeLabel&&(identical(other.label, label) || other.label == label)&&(identical(other.confidence, confidence) || other.confidence == confidence)&&const DeepCollectionEquality().equals(other.provider, provider));
 }
 
-@JsonKey(includeFromJson: false, includeToJson: false)
-@override
-int get hashCode => Object.hash(runtimeType,label,confidence,provider);
 
 @override
-String toString() {
+int get hashCode => Object.hash(runtimeType,label,confidence,const DeepCollectionEquality().hash(provider));
+
+@override
+String toString({ DiagnosticLevel minLevel = DiagnosticLevel.info }) {
   return 'AlternativeLabel(label: $label, confidence: $confidence, provider: $provider)';
 }
 
@@ -68,11 +68,11 @@ class _$AlternativeLabelCopyWithImpl<$Res>
 
 /// Create a copy of AlternativeLabel
 /// with the given fields replaced by the non-null parameter values.
-@pragma('vm:prefer-inline') @override $Res call({Object? label = null,Object? confidence = null,Object? provider = null,}) {
+@pragma('vm:prefer-inline') @override $Res call({Object? label = null,Object? confidence = null,Object? provider = freezed,}) {
   return _then(_self.copyWith(
 label: null == label ? _self.label : label // ignore: cast_nullable_to_non_nullable
 as String,confidence: null == confidence ? _self.confidence : confidence // ignore: cast_nullable_to_non_nullable
-as double,provider: null == provider ? _self.provider : provider // ignore: cast_nullable_to_non_nullable
+as double,provider: freezed == provider ? _self.provider : provider // ignore: cast_nullable_to_non_nullable
 as VisionProvider,
   ));
 }
@@ -211,17 +211,14 @@ return $default(_that.label,_that.confidence,_that.provider);case _:
 }
 
 /// @nodoc
-@JsonSerializable()
 
-class _AlternativeLabel implements AlternativeLabel {
+
+class _AlternativeLabel with DiagnosticableTreeMixin implements AlternativeLabel {
   const _AlternativeLabel({required this.label, required this.confidence, required this.provider});
-  factory _AlternativeLabel.fromJson(Map<String, dynamic> json) => _$AlternativeLabelFromJson(json);
+  
 
-/// Alternative label name
 @override final  String label;
-/// Confidence score for this label (0-1)
 @override final  double confidence;
-/// Which provider suggested this label
 @override final  VisionProvider provider;
 
 /// Create a copy of AlternativeLabel
@@ -230,22 +227,25 @@ class _AlternativeLabel implements AlternativeLabel {
 @pragma('vm:prefer-inline')
 _$AlternativeLabelCopyWith<_AlternativeLabel> get copyWith => __$AlternativeLabelCopyWithImpl<_AlternativeLabel>(this, _$identity);
 
+
 @override
-Map<String, dynamic> toJson() {
-  return _$AlternativeLabelToJson(this, );
+void debugFillProperties(DiagnosticPropertiesBuilder properties) {
+  properties
+    ..add(DiagnosticsProperty('type', 'AlternativeLabel'))
+    ..add(DiagnosticsProperty('label', label))..add(DiagnosticsProperty('confidence', confidence))..add(DiagnosticsProperty('provider', provider));
 }
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is _AlternativeLabel&&(identical(other.label, label) || other.label == label)&&(identical(other.confidence, confidence) || other.confidence == confidence)&&(identical(other.provider, provider) || other.provider == provider));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is _AlternativeLabel&&(identical(other.label, label) || other.label == label)&&(identical(other.confidence, confidence) || other.confidence == confidence)&&const DeepCollectionEquality().equals(other.provider, provider));
 }
 
-@JsonKey(includeFromJson: false, includeToJson: false)
-@override
-int get hashCode => Object.hash(runtimeType,label,confidence,provider);
 
 @override
-String toString() {
+int get hashCode => Object.hash(runtimeType,label,confidence,const DeepCollectionEquality().hash(provider));
+
+@override
+String toString({ DiagnosticLevel minLevel = DiagnosticLevel.info }) {
   return 'AlternativeLabel(label: $label, confidence: $confidence, provider: $provider)';
 }
 
@@ -274,11 +274,11 @@ class __$AlternativeLabelCopyWithImpl<$Res>
 
 /// Create a copy of AlternativeLabel
 /// with the given fields replaced by the non-null parameter values.
-@override @pragma('vm:prefer-inline') $Res call({Object? label = null,Object? confidence = null,Object? provider = null,}) {
+@override @pragma('vm:prefer-inline') $Res call({Object? label = null,Object? confidence = null,Object? provider = freezed,}) {
   return _then(_AlternativeLabel(
 label: null == label ? _self.label : label // ignore: cast_nullable_to_non_nullable
 as String,confidence: null == confidence ? _self.confidence : confidence // ignore: cast_nullable_to_non_nullable
-as double,provider: null == provider ? _self.provider : provider // ignore: cast_nullable_to_non_nullable
+as double,provider: freezed == provider ? _self.provider : provider // ignore: cast_nullable_to_non_nullable
 as VisionProvider,
   ));
 }

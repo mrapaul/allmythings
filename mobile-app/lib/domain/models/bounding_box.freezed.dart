@@ -13,13 +13,9 @@ part of 'bounding_box.dart';
 T _$identity<T>(T value) => value;
 
 /// @nodoc
-mixin _$BoundingBox {
+mixin _$BoundingBox implements DiagnosticableTreeMixin {
 
-/// X coordinate of top-left corner (0-1)
- double get x;/// Y coordinate of top-left corner (0-1)
- double get y;/// Width of bounding box (0-1)
- double get width;/// Height of bounding box (0-1)
- double get height;
+ double get x; double get y; double get width; double get height;
 /// Create a copy of BoundingBox
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
@@ -29,6 +25,12 @@ $BoundingBoxCopyWith<BoundingBox> get copyWith => _$BoundingBoxCopyWithImpl<Boun
   /// Serializes this BoundingBox to a JSON map.
   Map<String, dynamic> toJson();
 
+@override
+void debugFillProperties(DiagnosticPropertiesBuilder properties) {
+  properties
+    ..add(DiagnosticsProperty('type', 'BoundingBox'))
+    ..add(DiagnosticsProperty('x', x))..add(DiagnosticsProperty('y', y))..add(DiagnosticsProperty('width', width))..add(DiagnosticsProperty('height', height));
+}
 
 @override
 bool operator ==(Object other) {
@@ -40,7 +42,7 @@ bool operator ==(Object other) {
 int get hashCode => Object.hash(runtimeType,x,y,width,height);
 
 @override
-String toString() {
+String toString({ DiagnosticLevel minLevel = DiagnosticLevel.info }) {
   return 'BoundingBox(x: $x, y: $y, width: $width, height: $height)';
 }
 
@@ -215,17 +217,13 @@ return $default(_that.x,_that.y,_that.width,_that.height);case _:
 /// @nodoc
 @JsonSerializable()
 
-class _BoundingBox extends BoundingBox {
-  const _BoundingBox({required this.x, required this.y, required this.width, required this.height}): super._();
+class _BoundingBox with DiagnosticableTreeMixin implements BoundingBox {
+  const _BoundingBox({required this.x, required this.y, required this.width, required this.height});
   factory _BoundingBox.fromJson(Map<String, dynamic> json) => _$BoundingBoxFromJson(json);
 
-/// X coordinate of top-left corner (0-1)
 @override final  double x;
-/// Y coordinate of top-left corner (0-1)
 @override final  double y;
-/// Width of bounding box (0-1)
 @override final  double width;
-/// Height of bounding box (0-1)
 @override final  double height;
 
 /// Create a copy of BoundingBox
@@ -238,6 +236,12 @@ _$BoundingBoxCopyWith<_BoundingBox> get copyWith => __$BoundingBoxCopyWithImpl<_
 Map<String, dynamic> toJson() {
   return _$BoundingBoxToJson(this, );
 }
+@override
+void debugFillProperties(DiagnosticPropertiesBuilder properties) {
+  properties
+    ..add(DiagnosticsProperty('type', 'BoundingBox'))
+    ..add(DiagnosticsProperty('x', x))..add(DiagnosticsProperty('y', y))..add(DiagnosticsProperty('width', width))..add(DiagnosticsProperty('height', height));
+}
 
 @override
 bool operator ==(Object other) {
@@ -249,7 +253,7 @@ bool operator ==(Object other) {
 int get hashCode => Object.hash(runtimeType,x,y,width,height);
 
 @override
-String toString() {
+String toString({ DiagnosticLevel minLevel = DiagnosticLevel.info }) {
   return 'BoundingBox(x: $x, y: $y, width: $width, height: $height)';
 }
 

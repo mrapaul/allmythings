@@ -1,38 +1,29 @@
 import 'package:freezed_annotation/freezed_annotation.dart';
-import 'dart:convert'; // Added for jsonEncode
-import 'bounding_box.dart';
-import 'ensemble_details.dart';
-import 'alternative_label.dart';
+import 'package:flutter/foundation.dart';
+import 'package:all_my_things/domain/models/bounding_box.dart';
+import 'package:all_my_things/domain/models/ensemble_details.dart';
+import 'package:all_my_things/domain/models/alternative_label.dart';
+import 'package:all_my_things/core/converters/bounding_box_converter.dart';
+import 'package:all_my_things/core/converters/ensemble_details_converter.dart';
+import 'package:all_my_things/core/converters/alternative_label_list_converter.dart';
 
 part 'detection.freezed.dart';
 part 'detection.g.dart';
 
-/// A detected object in an image
+@JsonSerializable(explicitToJson: true)
 @freezed
 class Detection with _$Detection {
   const factory Detection({
-    /// Unique identifier for this detection
-    required String id,
-
-    /// Primary label (after ensemble consensus)
+    String? id,
     required String label,
-
-    /// Final confidence score (after ensemble fusion)
     required double confidence,
-
-    /// Bounding box coordinates
-    required BoundingBox boundingBox,
-
-    /// Ensemble voting details
-    required EnsembleDetails ensembleDetails,
-
-    /// Alternative labels from providers
-    required List<AlternativeLabel> alternativeLabels,
+    @BoundingBoxConverter() required BoundingBox boundingBox,
+    @EnsembleDetailsConverter() required EnsembleDetails ensembleDetails,
+    @AlternativeLabelListConverter() required List<AlternativeLabel> alternativeLabels,
   }) = _Detection;
 
   factory Detection.fromJson(Map<String, dynamic> json) =>
       _$DetectionFromJson(json);
 
-  // Helper to convert to JSON string
   String toJsonString() => jsonEncode(toJson());
 }
