@@ -1,0 +1,45 @@
+{
+  "name": "@all-my-things/e2e",
+  "version": "1.0.0",
+  "description": "End-to-end tests for All My Things app and API",
+  "scripts": {
+    "test": "jest --runInBand",
+    "test:watch": "jest --watch --runInBand",
+    "test:api": "jest api-vision-test.ts --runInBand",
+    "test:mobile": "jest app-e2e.ts --runInBand",
+    "test:coverage": "jest --coverage --runInBand",
+    "test:ci": "jest --ci --coverage --runInBand",
+    "appium": "appium",
+    "appium:stop": "pkill -f appium"
+  },
+  "keywords": [
+    "e2e",
+    "testing",
+    "appium",
+    "webdriverio",
+    "jest",
+    "mobile"
+  ],
+  "author": "",
+  "license": "MIT",
+  "devDependencies": {
+    "@types/jest": "^29.5.0",
+    "@types/node": "^20.0.0",
+    "@wdio/cli": "^8.24.0",
+    "@wdio/local-runner": "^8.24.0",
+    "@wdio/mocha-framework": "^8.24.0",
+    "@wdio/spec-reporter": "^8.24.0",
+    "appium": "^2.0.0",
+    "appium-xcuitest-driver": "^4.0.0",
+    "appium-uiautomator2-driver": "^2.0.0",
+    "jest": "^29.5.0",
+    "ts-jest": "^29.1.0",
+    "ts-node": "^10.9.0",
+    "typescript": "^5.0.0",
+    "webdriverio": "^8.24.0"
+  },
+  "dependencies": {
+    "axios": "^1.6.0",
+    "form-data": "^4.0.0"
+  }
+}

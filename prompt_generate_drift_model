@@ -1,0 +1,17 @@
+Based on the SQL schema for {{table_name}}, write the Dart class for a Drift Table definition.
+
+Example for labels:
+```dart
+import 'package:drift/drift.dart';
+import 'inventory_items.dart'; // Assume this exists
+
+class Labels extends Table {
+  IntColumn get id => integer().autoIncrement()();
+  IntColumn get itemId => integer().references(InventoryItems, #id, onDelete: KeyAction.cascade)();
+  TextColumn get key => text().nullable()();
+  TextColumn get value => text()();
+  DateTimeColumn get createdAt => dateTime()();
+}
+```
+
+Now, generate the one for {{table_name}}.

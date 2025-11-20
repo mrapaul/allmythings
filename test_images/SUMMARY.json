@@ -1,0 +1,93 @@
+{
+  "timestamp": "2025-11-21T00:48:47.550668",
+  "images": {
+    "hallway": {
+      "count": 6,
+      "files": [
+        "hallway_01.jpg",
+        "hallway_02.jpg",
+        "hallway_03.jpg",
+        "hallway_04.jpg",
+        "hallway_05.jpg",
+        "hallway_06.jpg"
+      ]
+    },
+    "bedroom": {
+      "count": 6,
+      "files": [
+        "bedroom_01.jpg",
+        "bedroom_02.jpg",
+        "bedroom_03.jpg",
+        "bedroom_04.jpg",
+        "bedroom_05.jpg",
+        "bedroom_06.jpg"
+      ]
+    },
+    "office": {
+      "count": 6,
+      "files": [
+        "office_01.jpg",
+        "office_02.jpg",
+        "office_03.jpg",
+        "office_04.jpg",
+        "office_05.jpg",
+        "office_06.jpg"
+      ]
+    },
+    "bathroom": {
+      "count": 6,
+      "files": [
+        "bathroom_01.jpg",
+        "bathroom_02.jpg",
+        "bathroom_03.jpg",
+        "bathroom_04.jpg",
+        "bathroom_05.jpg",
+        "bathroom_06.jpg"
+      ]
+    },
+    "dining_room": {
+      "count": 6,
+      "files": [
+        "dining_room_01.jpg",
+        "dining_room_02.jpg",
+        "dining_room_03.jpg",
+        "dining_room_04.jpg",
+        "dining_room_05.jpg",
+        "dining_room_06.jpg"
+      ]
+    },
+    "living_room": {
+      "count": 6,
+      "files": [
+        "living_room_01.jpg",
+        "living_room_02.jpg",
+        "living_room_03.jpg",
+        "living_room_04.jpg",
+        "living_room_05.jpg",
+        "living_room_06.jpg"
+      ]
+    },
+    "kitchen": {
+      "count": 6,
+      "files": [
+        "kitchen_01.jpg",
+        "kitchen_02.jpg",
+        "kitchen_03.jpg",
+        "kitchen_04.jpg",
+        "kitchen_05.jpg",
+        "kitchen_06.jpg"
+      ]
+    },
+    "utility_room": {
+      "count": 6,
+      "files": [
+        "utility_room_01.jpg",
+        "utility_room_02.jpg",
+        "utility_room_03.jpg",
+        "utility_room_04.jpg",
+        "utility_room_05.jpg",
+        "utility_room_06.jpg"
+      ]
+    }
+  }
+}

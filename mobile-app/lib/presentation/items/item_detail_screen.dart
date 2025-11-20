@@ -1,19 +1,18 @@
+import 'dart:io';
+
+import 'package:all_my_things/application/providers/inventory_providers.dart';
+import 'package:all_my_things/presentation/common/custom_app_bar.dart'; // Added import
+// import '../../domain/models/detection.dart';
+import 'package:all_my_things/presentation/common/loading_indicator.dart';
+import 'package:all_my_things/presentation/items/edit_labels_screen.dart';
+import 'package:all_my_things/presentation/theme/app_theme.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'dart:io';
-import 'dart:convert';
-import '../../application/providers/inventory_providers.dart';
-import '../../domain/models/detection.dart';
-import '../common/loading_indicator.dart';
-import '../common/custom_app_bar.dart'; // Added import
-import '../theme/app_theme.dart';
-import 'edit_labels_screen.dart';
 
 /// Instagram-style item detail screen
 class ItemDetailScreen extends ConsumerWidget {
+  const ItemDetailScreen({required this.itemId, super.key});
   final int itemId;
-
-  const ItemDetailScreen({super.key, required this.itemId});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -95,7 +94,8 @@ class ItemDetailScreen extends ConsumerWidget {
                               Navigator.push(
                                 context,
                                 MaterialPageRoute(
-                                  builder: (_) => EditLabelsScreen(itemId: itemId),
+                                  builder: (_) =>
+                                      EditLabelsScreen(itemId: itemId),
                                 ),
                               );
                             },
@@ -122,7 +122,11 @@ class ItemDetailScreen extends ConsumerWidget {
                                 backgroundColor: AppTheme.surfaceLight,
                                 shape: RoundedRectangleBorder(
                                   borderRadius: BorderRadius.circular(8),
-                                  side: BorderSide(color: AppTheme.textTertiary.withOpacity(0.2)),
+                                  side: BorderSide(
+                                    color: AppTheme.textTertiary.withOpacity(
+                                      0.2,
+                                    ),
+                                  ),
                                 ),
                                 label: Text(
                                   label.key != null
@@ -140,13 +144,22 @@ class ItemDetailScreen extends ConsumerWidget {
                         },
                         loading: () =>
                             const CircularProgressIndicator.adaptive(),
-                        error: (error, stack) => Text('Error loading labels'),
+                        error: (error, stack) =>
+                            const Text('Error loading labels'),
                       ),
 
                       const SizedBox(height: 24),
 
                       // Detection info
-                      _buildDetectionInfo(item.detectionData),
+                      // _buildDetectionInfo(item.detectionData), // Commented out
+                      const Text(
+                        'Detection Info Temporarily Disabled',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w600,
+                          color: Colors.grey,
+                        ),
+                      ),
                     ],
                   ),
                 ),
@@ -165,6 +178,7 @@ class ItemDetailScreen extends ConsumerWidget {
     );
   }
 
+  /*
   Widget _buildDetectionInfo(String detectionDataJson) {
     try {
       final detectionData = jsonDecode(detectionDataJson) as Map<String, dynamic>;
@@ -200,6 +214,7 @@ class ItemDetailScreen extends ConsumerWidget {
       return const SizedBox.shrink();
     }
   }
+  */
 
   Widget _buildInfoRow(String label, String value) {
     return Padding(
@@ -239,8 +254,7 @@ class ItemDetailScreen extends ConsumerWidget {
                   context: context,
                   builder: (context) => AlertDialog(
                     title: const Text('Delete Item?'),
-                    content:
-                        const Text('This action cannot be undone.'),
+                    content: const Text('This action cannot be undone.'),
                     actions: [
                       TextButton(
                         onPressed: () => Navigator.pop(context, false),
@@ -257,7 +271,7 @@ class ItemDetailScreen extends ConsumerWidget {
                   ),
                 );
 
-                if (shouldDelete == true) {
+                if (shouldDelete ?? false) {
                   final repository = ref.read(inventoryRepositoryProvider);
                   await repository.deleteItem(itemId);
                   if (context.mounted) {

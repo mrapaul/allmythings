@@ -4,7 +4,7 @@ import {
 } from '@aws-sdk/client-rekognition';
 import { ProviderAdapter } from './provider-adapter.interface';
 import { Detection, BoundingBox } from '../schemas/detection.schema';
-import { CircuitBreaker } from '../utils/circuit-breaker';
+import { CircuitBreaker, CircuitState } from '../utils/circuit-breaker';
 import { envConfig } from '../config/env.config';
 import { logger } from '../utils/logger';
 
@@ -82,11 +82,11 @@ export class AWSRekognitionAdapter implements ProviderAdapter {
     });
   }
 
-  async health(): Promise<boolean> {
+  health(): Promise<boolean> {
     try {
-      return this.circuitBreaker.getState() !== 'open';
+      return Promise.resolve(this.circuitBreaker.getState() !== CircuitState.OPEN);
     } catch {
-      return false;
+      return Promise.resolve(false);
     }
   }
 

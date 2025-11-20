@@ -1,10 +1,10 @@
+import 'package:all_my_things/presentation/camera/camera_capture_screen.dart';
+import 'package:all_my_things/presentation/screens/inventory_feed_screen.dart';
+import 'package:all_my_things/presentation/profile/profile_screen.dart';
+import 'package:all_my_things/presentation/search/search_screen.dart';
+import 'package:all_my_things/presentation/theme/app_theme.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../home/inventory_feed_screen.dart';
-import '../search/search_screen.dart';
-import '../profile/profile_screen.dart';
-import '../camera/camera_screen.dart';
-import '../theme/app_theme.dart';
 
 /// Simple main navigation with bottom bar
 class MainNavigation extends ConsumerStatefulWidget {
@@ -33,18 +33,19 @@ class _MainNavigationState extends ConsumerState<MainNavigation> {
         onPressed: () async {
           await Navigator.of(context).push(
             MaterialPageRoute(
-              builder: (context) => const CameraScreen(),
+              builder: (context) => const CameraCaptureScreen(),
               fullscreenDialog: true,
             ),
           );
         },
         backgroundColor: AppTheme.primaryBlack,
         shape: const CircleBorder(),
+        heroTag: 'main-camera-fab',
         child: const Icon(Icons.add, color: Colors.white, size: 32),
       ),
       bottomNavigationBar: BottomAppBar(
         shape: const CircularNotchedRectangle(),
-        notchMargin: 8.0,
+        notchMargin: 8,
         color: Colors.white,
         elevation: 0,
         child: Row(
@@ -53,7 +54,9 @@ class _MainNavigationState extends ConsumerState<MainNavigation> {
             IconButton(
               icon: Icon(
                 _currentIndex == 0 ? Icons.home : Icons.home_outlined,
-                color: _currentIndex == 0 ? AppTheme.primaryBlack : AppTheme.textSecondary,
+                color: _currentIndex == 0
+                    ? AppTheme.primaryBlack
+                    : AppTheme.textSecondary,
               ),
               onPressed: () {
                 setState(() {
@@ -64,7 +67,9 @@ class _MainNavigationState extends ConsumerState<MainNavigation> {
             IconButton(
               icon: Icon(
                 _currentIndex == 1 ? Icons.search : Icons.search_outlined,
-                color: _currentIndex == 1 ? AppTheme.primaryBlack : AppTheme.textSecondary,
+                color: _currentIndex == 1
+                    ? AppTheme.primaryBlack
+                    : AppTheme.textSecondary,
               ),
               onPressed: () {
                 setState(() {
@@ -77,7 +82,9 @@ class _MainNavigationState extends ConsumerState<MainNavigation> {
             IconButton(
               icon: Icon(
                 _currentIndex == 2 ? Icons.person : Icons.person_outline,
-                color: _currentIndex == 2 ? AppTheme.primaryBlack : AppTheme.textSecondary,
+                color: _currentIndex == 2
+                    ? AppTheme.primaryBlack
+                    : AppTheme.textSecondary,
               ),
               onPressed: () {
                 setState(() {

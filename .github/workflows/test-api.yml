@@ -1,0 +1,177 @@
+name: API Service Tests
+
+on:
+  push:
+    branches: [main, develop, feature/**]
+    paths:
+      - 'api-service/**'
+      - '.github/workflows/test-api.yml'
+  pull_request:
+    branches: [main, develop]
+    paths:
+      - 'api-service/**'
+
+jobs:
+  test:
+    name: Test API Service
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:15-alpine
+        env:
+          POSTGRES_PASSWORD: testpassword
+          POSTGRES_DB: test
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+          cache-dependency-path: 'api-service/package-lock.json'
+
+      - name: Install dependencies
+        working-directory: api-service
+        run: npm ci
+
+      - name: Check types
+        working-directory: api-service
+        run: npm run type-check
+
+      - name: Lint
+        working-directory: api-service
+        run: npm run lint
+
+      - name: Run tests
+        working-directory: api-service
+        env:
+          DATABASE_URL: postgres://postgres:testpassword@localhost:5432/test
+          NODE_ENV: test
+          LOG_LEVEL: silent
+        run: npm run test:coverage
+
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v3
+        with:
+          files: ./api-service/coverage/coverage-final.json
+          flags: api-service
+          fail_ci_if_error: false
+
+  contract-tests:
+    name: Contract Tests
+    runs-on: ubuntu-latest
+    needs: test
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+          cache-dependency-path: 'api-service/package-lock.json'
+
+      - name: Install dependencies
+        working-directory: api-service
+        run: npm ci
+
+      - name: Run contract tests
+        working-directory: api-service
+        run: npm test -- src/__tests__/contract/
+
+  integration-tests:
+    name: Integration Tests
+    runs-on: ubuntu-latest
+    needs: test
+
+    services:
+      postgres:
+        image: postgres:15-alpine
+        env:
+          POSTGRES_PASSWORD: testpassword
+          POSTGRES_DB: test
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+          cache-dependency-path: 'api-service/package-lock.json'
+
+      - name: Install dependencies
+        working-directory: api-service
+        run: npm ci
+
+      - name: Run integration tests
+        working-directory: api-service
+        env:
+          DATABASE_URL: postgres://postgres:testpassword@localhost:5432/test
+          NODE_ENV: test
+          LOG_LEVEL: silent
+        run: npm test -- src/__tests__/integration/
+
+  load-tests:
+    name: Load Tests
+    runs-on: ubuntu-latest
+    needs: test
+
+    services:
+      postgres:
+        image: postgres:15-alpine
+        env:
+          POSTGRES_PASSWORD: testpassword
+          POSTGRES_DB: test
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+          cache-dependency-path: 'api-service/package-lock.json'
+
+      - name: Install dependencies
+        working-directory: api-service
+        run: npm ci
+
+      - name: Run load tests
+        working-directory: api-service
+        env:
+          DATABASE_URL: postgres://postgres:testpassword@localhost:5432/test
+          NODE_ENV: test
+          LOG_LEVEL: silent
+        run: npm test -- src/__tests__/integration/load.integration.test.ts

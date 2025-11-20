@@ -1,18 +1,17 @@
+import 'package:all_my_things/presentation/theme/app_theme.dart';
 import 'package:flutter/material.dart';
-import '../theme/app_theme.dart';
 
 /// Modern animated loading indicator with multiple styles
 class LoadingIndicator extends StatelessWidget {
-  final LoadingStyle style;
-  final String? message;
-  final double size;
-
   const LoadingIndicator({
     super.key,
     this.style = LoadingStyle.spinner,
     this.message,
     this.size = 48,
   });
+  final LoadingStyle style;
+  final String? message;
+  final double size;
 
   @override
   Widget build(BuildContext context) {
@@ -58,18 +57,17 @@ enum LoadingStyle {
 
 /// Circular spinner loader
 class _SpinnerLoader extends StatelessWidget {
-  final double size;
-
   const _SpinnerLoader({required this.size});
+  final double size;
 
   @override
   Widget build(BuildContext context) {
     return SizedBox(
       width: size,
       height: size,
-      child: CircularProgressIndicator(
+      child: const CircularProgressIndicator(
         strokeWidth: 3,
-        valueColor: const AlwaysStoppedAnimation<Color>(
+        valueColor: AlwaysStoppedAnimation<Color>(
           AppTheme.primaryBlack,
         ),
       ),
@@ -79,9 +77,8 @@ class _SpinnerLoader extends StatelessWidget {
 
 /// Three dots animated loader
 class _DotsLoader extends StatefulWidget {
-  final double size;
-
   const _DotsLoader({required this.size});
+  final double size;
 
   @override
   State<_DotsLoader> createState() => _DotsLoaderState();
@@ -142,9 +139,8 @@ class _DotsLoaderState extends State<_DotsLoader>
 
 /// Pulsing circle loader
 class _PulseLoader extends StatefulWidget {
-  final double size;
-
   const _PulseLoader({required this.size});
+  final double size;
 
   @override
   State<_PulseLoader> createState() => _PulseLoaderState();
@@ -164,11 +160,11 @@ class _PulseLoaderState extends State<_PulseLoader>
       duration: const Duration(milliseconds: 1500),
     )..repeat();
 
-    _scaleAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
+    _scaleAnimation = Tween<double>(begin: 0, end: 1).animate(
       CurvedAnimation(parent: _controller, curve: Curves.easeOut),
     );
 
-    _opacityAnimation = Tween<double>(begin: 0.8, end: 0.0).animate(
+    _opacityAnimation = Tween<double>(begin: 0.8, end: 0).animate(
       CurvedAnimation(parent: _controller, curve: Curves.easeOut),
     );
   }
@@ -227,9 +223,8 @@ class _PulseLoaderState extends State<_PulseLoader>
 
 /// Shimmer effect loader
 class _ShimmerLoader extends StatefulWidget {
-  final double size;
-
   const _ShimmerLoader({required this.size});
+  final double size;
 
   @override
   State<_ShimmerLoader> createState() => _ShimmerLoaderState();
@@ -284,16 +279,15 @@ class _ShimmerLoaderState extends State<_ShimmerLoader>
 
 /// Card shimmer effect for loading states
 class ShimmerCard extends StatefulWidget {
-  final double height;
-  final double? width;
-  final BorderRadius? borderRadius;
-
   const ShimmerCard({
     super.key,
     this.height = 200,
     this.width,
     this.borderRadius,
   });
+  final double height;
+  final double? width;
+  final BorderRadius? borderRadius;
 
   @override
   State<ShimmerCard> createState() => _ShimmerCardState();
@@ -347,16 +341,15 @@ class _ShimmerCardState extends State<ShimmerCard>
 
 /// List shimmer effect for loading feed
 class ShimmerList extends StatelessWidget {
-  final int itemCount;
-  final double itemHeight;
-  final EdgeInsets? padding;
-
   const ShimmerList({
     super.key,
     this.itemCount = 5,
     this.itemHeight = 80,
     this.padding,
   });
+  final int itemCount;
+  final double itemHeight;
+  final EdgeInsets? padding;
 
   @override
   Widget build(BuildContext context) {
@@ -371,11 +364,6 @@ class ShimmerList extends StatelessWidget {
 
 /// Grid shimmer effect for loading grid
 class ShimmerGrid extends StatelessWidget {
-  final int itemCount;
-  final int crossAxisCount;
-  final double aspectRatio;
-  final EdgeInsets? padding;
-
   const ShimmerGrid({
     super.key,
     this.itemCount = 9,
@@ -383,6 +371,10 @@ class ShimmerGrid extends StatelessWidget {
     this.aspectRatio = 1.0,
     this.padding,
   });
+  final int itemCount;
+  final int crossAxisCount;
+  final double aspectRatio;
+  final EdgeInsets? padding;
 
   @override
   Widget build(BuildContext context) {

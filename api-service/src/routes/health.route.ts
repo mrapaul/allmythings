@@ -4,7 +4,8 @@ import { VisionOrchestratorService } from '../services/vision-orchestrator.servi
 /**
  * GET /v1/health - Service health check
  */
-export async function healthRoute(fastify: FastifyInstance): Promise<void> {
+// eslint-disable-next-line @typescript-eslint/require-await
+export async function healthRoute(fastify: FastifyInstance) {
   const orchestrator = new VisionOrchestratorService();
 
   fastify.get('/v1/health', async (_request, reply) => {

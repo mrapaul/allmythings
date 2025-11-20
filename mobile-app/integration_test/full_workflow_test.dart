@@ -1,11 +1,12 @@
 import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:integration_test/integration_test.dart';
-import 'package:home_inventory/main.dart' as app;
 import 'package:home_inventory/data/database/app_database.dart';
-import 'package:path_provider/path_provider.dart';
+import 'package:home_inventory/main.dart' as app;
+import 'package:integration_test/integration_test.dart';
 import 'package:path/path.dart' as path;
+import 'package:path_provider/path_provider.dart';
 
 /// Full workflow E2E test
 /// Tests: Photo → Detection → Storage → Retrieval → Search
@@ -18,7 +19,9 @@ void main() {
     setUp(() async {
       // Initialize database
       final dbFolder = await getApplicationDocumentsDirectory();
-      database = AppDatabase(File(path.join(dbFolder.path, 'test_inventory.db')));
+      database = AppDatabase(
+        File(path.join(dbFolder.path, 'test_inventory.db')),
+      );
     });
 
     tearDown(() async {
@@ -26,8 +29,9 @@ void main() {
       await database.close();
     });
 
-    testWidgets('Complete workflow: Photo → Detect → Store → Retrieve',
-        (WidgetTester tester) async {
+    testWidgets('Complete workflow: Photo → Detect → Store → Retrieve', (
+      WidgetTester tester,
+    ) async {
       // STEP 1: Start app
       app.main();
       await tester.pumpAndSettle();
@@ -79,8 +83,9 @@ void main() {
       print('✓ Full UI workflow navigation verified');
     });
 
-    testWidgets('Database operations: Create → Read → Update → Delete',
-        (WidgetTester tester) async {
+    testWidgets('Database operations: Create → Read → Update → Delete', (
+      WidgetTester tester,
+    ) async {
       // STEP 1: Create test item
       final itemId = await database.inventoryItemDao.createItem(
         InventoryItemsCompanion.insert(
@@ -105,12 +110,16 @@ void main() {
       await database.alternativeLabelDao.addLabel(itemId, 'electronics');
       await database.alternativeLabelDao.addLabel(itemId, 'work');
 
-      final labels = await database.alternativeLabelDao.getLabelsForItem(itemId);
+      final labels = await database.alternativeLabelDao.getLabelsForItem(
+        itemId,
+      );
       expect(labels.length, 2);
       print('✓ Added ${labels.length} labels');
 
       // STEP 4: Search by label
-      final searchResults = await database.inventoryItemDao.searchItems('electronics');
+      final searchResults = await database.inventoryItemDao.searchItems(
+        'electronics',
+      );
       expect(searchResults.length, greaterThan(0));
       print('✓ Search found ${searchResults.length} items');
 
@@ -129,8 +138,9 @@ void main() {
       print('✓ Complete CRUD workflow verified');
     });
 
-    testWidgets('API integration: Mock detections are stored correctly',
-        (WidgetTester tester) async {
+    testWidgets('API integration: Mock detections are stored correctly', (
+      WidgetTester tester,
+    ) async {
       // This test verifies that when mock API returns detections,
       // they are properly stored in the database
 

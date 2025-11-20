@@ -1,0 +1,1228 @@
+openapi: 3.1.0
+info:
+  title: Visual Home Inventory Manager API
+  version: 1.0.0
+  description: |
+    RESTful API for Visual Home Inventory Manager - a mobile app for cataloging household items using AI-powered object detection.
+
+    ## Features
+    - Multi-provider ensemble vision AI (Google Vision, AWS Rekognition)
+    - User-based data isolation with JWT authentication
+    - Offline-first sync support
+    - Full-text search across inventory
+    - Custom label management
+
+  contact:
+    name: API Support
+    email: support@example.com
+
+servers:
+  - url: https://api.homeinventory.app/v1
+    description: Production server
+  - url: https://staging-api.homeinventory.app/v1
+    description: Staging server
+  - url: http://localhost:3000/v1
+    description: Local development
+
+tags:
+  - name: Detection
+    description: Object detection and image analysis
+  - name: Inventory
+    description: Inventory item management
+  - name: Labels
+    description: Label and tag management
+  - name: Search
+    description: Full-text search across inventory
+  - name: Sync
+    description: Offline-first synchronization
+  - name: Health
+    description: Service health and monitoring
+
+security:
+  - BearerAuth: []
+
+paths:
+  # ==================== DETECTION ENDPOINTS ====================
+  /detect:
+    post:
+      tags:
+        - Detection
+      summary: Detect objects in uploaded image
+      description: |
+        Uploads an image and performs object detection using ensemble of AI providers.
+        Results are cached for 24 hours based on image hash.
+      operationId: detectObjects
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required:
+                - image
+              properties:
+                image:
+                  type: string
+                  format: binary
+                  description: Image file (JPEG, PNG, WebP). Max 10MB, recommended max 2048px.
+                minConfidence:
+                  type: number
+                  format: float
+                  minimum: 0.0
+                  maximum: 1.0
+                  default: 0.7
+                  description: Minimum confidence threshold for detections
+                maxDetections:
+                  type: integer
+                  minimum: 1
+                  maximum: 50
+                  default: 20
+                  description: Maximum number of detections to return
+      responses:
+        '200':
+          description: Detection successful
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DetectionResponse'
+              examples:
+                successfulDetection:
+                  $ref: '#/components/examples/DetectionResponseExample'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '413':
+          $ref: '#/components/responses/PayloadTooLarge'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
+
+  # ==================== INVENTORY ENDPOINTS ====================
+  /items:
+    get:
+      tags:
+        - Inventory
+      summary: List all inventory items
+      description: Returns paginated list of user's inventory items with labels
+      operationId: listItems
+      parameters:
+        - $ref: '#/components/parameters/PageParam'
+        - $ref: '#/components/parameters/LimitParam'
+        - $ref: '#/components/parameters/SortParam'
+        - name: minConfidence
+          in: query
+          schema:
+            type: number
+            format: float
+            minimum: 0.0
+            maximum: 1.0
+          description: Filter items by minimum detection confidence
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedItemsResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+    post:
+      tags:
+        - Inventory
+      summary: Create new inventory item
+      description: Creates a new item from detection results
+      operationId: createItem
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateItemRequest'
+      responses:
+        '201':
+          description: Item created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InventoryItem'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /items/{itemId}:
+    parameters:
+      - $ref: '#/components/parameters/ItemIdParam'
+
+    get:
+      tags:
+        - Inventory
+      summary: Get item details
+      description: Returns detailed information about a specific inventory item
+      operationId: getItem
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InventoryItem'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+    patch:
+      tags:
+        - Inventory
+      summary: Update item metadata
+      description: Updates item properties (excluding detection data)
+      operationId: updateItem
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateItemRequest'
+      responses:
+        '200':
+          description: Item updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InventoryItem'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+    delete:
+      tags:
+        - Inventory
+      summary: Delete inventory item
+      description: Soft deletes an item (marks as deleted for sync)
+      operationId: deleteItem
+      responses:
+        '204':
+          description: Item deleted successfully
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  # ==================== LABEL ENDPOINTS ====================
+  /labels:
+    post:
+      tags:
+        - Labels
+      summary: Add label to item
+      description: Creates a new custom label for an inventory item
+      operationId: createLabel
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateLabelRequest'
+      responses:
+        '201':
+          description: Label created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Label'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          description: Label already exists
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /labels/{labelId}:
+    parameters:
+      - $ref: '#/components/parameters/LabelIdParam'
+
+    patch:
+      tags:
+        - Labels
+      summary: Update label value
+      description: Updates the value of an existing label
+      operationId: updateLabel
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - value
+              properties:
+                value:
+                  type: string
+                  minLength: 1
+                  maxLength: 100
+                  description: New label value
+      responses:
+        '200':
+          description: Label updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Label'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    delete:
+      tags:
+        - Labels
+      summary: Delete label
+      description: Removes a label from an item
+      operationId: deleteLabel
+      responses:
+        '204':
+          description: Label deleted successfully
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /items/{itemId}/labels:
+    parameters:
+      - $ref: '#/components/parameters/ItemIdParam'
+
+    get:
+      tags:
+        - Labels
+      summary: Get all labels for item
+      description: Returns all labels associated with an inventory item
+      operationId: getItemLabels
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  labels:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Label'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  # ==================== SEARCH ENDPOINTS ====================
+  /search:
+    get:
+      tags:
+        - Search
+      summary: Search inventory
+      description: |
+        Full-text search across inventory items and labels using PostgreSQL FTS.
+        Results are ranked by relevance.
+      operationId: searchInventory
+      parameters:
+        - name: q
+          in: query
+          required: true
+          schema:
+            type: string
+            minLength: 1
+          description: Search query
+        - $ref: '#/components/parameters/PageParam'
+        - $ref: '#/components/parameters/LimitParam'
+        - name: minConfidence
+          in: query
+          schema:
+            type: number
+            format: float
+            minimum: 0.0
+            maximum: 1.0
+          description: Filter by minimum detection confidence
+        - name: startDate
+          in: query
+          schema:
+            type: string
+            format: date-time
+          description: Filter items created after this date
+        - name: endDate
+          in: query
+          schema:
+            type: string
+            format: date-time
+          description: Filter items created before this date
+      responses:
+        '200':
+          description: Search results
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SearchResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+
+  # ==================== SYNC ENDPOINTS ====================
+  /sync:
+    get:
+      tags:
+        - Sync
+      summary: Get changes since timestamp
+      description: |
+        Returns all items, labels, and deletions since the provided timestamp.
+        Supports offline-first mobile app synchronization.
+      operationId: syncChanges
+      parameters:
+        - name: since
+          in: query
+          required: true
+          schema:
+            type: string
+            format: date-time
+          description: Timestamp of last successful sync (ISO 8601)
+        - $ref: '#/components/parameters/PageParam'
+        - $ref: '#/components/parameters/LimitParam'
+      responses:
+        '200':
+          description: Sync data
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SyncResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+
+    post:
+      tags:
+        - Sync
+      summary: Push local changes to server
+      description: |
+        Uploads local changes made while offline.
+        Server resolves conflicts using last-write-wins strategy.
+      operationId: pushChanges
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PushChangesRequest'
+      responses:
+        '200':
+          description: Changes applied successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PushChangesResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '409':
+          description: Conflict detected
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ConflictResponse'
+
+  # ==================== HEALTH ENDPOINTS ====================
+  /health:
+    get:
+      tags:
+        - Health
+      summary: Health check
+      description: Returns service health status and provider availability
+      operationId: healthCheck
+      security: []  # No auth required
+      responses:
+        '200':
+          description: Service healthy
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthResponse'
+              examples:
+                healthy:
+                  value:
+                    status: "healthy"
+                    timestamp: "2024-01-15T10:30:00.000Z"
+                    uptime: 3600
+                    version: "1.0.0"
+                    providers:
+                      google: true
+                      aws: true
+                      mock: true
+                    database:
+                      connected: true
+                      responseTimeMs: 12
+                    cache:
+                      connected: true
+                      responseTimeMs: 3
+        '503':
+          description: Service unhealthy
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthResponse'
+
+# ==================== COMPONENTS ====================
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: JWT token obtained from authentication service
+
+  parameters:
+    ItemIdParam:
+      name: itemId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+      description: Unique identifier for inventory item
+
+    LabelIdParam:
+      name: labelId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+      description: Unique identifier for label
+
+    PageParam:
+      name: page
+      in: query
+      schema:
+        type: integer
+        minimum: 1
+        default: 1
+      description: Page number for pagination
+
+    LimitParam:
+      name: limit
+      in: query
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 100
+        default: 20
+      description: Number of items per page
+
+    SortParam:
+      name: sort
+      in: query
+      schema:
+        type: string
+        enum: [createdAt_desc, createdAt_asc, updatedAt_desc, confidence_desc]
+        default: createdAt_desc
+      description: Sort order
+
+  schemas:
+    # ==================== DETECTION SCHEMAS ====================
+    BoundingBox:
+      type: object
+      required:
+        - x
+        - y
+        - width
+        - height
+      properties:
+        x:
+          type: number
+          format: float
+          minimum: 0.0
+          maximum: 1.0
+          description: Normalized x-coordinate (0-1)
+        y:
+          type: number
+          format: float
+          minimum: 0.0
+          maximum: 1.0
+          description: Normalized y-coordinate (0-1)
+        width:
+          type: number
+          format: float
+          minimum: 0.0
+          maximum: 1.0
+          description: Normalized width (0-1)
+        height:
+          type: number
+          format: float
+          minimum: 0.0
+          maximum: 1.0
+          description: Normalized height (0-1)
+
+    AlternativeLabel:
+      type: object
+      required:
+        - label
+        - confidence
+        - provider
+      properties:
+        label:
+          type: string
+        confidence:
+          type: number
+          format: float
+          minimum: 0.0
+          maximum: 1.0
+        provider:
+          type: string
+          enum: [meta, google, aws, tensorflow, mock]
+
+    EnsembleDetails:
+      type: object
+      required:
+        - providerAgreement
+        - confidenceByProvider
+        - labelConsensus
+      properties:
+        providerAgreement:
+          type: integer
+          minimum: 1
+          maximum: 4
+          description: Number of providers that detected this object
+        confidenceByProvider:
+          type: object
+          additionalProperties:
+            type: number
+            format: float
+          description: Confidence score from each provider
+        labelConsensus:
+          type: string
+          enum: [unanimous, majority, split, single-provider]
+          description: Level of agreement among providers
+
+    Detection:
+      type: object
+      required:
+        - id
+        - label
+        - confidence
+        - boundingBox
+        - ensembleDetails
+        - alternativeLabels
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: Unique detection identifier
+        label:
+          type: string
+          description: Primary label (highest confidence)
+        confidence:
+          type: number
+          format: float
+          minimum: 0.0
+          maximum: 1.0
+          description: Fused confidence score
+        boundingBox:
+          $ref: '#/components/schemas/BoundingBox'
+        ensembleDetails:
+          $ref: '#/components/schemas/EnsembleDetails'
+        alternativeLabels:
+          type: array
+          items:
+            $ref: '#/components/schemas/AlternativeLabel'
+
+    ProviderResult:
+      type: object
+      required:
+        - provider
+        - success
+        - processingTimeMs
+        - detections
+      properties:
+        provider:
+          type: string
+          enum: [meta, google, aws, tensorflow, mock]
+        success:
+          type: boolean
+        processingTimeMs:
+          type: integer
+          minimum: 0
+        detections:
+          type: array
+          items:
+            $ref: '#/components/schemas/Detection'
+        error:
+          type: string
+          description: Error message if provider failed
+
+    EnsembleMetrics:
+      type: object
+      required:
+        - providersUsed
+        - averageConfidence
+        - consensusRate
+      properties:
+        providersUsed:
+          type: integer
+          minimum: 0
+          maximum: 4
+        averageConfidence:
+          type: number
+          format: float
+          minimum: 0.0
+          maximum: 1.0
+        consensusRate:
+          type: number
+          format: float
+          minimum: 0.0
+          maximum: 1.0
+          description: Percentage of detections with multi-provider agreement
+
+    DetectionResponse:
+      type: object
+      required:
+        - success
+        - ensembleMode
+        - processingTimeMs
+        - detections
+        - providerResults
+        - ensembleMetrics
+      properties:
+        success:
+          type: boolean
+        ensembleMode:
+          type: string
+          enum: [full, partial, single, none]
+        processingTimeMs:
+          type: integer
+          minimum: 0
+        detections:
+          type: array
+          items:
+            $ref: '#/components/schemas/Detection'
+        providerResults:
+          type: array
+          items:
+            $ref: '#/components/schemas/ProviderResult'
+        ensembleMetrics:
+          $ref: '#/components/schemas/EnsembleMetrics'
+        error:
+          type: string
+          description: Error message if all providers failed
+
+    # ==================== INVENTORY SCHEMAS ====================
+    Label:
+      type: object
+      required:
+        - id
+        - itemId
+        - value
+        - createdAt
+      properties:
+        id:
+          type: string
+          format: uuid
+        itemId:
+          type: string
+          format: uuid
+        key:
+          type: string
+          nullable: true
+          description: Optional category (type, color, brand, room)
+        value:
+          type: string
+          minLength: 1
+          maxLength: 100
+        createdAt:
+          type: string
+          format: date-time
+
+    InventoryItem:
+      type: object
+      required:
+        - id
+        - userId
+        - photoUrl
+        - thumbnailUrl
+        - detectionData
+        - labels
+        - createdAt
+        - updatedAt
+      properties:
+        id:
+          type: string
+          format: uuid
+        userId:
+          type: string
+          format: uuid
+        photoUrl:
+          type: string
+          format: uri
+          description: Presigned S3 URL for full-resolution image
+        thumbnailUrl:
+          type: string
+          format: uri
+          description: Presigned S3 URL for 256x256 thumbnail
+        detectionData:
+          $ref: '#/components/schemas/DetectionResponse'
+        labels:
+          type: array
+          items:
+            $ref: '#/components/schemas/Label'
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+        deletedAt:
+          type: string
+          format: date-time
+          nullable: true
+          description: Soft delete timestamp
+
+    CreateItemRequest:
+      type: object
+      required:
+        - detectionData
+        - photoS3Key
+        - thumbnailS3Key
+      properties:
+        detectionData:
+          $ref: '#/components/schemas/DetectionResponse'
+        photoS3Key:
+          type: string
+          description: S3 object key for uploaded photo
+        thumbnailS3Key:
+          type: string
+          description: S3 object key for thumbnail
+        initialLabels:
+          type: array
+          items:
+            type: object
+            properties:
+              key:
+                type: string
+              value:
+                type: string
+
+    UpdateItemRequest:
+      type: object
+      properties:
+        photoUrl:
+          type: string
+          format: uri
+        thumbnailUrl:
+          type: string
+          format: uri
+
+    PaginatedItemsResponse:
+      type: object
+      required:
+        - items
+        - pagination
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/InventoryItem'
+        pagination:
+          $ref: '#/components/schemas/PaginationMeta'
+
+    PaginationMeta:
+      type: object
+      required:
+        - page
+        - limit
+        - total
+        - totalPages
+      properties:
+        page:
+          type: integer
+        limit:
+          type: integer
+        total:
+          type: integer
+          description: Total number of items
+        totalPages:
+          type: integer
+        hasNext:
+          type: boolean
+        hasPrev:
+          type: boolean
+
+    # ==================== LABEL SCHEMAS ====================
+    CreateLabelRequest:
+      type: object
+      required:
+        - itemId
+        - value
+      properties:
+        itemId:
+          type: string
+          format: uuid
+        key:
+          type: string
+          nullable: true
+        value:
+          type: string
+          minLength: 1
+          maxLength: 100
+
+    # ==================== SEARCH SCHEMAS ====================
+    SearchResult:
+      allOf:
+        - $ref: '#/components/schemas/InventoryItem'
+        - type: object
+          properties:
+            rank:
+              type: number
+              format: float
+              description: Search relevance score
+            highlights:
+              type: object
+              properties:
+                labels:
+                  type: array
+                  items:
+                    type: string
+                  description: Matching label values with highlights
+
+    SearchResponse:
+      type: object
+      required:
+        - results
+        - pagination
+      properties:
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/SearchResult'
+        pagination:
+          $ref: '#/components/schemas/PaginationMeta'
+
+    # ==================== SYNC SCHEMAS ====================
+    SyncResponse:
+      type: object
+      required:
+        - items
+        - labels
+        - deletedItemIds
+        - timestamp
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/InventoryItem'
+          description: New or updated items
+        labels:
+          type: array
+          items:
+            $ref: '#/components/schemas/Label'
+          description: New or updated labels
+        deletedItemIds:
+          type: array
+          items:
+            type: string
+            format: uuid
+          description: IDs of deleted items
+        timestamp:
+          type: string
+          format: date-time
+          description: Server timestamp for next sync
+        pagination:
+          $ref: '#/components/schemas/PaginationMeta'
+
+    PushChangesRequest:
+      type: object
+      required:
+        - items
+        - labels
+        - deletedItemIds
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/InventoryItem'
+        labels:
+          type: array
+          items:
+            $ref: '#/components/schemas/Label'
+        deletedItemIds:
+          type: array
+          items:
+            type: string
+            format: uuid
+
+    PushChangesResponse:
+      type: object
+      required:
+        - syncedItemIds
+        - conflicts
+        - timestamp
+      properties:
+        syncedItemIds:
+          type: array
+          items:
+            type: string
+            format: uuid
+        conflicts:
+          type: array
+          items:
+            $ref: '#/components/schemas/Conflict'
+        timestamp:
+          type: string
+          format: date-time
+
+    Conflict:
+      type: object
+      required:
+        - itemId
+        - field
+        - clientValue
+        - serverValue
+        - resolution
+      properties:
+        itemId:
+          type: string
+          format: uuid
+        field:
+          type: string
+        clientValue:
+          type: string
+        serverValue:
+          type: string
+        resolution:
+          type: string
+          enum: [client_wins, server_wins]
+
+    ConflictResponse:
+      type: object
+      required:
+        - conflicts
+      properties:
+        conflicts:
+          type: array
+          items:
+            $ref: '#/components/schemas/Conflict'
+
+    # ==================== HEALTH SCHEMAS ====================
+    HealthResponse:
+      type: object
+      required:
+        - status
+        - timestamp
+        - uptime
+        - version
+      properties:
+        status:
+          type: string
+          enum: [healthy, degraded, unhealthy]
+        timestamp:
+          type: string
+          format: date-time
+        uptime:
+          type: integer
+          description: Uptime in seconds
+        version:
+          type: string
+        providers:
+          type: object
+          additionalProperties:
+            type: boolean
+          description: Health status of each vision provider
+        database:
+          type: object
+          properties:
+            connected:
+              type: boolean
+            responseTimeMs:
+              type: integer
+        cache:
+          type: object
+          properties:
+            connected:
+              type: boolean
+            responseTimeMs:
+              type: integer
+
+    # ==================== ERROR SCHEMAS ====================
+    Error:
+      type: object
+      required:
+        - statusCode
+        - error
+        - message
+        - timestamp
+        - requestId
+      properties:
+        statusCode:
+          type: integer
+        error:
+          type: string
+        message:
+          type: string
+        timestamp:
+          type: string
+          format: date-time
+        requestId:
+          type: string
+        details:
+          type: object
+          additionalProperties: true
+
+  responses:
+    BadRequest:
+      description: Bad request
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            statusCode: 400
+            error: "Bad Request"
+            message: "Invalid image format. Accepted: JPEG, PNG, WebP"
+            timestamp: "2024-01-15T10:30:00.000Z"
+            requestId: "req_abc123"
+
+    Unauthorized:
+      description: Unauthorized
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            statusCode: 401
+            error: "Unauthorized"
+            message: "Invalid or expired token"
+            timestamp: "2024-01-15T10:30:00.000Z"
+            requestId: "req_abc123"
+
+    NotFound:
+      description: Resource not found
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            statusCode: 404
+            error: "Not Found"
+            message: "Item not found or access denied"
+            timestamp: "2024-01-15T10:30:00.000Z"
+            requestId: "req_abc123"
+
+    PayloadTooLarge:
+      description: Payload too large
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            statusCode: 413
+            error: "Payload Too Large"
+            message: "Image exceeds maximum size of 10MB"
+            timestamp: "2024-01-15T10:30:00.000Z"
+            requestId: "req_abc123"
+
+    TooManyRequests:
+      description: Rate limit exceeded
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            statusCode: 429
+            error: "Too Many Requests"
+            message: "Rate limit exceeded. Retry after 60 seconds"
+            timestamp: "2024-01-15T10:30:00.000Z"
+            requestId: "req_abc123"
+
+    ServiceUnavailable:
+      description: Service unavailable
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            statusCode: 503
+            error: "Service Unavailable"
+            message: "Vision providers temporarily unavailable"
+            timestamp: "2024-01-15T10:30:00.000Z"
+            requestId: "req_abc123"
+            details:
+              providers:
+                google: false
+                aws: false
+
+  examples:
+    DetectionResponseExample:
+      value:
+        success: true
+        ensembleMode: "partial"
+        processingTimeMs: 1250
+        detections:
+          - id: "det_abc123"
+            label: "laptop"
+            confidence: 0.92
+            boundingBox:
+              x: 0.2
+              y: 0.3
+              width: 0.4
+              height: 0.5
+            ensembleDetails:
+              providerAgreement: 2
+              confidenceByProvider:
+                google: 0.95
+                aws: 0.89
+              labelConsensus: "majority"
+            alternativeLabels:
+              - label: "computer"
+                confidence: 0.87
+                provider: "google"
+              - label: "notebook"
+                confidence: 0.82
+                provider: "aws"
+        providerResults:
+          - provider: "google"
+            success: true
+            processingTimeMs: 890
+            detections:
+              - id: "det_google_1"
+                label: "laptop"
+                confidence: 0.95
+                boundingBox:
+                  x: 0.2
+                  y: 0.3
+                  width: 0.4
+                  height: 0.5
+                ensembleDetails:
+                  providerAgreement: 1
+                  confidenceByProvider:
+                    google: 0.95
+                  labelConsensus: "single-provider"
+                alternativeLabels: []
+          - provider: "aws"
+            success: true
+            processingTimeMs: 1120
+            detections:
+              - id: "det_aws_1"
+                label: "laptop"
+                confidence: 0.89
+                boundingBox:
+                  x: 0.21
+                  y: 0.31
+                  width: 0.39
+                  height: 0.49
+                ensembleDetails:
+                  providerAgreement: 1
+                  confidenceByProvider:
+                    aws: 0.89
+                  labelConsensus: "single-provider"
+                alternativeLabels: []
+        ensembleMetrics:
+          providersUsed: 2
+          averageConfidence: 0.92
+          consensusRate: 1.0

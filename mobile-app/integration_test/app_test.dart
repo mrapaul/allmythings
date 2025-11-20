@@ -1,14 +1,15 @@
-import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:integration_test/integration_test.dart';
 import 'package:home_inventory/main.dart' as app;
+import 'package:integration_test/integration_test.dart';
 
 void main() {
   IntegrationTestWidgetsFlutterBinding.ensureInitialized();
 
   group('Home Inventory App - Integration Tests', () {
-    testWidgets('App should start and show empty inventory screen', (WidgetTester tester) async {
+    testWidgets('App should start and show empty inventory screen', (
+      WidgetTester tester,
+    ) async {
       app.main();
       await tester.pumpAndSettle();
 
@@ -25,7 +26,9 @@ void main() {
       expect(find.byIcon(Icons.person_outline), findsOneWidget);
     });
 
-    testWidgets('Bottom navigation should work correctly', (WidgetTester tester) async {
+    testWidgets('Bottom navigation should work correctly', (
+      WidgetTester tester,
+    ) async {
       app.main();
       await tester.pumpAndSettle();
 
@@ -52,7 +55,9 @@ void main() {
       expect(find.byIcon(Icons.home), findsOneWidget);
     });
 
-    testWidgets('Camera button should show image picker options', (WidgetTester tester) async {
+    testWidgets('Camera button should show image picker options', (
+      WidgetTester tester,
+    ) async {
       app.main();
       await tester.pumpAndSettle();
 
@@ -69,7 +74,9 @@ void main() {
       await tester.pumpAndSettle();
     });
 
-    testWidgets('Search screen should have search functionality', (WidgetTester tester) async {
+    testWidgets('Search screen should have search functionality', (
+      WidgetTester tester,
+    ) async {
       app.main();
       await tester.pumpAndSettle();
 
@@ -81,7 +88,9 @@ void main() {
       expect(find.byType(TextField), findsOneWidget);
     });
 
-    testWidgets('Profile screen should show stats', (WidgetTester tester) async {
+    testWidgets('Profile screen should show stats', (
+      WidgetTester tester,
+    ) async {
       app.main();
       await tester.pumpAndSettle();
 
@@ -93,7 +102,9 @@ void main() {
       expect(find.byType(Scaffold), findsWidgets);
     });
 
-    testWidgets('App should handle refresh on home screen', (WidgetTester tester) async {
+    testWidgets('App should handle refresh on home screen', (
+      WidgetTester tester,
+    ) async {
       app.main();
       await tester.pumpAndSettle();
 
@@ -115,7 +126,9 @@ void main() {
   });
 
   group('Database Operations', () {
-    testWidgets('App should handle database initialization', (WidgetTester tester) async {
+    testWidgets('App should handle database initialization', (
+      WidgetTester tester,
+    ) async {
       app.main();
       await tester.pumpAndSettle(const Duration(seconds: 2));
 
@@ -128,7 +141,9 @@ void main() {
   });
 
   group('UI/UX Validations', () {
-    testWidgets('No header should be visible on home screen', (WidgetTester tester) async {
+    testWidgets('No header should be visible on home screen', (
+      WidgetTester tester,
+    ) async {
       app.main();
       await tester.pumpAndSettle();
 
@@ -136,7 +151,9 @@ void main() {
       expect(find.text('Home Inventory'), findsNothing);
     });
 
-    testWidgets('Bottom navigation should have proper styling', (WidgetTester tester) async {
+    testWidgets('Bottom navigation should have proper styling', (
+      WidgetTester tester,
+    ) async {
       app.main();
       await tester.pumpAndSettle();
 

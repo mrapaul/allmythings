@@ -1,150 +1,447 @@
-import 'package:flutter_test/flutter_test.dart';
-import 'package:fpdart/fpdart.dart' show right, left;
-
+import 'package:all_my_things/application/providers/inventory_providers.dart';
+import 'package:all_my_things/data/database/app_database.dart';
+import 'package:all_my_things/data/repositories/inventory_repository.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:home_inventory/application/providers/inventory_providers.dart';
-import 'package:home_inventory/data/repositories/inventory_repository.dart';
-import 'package:home_inventory/data/database/app_database.dart';
+import 'package:flutter_test/flutter_test.dart';
+import 'package:mocktail/mocktail.dart';
 
+import '../../fixtures/mock_data.dart';
 
-import 'package:mockito/annotations.dart';
-import 'package:mockito/mockito.dart';
-import 'inventory_providers_test.mocks.dart';
+class MockInventoryRepository extends Mock implements InventoryRepository {}
 
-@GenerateMocks([InventoryRepository])
 void main() {
-  group('InventoryListNotifier', () {
+  TestWidgetsFlutterBinding.ensureInitialized();
+
+  group('InventoryItemsProvider Tests', () {
     late MockInventoryRepository mockRepository;
-    late ProviderContainer container;
 
     setUp(() {
       mockRepository = MockInventoryRepository();
-      container = ProviderContainer(
-        overrides: [
-          inventoryRepositoryProvider.overrideWithValue(mockRepository),
-        ],
-      );
     });
 
-    tearDown(() {
-      container.dispose();
+    test(
+      'should return list of inventory items',
+      () async {
+        // Arrange
+        final items = MockDataFactory.createInventoryItems(3);
+        when(() => mockRepository.getAll()).thenAnswer((_) async => items);
+
+        final container = ProviderContainer(
+          overrides: [
+            inventoryRepositoryProvider
+                .overrideWithValue(mockRepository),
+          ],
+        );
+
+        // Act
+        final result = await container.read(inventoryItemsProvider.future);
+
+        // Assert
+        expect(result, equals(items));
+        expect(result.length, equals(3));
+        verify(() => mockRepository.getAll()).called(1);
+      },
+    );
+
+    test(
+      'should handle empty inventory',
+      () async {
+        // Arrange
+        when(() => mockRepository.getAll()).thenAnswer((_) async => []);
+
+        final container = ProviderContainer(
+          overrides: [
+            inventoryRepositoryProvider
+                .overrideWithValue(mockRepository),
+          ],
+        );
+
+        // Act
+        final result = await container.read(inventoryItemsProvider.future);
+
+        // Assert
+        expect(result, isEmpty);
+      },
+    );
+
+    test(
+      'should handle repository error',
+      () async {
+        // Arrange
+        when(() => mockRepository.getAll()).thenThrow(
+          Exception('Database error'),
+        );
+
+        final container = ProviderContainer(
+          overrides: [
+            inventoryRepositoryProvider
+                .overrideWithValue(mockRepository),
+          ],
+        );
+
+        // Act & Assert
+        expect(
+          () => container.read(inventoryItemsProvider.future),
+          throwsException,
+        );
+      },
+    );
+
+    test(
+      'should refresh when invalidated',
+      () async {
+        // Arrange
+        final items1 = MockDataFactory.createInventoryItems(2);
+        final items2 = MockDataFactory.createInventoryItems(3);
+
+        when(() => mockRepository.getAll())
+            .thenAnswer((_) async => items1)
+            .thenAnswer((_) async => items2);
+
+        final container = ProviderContainer(
+          overrides: [
+            inventoryRepositoryProvider
+                .overrideWithValue(mockRepository),
+          ],
+        );
+
+        // Act
+        final result1 = await container.read(inventoryItemsProvider.future);
+        container.invalidate(inventoryItemsProvider);
+        final result2 = await container.read(inventoryItemsProvider.future);
+
+        // Assert
+        expect(result1.length, equals(2));
+        expect(result2.length, equals(3));
+      },
+    );
+  });
+
+  group('SearchInventoryProvider Tests', () {
+    late MockInventoryRepository mockRepository;
+
+    setUp(() {
+      mockRepository = MockInventoryRepository();
     });
 
-    /*test('build returns initial list of items', () async {
-      final items = [
-        InventoryItem(
+    test(
+      'should filter items by search query',
+      () async {
+        // Arrange
+        final items = [
+          MockDataFactory.createInventoryItem(
+            id: 1,
+            label: 'lamp',
+          ),
+          MockDataFactory.createInventoryItem(
+            id: 2,
+            label: 'chair',
+          ),
+        ];
+        when(() => mockRepository.search('lamp')).thenAnswer(
+          (_) async => [items[0]],
+        );
+
+        final container = ProviderContainer(
+          overrides: [
+            inventoryRepositoryProvider
+                .overrideWithValue(mockRepository),
+          ],
+        );
+
+        // Act
+        final result = await container.read(
+          searchInventoryProvider('lamp').future,
+        );
+
+        // Assert
+        expect(result.length, equals(1));
+        expect(result.first.label, equals('lamp'));
+      },
+    );
+
+    test(
+      'should return empty list for no matches',
+      () async {
+        // Arrange
+        when(() => mockRepository.search('nonexistent')).thenAnswer(
+          (_) async => [],
+        );
+
+        final container = ProviderContainer(
+          overrides: [
+            inventoryRepositoryProvider
+                .overrideWithValue(mockRepository),
+          ],
+        );
+
+        // Act
+        final result = await container.read(
+          searchInventoryProvider('nonexistent').future,
+        );
+
+        // Assert
+        expect(result, isEmpty);
+      },
+    );
+
+    test(
+      'should be case-insensitive',
+      () async {
+        // Arrange
+        final item = MockDataFactory.createInventoryItem(
+          label: 'Lamp',
+        );
+        when(() => mockRepository.search('lamp')).thenAnswer(
+          (_) async => [item],
+        );
+
+        final container = ProviderContainer(
+          overrides: [
+            inventoryRepositoryProvider
+                .overrideWithValue(mockRepository),
+          ],
+        );
+
+        // Act
+        final result = await container.read(
+          searchInventoryProvider('lamp').future,
+        );
+
+        // Assert
+        expect(result.length, equals(1));
+      },
+    );
+  });
+
+  group('ItemDetailProvider Tests', () {
+    late MockInventoryRepository mockRepository;
+
+    setUp(() {
+      mockRepository = MockInventoryRepository();
+    });
+
+    test(
+      'should fetch item by ID',
+      () async {
+        // Arrange
+        final item = MockDataFactory.createInventoryItem(id: 1);
+        when(() => mockRepository.getById(1)).thenAnswer(
+          (_) async => item,
+        );
+
+        final container = ProviderContainer(
+          overrides: [
+            inventoryRepositoryProvider
+                .overrideWithValue(mockRepository),
+          ],
+        );
+
+        // Act
+        final result = await container.read(
+          itemDetailProvider(1).future,
+        );
+
+        // Assert
+        expect(result, equals(item));
+        expect(result.id, equals(1));
+      },
+    );
+
+    test(
+      'should return null if item not found',
+      () async {
+        // Arrange
+        when(() => mockRepository.getById(999)).thenAnswer(
+          (_) async => null,
+        );
+
+        final container = ProviderContainer(
+          overrides: [
+            inventoryRepositoryProvider
+                .overrideWithValue(mockRepository),
+          ],
+        );
+
+        // Act
+        final result = await container.read(
+          itemDetailProvider(999).future,
+        );
+
+        // Assert
+        expect(result, isNull);
+      },
+    );
+  });
+
+  group('DeleteItemProvider Tests', () {
+    late MockInventoryRepository mockRepository;
+
+    setUp(() {
+      mockRepository = MockInventoryRepository();
+    });
+
+    test(
+      'should delete item successfully',
+      () async {
+        // Arrange
+        when(() => mockRepository.delete(1)).thenAnswer(
+          (_) async => true,
+        );
+
+        final container = ProviderContainer(
+          overrides: [
+            inventoryRepositoryProvider
+                .overrideWithValue(mockRepository),
+          ],
+        );
+
+        // Act
+        final result = await container.read(
+          deleteItemProvider(1).future,
+        );
+
+        // Assert
+        expect(result, isTrue);
+        verify(() => mockRepository.delete(1)).called(1);
+      },
+    );
+
+    test(
+      'should handle deletion error',
+      () async {
+        // Arrange
+        when(() => mockRepository.delete(1)).thenThrow(
+          Exception('Delete failed'),
+        );
+
+        final container = ProviderContainer(
+          overrides: [
+            inventoryRepositoryProvider
+                .overrideWithValue(mockRepository),
+          ],
+        );
+
+        // Act & Assert
+        expect(
+          () => container.read(deleteItemProvider(1).future),
+          throwsException,
+        );
+      },
+    );
+  });
+
+  group('CreateItemProvider Tests', () {
+    late MockInventoryRepository mockRepository;
+
+    setUp(() {
+      mockRepository = MockInventoryRepository();
+    });
+
+    test(
+      'should create new item',
+      () async {
+        // Arrange
+        final newItem = MockDataFactory.createInventoryItem(
+          label: 'new_item',
+        );
+        when(() => mockRepository.create(any())).thenAnswer(
+          (_) async => 1,
+        );
+
+        final container = ProviderContainer(
+          overrides: [
+            inventoryRepositoryProvider
+                .overrideWithValue(mockRepository),
+          ],
+        );
+
+        // Act
+        final result = await container.read(
+          createItemProvider(newItem).future,
+        );
+
+        // Assert
+        expect(result, equals(1));
+      },
+    );
+  });
+
+  group('UpdateItemProvider Tests', () {
+    late MockInventoryRepository mockRepository;
+
+    setUp(() {
+      mockRepository = MockInventoryRepository();
+    });
+
+    test(
+      'should update existing item',
+      () async {
+        // Arrange
+        final item = MockDataFactory.createInventoryItem(
           id: 1,
-          photoPath: 'path/to/photo1.jpg',
-          thumbnailPath: 'path/to/thumb1.jpg',
-          detectionData: '{"label": "item1"}',
-          createdAt: DateTime.now(),
-          updatedAt: DateTime.now(),
-        ),
-      ];
-      when(mockRepository.getAllItems()).thenAnswer((_) async => right(items));
+          label: 'updated_label',
+        );
+        when(() => mockRepository.update(any())).thenAnswer(
+          (_) async => true,
+        );
 
-      final notifier = container.read(inventoryItemsProvider.notifier);
-      await notifier.build();
+        final container = ProviderContainer(
+          overrides: [
+            inventoryRepositoryProvider
+                .overrideWithValue(mockRepository),
+          ],
+        );
 
-      container.read(inventoryItemsProvider).when(
-            data: (value) => expect(value, equals(items)),
-            loading: () => fail('Should not be loading'),
-            error: (error, stackTrace) => fail('Should not have an error: $error'),
-          );
-      verify(mockRepository.getAllItems()).called(1);
-    });*/
+        // Act
+        final result = await container.read(
+          updateItemProvider(item).future,
+        );
 
-    // test('build returns empty list on error', () async {
-    //   // when(mockRepository.getAllItems())
-    //   //     .thenAnswer((_) async => left(const Failure.storage(message: 'Error')));
+        // Assert
+        expect(result, isTrue);
+      },
+    );
+  });
 
-    //   final notifier = container.read(inventoryItemsProvider.notifier);
-    //   // await notifier.build();
+  group('FilteredInventoryProvider Tests', () {
+    late MockInventoryRepository mockRepository;
 
-    //   // expect(container.read(inventoryItemsProvider).value, isEmpty);
-    //   // verify(mockRepository.getAllItems()).called(1);
-    // });
+    setUp(() {
+      mockRepository = MockInventoryRepository();
+    });
 
-    // test('addItemFromDetection adds items successfully', () async {
-    //   final detection = Detection(
-    //     id: 'det1',
-    //     label: 'Chair',
-    //     confidence: 0.9,
-    //     boundingBox: BoundingBox(x: 0, y: 0, width: 10, height: 10),
-    //     ensembleDetails: EnsembleDetails(
-    //         providerAgreement: 2,
-    //         confidenceByProvider: {},
-    //         labelConsensus: 'Chair'),
-    //     alternativeLabels: [],
-    //   );
+    test(
+      'should filter items by location',
+      () async {
+        // Arrange
+        final items = [
+          MockDataFactory.createInventoryItem(
+            id: 1,
+            location: 'bedroom',
+          ),
+          MockDataFactory.createInventoryItem(
+            id: 2,
+            location: 'living_room',
+          ),
+        ];
+        when(() => mockRepository.getAll()).thenAnswer(
+          (_) async => items,
+        );
 
-    //   final newItem = InventoryItem(
-    //     id: 1,
-    //     photoPath: 'path/to/new_image.jpg',
-    //     thumbnailPath: 'path/to/new_image.jpg',
-    //     detectionData: detection.toJsonString(),
-    //     createdAt: DateTime.now(),
-    //     updatedAt: DateTime.now(),
-    //   );
+        final container = ProviderContainer(
+          overrides: [
+            inventoryRepositoryProvider
+                .overrideWithValue(mockRepository),
+          ],
+        );
 
-    //   // when(mockRepository.createItem(
-    //   //   photoPath: anyNamed('photoPath'),
-    //   //   thumbnailPath: anyNamed('thumbnailPath'),
-    //   //   detection: anyNamed('detection'),
-    //   // )).thenAnswer((_) async => right(1));
-    //   // when(mockRepository.getAllItems()).thenAnswer((_) async => right([newItem]));
+        // Act
+        final allItems = await container.read(inventoryItemsProvider.future);
 
-    //   final notifier = container.read(inventoryItemsProvider.notifier);
-    //   // await notifier.addItemFromDetection(
-    //   //   photoPath: 'path/to/new_image.jpg',
-    //   //   thumbnailPath: 'path/to/new_image.jpg',
-    //   //   detection: detection,
-    //   // );
-
-    //   // expect(container.read(inventoryItemsProvider).value, equals([newItem]));
-    //   // verify(mockRepository.createItem(
-    //   //   photoPath: anyNamed('photoPath'),
-    //   //   thumbnailPath: anyNamed('thumbnailPath'),
-    //   //   detection: anyNamed('detection'),
-    //   // )).called(1);
-    //   // verify(mockRepository.getAllItems()).called(1);
-    // });
-
-    // test('addItemFromDetection handles error during addition', () async {
-    //   final detection = Detection(
-    //     id: 'det1',
-    //     label: 'Chair',
-    //     confidence: 0.9,
-    //     boundingBox: BoundingBox(x: 0, y: 0, width: 10, height: 10),
-    //     ensembleDetails: EnsembleDetails(
-    //         providerAgreement: 2,
-    //         confidenceByProvider: {},
-    //         labelConsensus: 'Chair'),
-    //     alternativeLabels: [],
-    //   );
-
-    //   // when(mockRepository.createItem(
-    //   //   photoPath: anyNamed('photoPath'),
-    //   //   thumbnailPath: anyNamed('thumbnailPath'),
-    //   //   detection: anyNamed('detection'),
-    //   // )).thenAnswer((_) async => left(const Failure.storage(message: 'Add error')));
-    //   // when(mockRepository.getAllItems()).thenAnswer((_) async => right([])); // Initial state
-
-    //   final notifier = container.read(inventoryItemsProvider.notifier);
-    //   // await notifier.addItemFromDetection(
-    //   //   photoPath: 'path/to/new_image.jpg',
-    //   //   thumbnailPath: 'path/to/new_image.jpg',
-    //   //   detection: detection,
-    //   // );
-
-    //   // expect(container.read(inventoryItemsProvider).hasError, isTrue);
-    //   // expect(container.read(inventoryItemsProvider).error, isA<Exception>());
-    //   // verify(mockRepository.createItem(
-    //   //   photoPath: anyNamed('photoPath'),
-    //   //   thumbnailPath: anyNamed('thumbnailPath'),
-    //   //   detection: anyNamed('detection'),
-    //   // )).called(1);
-    //   // verifyNever(mockRepository.getAllItems()); // Should not call getAllItems on add failure
-    // });
+        // Assert
+        expect(allItems.length, equals(2));
+      },
+    );
   });
 }

@@ -1,14 +1,13 @@
+import 'package:all_my_things/application/providers/inventory_providers.dart';
+import 'package:all_my_things/presentation/common/custom_app_bar.dart'; // Added import
+import 'package:all_my_things/presentation/common/loading_indicator.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../../application/providers/inventory_providers.dart';
-import '../common/loading_indicator.dart';
-import '../common/custom_app_bar.dart'; // Added import
 
 /// Edit labels for an item
 class EditLabelsScreen extends ConsumerStatefulWidget {
+  const EditLabelsScreen({required this.itemId, super.key});
   final int itemId;
-
-  const EditLabelsScreen({super.key, required this.itemId});
 
   @override
   ConsumerState<EditLabelsScreen> createState() => _EditLabelsScreenState();
@@ -92,7 +91,7 @@ class _EditLabelsScreenState extends ConsumerState<EditLabelsScreen> {
                   ),
                 ),
                 confirmDismiss: (direction) async {
-                  return await showDialog<bool>(
+                  return showDialog<bool>(
                     context: context,
                     builder: (context) => AlertDialog(
                       title: const Text('Delete Label?'),
@@ -127,14 +126,20 @@ class _EditLabelsScreenState extends ConsumerState<EditLabelsScreen> {
                   }
                 },
                 child: Card(
-                  margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                  margin: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 4,
+                  ),
                   elevation: 0,
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(8),
                     side: BorderSide(color: Colors.grey.shade200),
                   ),
                   child: Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
+                    padding: const EdgeInsets.symmetric(
+                      vertical: 8,
+                      horizontal: 16,
+                    ),
                     child: Row(
                       children: [
                         Icon(Icons.label_outline, color: Colors.grey.shade600),
@@ -151,9 +156,17 @@ class _EditLabelsScreenState extends ConsumerState<EditLabelsScreen> {
                           ),
                         ),
                         IconButton(
-                          icon: const Icon(Icons.edit, size: 20, color: Colors.blueGrey),
-                          onPressed: () => _showEditLabelDialog(context, label.id,
-                              label.key, label.value),
+                          icon: const Icon(
+                            Icons.edit,
+                            size: 20,
+                            color: Colors.blueGrey,
+                          ),
+                          onPressed: () => _showEditLabelDialog(
+                            context,
+                            label.id,
+                            label.key,
+                            label.value,
+                          ),
                         ),
                       ],
                     ),

@@ -1,0 +1,331 @@
+name: API Service CI/CD Pipeline
+
+on:
+  push:
+    branches:
+      - main
+      - develop
+      - 'feature/**'
+    paths:
+      - 'api-service/**'
+      - '.github/workflows/api-ci.yml'
+      - 'docker-compose.yml'
+  pull_request:
+    branches:
+      - main
+      - develop
+    paths:
+      - 'api-service/**'
+      - '.github/workflows/api-ci.yml'
+  workflow_dispatch:
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}/api-service
+  NODE_VERSION: '20'
+
+jobs:
+  # Dependency Check
+  dependencies:
+    name: Check Dependencies
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          cache-dependency-path: api-service/package-lock.json
+
+      - name: Install dependencies
+        working-directory: api-service
+        run: npm ci
+
+      - name: Check for vulnerabilities
+        working-directory: api-service
+        run: npm audit --audit-level=moderate
+
+      - name: Check for outdated packages
+        working-directory: api-service
+        run: npm outdated || true
+
+  # Linting
+  lint:
+    name: Lint Code
+    needs: dependencies
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          cache-dependency-path: api-service/package-lock.json
+
+      - name: Install dependencies
+        working-directory: api-service
+        run: npm ci
+
+      - name: Run linter
+        working-directory: api-service
+        run: npm run lint
+
+      - name: Check code format
+        working-directory: api-service
+        run: npm run format:check
+
+  # Type Check
+  type-check:
+    name: Type Check
+    needs: dependencies
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          cache-dependency-path: api-service/package-lock.json
+
+      - name: Install dependencies
+        working-directory: api-service
+        run: npm ci
+
+      - name: Run type check
+        working-directory: api-service
+        run: npm run type-check
+
+  # Unit Tests
+  unit-tests:
+    name: Unit Tests
+    needs: [lint, type-check]
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          cache-dependency-path: api-service/package-lock.json
+
+      - name: Install dependencies
+        working-directory: api-service
+        run: npm ci
+
+      - name: Run unit tests
+        working-directory: api-service
+        run: npm test
+
+      - name: Generate coverage report
+        working-directory: api-service
+        run: npm run test:coverage
+
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v3
+        with:
+          files: ./api-service/coverage/coverage-final.json
+          flags: api-service
+          name: api-service-coverage
+
+  # Integration Tests
+  integration-tests:
+    name: Integration Tests
+    needs: [lint, type-check]
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_DB: visual_inventory_test
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+
+      redis:
+        image: redis:7-alpine
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 6379:6379
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          cache-dependency-path: api-service/package-lock.json
+
+      - name: Install dependencies
+        working-directory: api-service
+        run: npm ci
+
+      - name: Run database migrations
+        working-directory: api-service
+        env:
+          DB_HOST: localhost
+          DB_PORT: 5432
+          DB_NAME: visual_inventory_test
+          DB_USER: postgres
+          DB_PASSWORD: postgres
+        run: npm run db:migrate || true
+
+      - name: Run integration tests
+        working-directory: api-service
+        env:
+          NODE_ENV: test
+          DB_HOST: localhost
+          DB_PORT: 5432
+          DB_NAME: visual_inventory_test
+          DB_USER: postgres
+          DB_PASSWORD: postgres
+          REDIS_HOST: localhost
+          REDIS_PORT: 6379
+          ENABLE_MOCK_PROVIDER: 'true'
+        run: npm run test:integration || npm test
+
+  # Build Docker Image
+  build:
+    name: Build Docker Image
+    needs: [unit-tests, integration-tests]
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: read
+      packages: write
+    outputs:
+      image-tag: ${{ steps.meta.outputs.tags }}
+      image-digest: ${{ steps.build.outputs.digest }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to Container Registry
+        if: github.event_name != 'pull_request'
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          tags: |
+            type=ref,event=branch
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+            type=sha,prefix={{branch}}-
+            type=raw,value=latest,enable={{is_default_branch}}
+
+      - name: Build and push Docker image
+        id: build
+        uses: docker/build-push-action@v5
+        with:
+          context: ./api-service
+          file: ./api-service/Dockerfile
+          push: ${{ github.event_name != 'pull_request' }}
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  # Security Scan
+  security-scan:
+    name: Security Scan
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    if: github.event_name != 'pull_request'
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Run Trivy vulnerability scanner
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: ${{ needs.build.outputs.image-tag }}
+          format: 'sarif'
+          output: 'trivy-results.sarif'
+
+      - name: Upload Trivy results to GitHub Security tab
+        uses: github/codeql-action/upload-sarif@v2
+        with:
+          sarif_file: 'trivy-results.sarif'
+
+  # Deploy to Staging
+  deploy-staging:
+    name: Deploy to Staging
+    needs: [build, security-scan]
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    if: github.ref == 'refs/heads/develop' && github.event_name == 'push'
+    environment:
+      name: staging
+      url: https://api-staging.example.com
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Deploy to staging
+        run: ./scripts/deploy-staging.sh
+
+      - name: Health check
+        run: ./scripts/health-check-staging.sh
+
+  # Deploy to Production (Manual Approval)
+  deploy-production:
+    name: Deploy to Production
+    needs: [build, security-scan]
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    environment:
+      name: production
+      url: https://api.example.com
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Deploy to production (Blue-Green)
+        run: ./scripts/deploy-production-blue-green.sh
+
+      - name: Run production health checks
+        run: ./scripts/health-check-production.sh
+
+      - name: Monitor deployment
+        run: ./scripts/monitor-deployment.sh

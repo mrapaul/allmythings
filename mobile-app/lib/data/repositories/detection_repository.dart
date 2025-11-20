@@ -1,66 +1,57 @@
 import 'dart:io';
+
+import 'package:all_my_things/data/remote/api_client.dart';
+import 'package:all_my_things/domain/models/detection.dart';
 import 'package:dio/dio.dart';
-import 'package:fpdart/fpdart.dart';
-import '../../core/errors/failures.dart';
-import '../../core/config/app_config.dart';
-import '../../domain/models/detection_response.dart';
-import '../remote/api_client.dart';
 
 /// Repository for object detection via API
 class DetectionRepository {
+  DetectionRepository(this._apiClient);
   final ApiClient _apiClient;
 
-  DetectionRepository(this._apiClient);
-
-  /// Detect objects in image
-  Future<Either<Failure, DetectionResponse>> detectObjects(File imageFile) async {
+  /// Detect objects in image file
+  /// Returns a list of detected objects with confidence scores and bounding boxes
+  Future<List<Detection>> detectObjects(File imageFile) async {
     try {
+      // Prepare multipart form data with image file
       final formData = FormData.fromMap({
         'image': await MultipartFile.fromFile(
           imageFile.path,
-          filename: 'image.jpg',
+          filename: imageFile.path.split('/').last,
         ),
-        'minConfidence': AppConfig.minConfidence,
       });
 
-      final response = await _apiClient.dio.post(
+      // Call detection API endpoint
+      final response = await _apiClient.dio.post<Map<String, dynamic>>(
         '/v1/detect',
         data: formData,
-      );
-
-      final detectionResponse = DetectionResponse.fromJson(
-        response.data as Map<String, dynamic>,
-      );
-
-      return right(detectionResponse);
-    } on DioException catch (e) {
-      if (e.type == DioExceptionType.connectionTimeout ||
-          e.type == DioExceptionType.receiveTimeout) {
-        return left(
-          const Failure.network(
-            message: 'Request timeout. Please check your internet connection.',
-          ),
-        );
-      } else if (e.response != null) {
-        return left(
-          Failure.network(
-            message: 'API error: ${e.response?.statusMessage}',
-            statusCode: e.response?.statusCode,
-          ),
-        );
-      } else {
-        return left(
-          Failure.network(
-            message: 'Network error: ${e.message}',
-          ),
-        );
-      }
-    } catch (e) {
-      return left(
-        Failure.unexpected(
-          message: 'Failed to detect objects: $e',
+        options: Options(
+          contentType: 'multipart/form-data',
         ),
       );
+
+      if (response.statusCode != 200) {
+        throw Exception('Detection API returned status code: ${response.statusCode}');
+      }
+
+      final data = response.data;
+      if (data == null) {
+        return [];
+      }
+
+      // Parse detections from response
+      final detections = data['detections'] as List<dynamic>?;
+      if (detections == null || detections.isEmpty) {
+        return [];
+      }
+
+      // Convert JSON to Detection objects
+      return detections
+          .map((detection) => Detection.fromJson(detection as Map<String, dynamic>))
+          .toList();
+    } catch (e) {
+      print('Detection API error: $e');
+      rethrow;
     }
   }
 }

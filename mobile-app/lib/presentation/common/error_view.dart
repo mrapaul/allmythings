@@ -1,22 +1,21 @@
+import 'package:all_my_things/presentation/theme/app_theme.dart';
 import 'package:flutter/material.dart';
-import '../theme/app_theme.dart';
 
 /// Modern error display widget with animations and different styles
 class ErrorView extends StatefulWidget {
-  final String message;
-  final String? subtitle;
-  final VoidCallback? onRetry;
-  final ErrorStyle style;
-  final IconData? customIcon;
-
   const ErrorView({
-    super.key,
     required this.message,
+    super.key,
     this.subtitle,
     this.onRetry,
     this.style = ErrorStyle.general,
     this.customIcon,
   });
+  final String message;
+  final String? subtitle;
+  final VoidCallback? onRetry;
+  final ErrorStyle style;
+  final IconData? customIcon;
 
   @override
   State<ErrorView> createState() => _ErrorViewState();
@@ -42,15 +41,18 @@ class _ErrorViewState extends State<ErrorView>
       curve: Curves.easeOut,
     );
 
-    _slideAnimation = Tween<Offset>(
-      begin: const Offset(0, 0.1),
-      end: Offset.zero,
-    ).animate(CurvedAnimation(
-      parent: _controller,
-      curve: Curves.easeOutCubic,
-    ));
+    _slideAnimation =
+        Tween<Offset>(
+          begin: const Offset(0, 0.1),
+          end: Offset.zero,
+        ).animate(
+          CurvedAnimation(
+            parent: _controller,
+            curve: Curves.easeOutCubic,
+          ),
+        );
 
-    _scaleAnimation = Tween<double>(begin: 0.9, end: 1.0).animate(
+    _scaleAnimation = Tween<double>(begin: 0.9, end: 1).animate(
       CurvedAnimation(
         parent: _controller,
         curve: Curves.easeOutBack,
@@ -87,9 +89,9 @@ class _ErrorViewState extends State<ErrorView>
                     widget.message,
                     textAlign: TextAlign.center,
                     style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                          color: AppTheme.textPrimary,
-                          fontWeight: FontWeight.w600,
-                        ),
+                      color: AppTheme.textPrimary,
+                      fontWeight: FontWeight.w600,
+                    ),
                   ),
                   if (widget.subtitle != null) ...[
                     const SizedBox(height: 8),
@@ -122,22 +124,18 @@ class _ErrorViewState extends State<ErrorView>
         icon = widget.customIcon ?? Icons.error_outline_rounded;
         color = AppTheme.accentRed;
         backgroundColor = AppTheme.accentRed.withOpacity(0.1);
-        break;
       case ErrorStyle.network:
         icon = widget.customIcon ?? Icons.wifi_off_rounded;
         color = AppTheme.accentOrange;
         backgroundColor = AppTheme.accentOrange.withOpacity(0.1);
-        break;
       case ErrorStyle.empty:
         icon = widget.customIcon ?? Icons.inbox_rounded;
         color = AppTheme.textSecondary;
         backgroundColor = AppTheme.surfaceMedium;
-        break;
       case ErrorStyle.notFound:
         icon = widget.customIcon ?? Icons.search_off_rounded;
         color = AppTheme.textSecondary;
         backgroundColor = AppTheme.surfaceMedium;
-        break;
     }
 
     return Container(
@@ -183,20 +181,19 @@ enum ErrorStyle {
 
 /// Compact error banner for inline errors
 class ErrorBanner extends StatelessWidget {
-  final String message;
-  final VoidCallback? onRetry;
-  final VoidCallback? onDismiss;
-  final Color? backgroundColor;
-  final IconData? icon;
-
   const ErrorBanner({
-    super.key,
     required this.message,
+    super.key,
     this.onRetry,
     this.onDismiss,
     this.backgroundColor,
     this.icon,
   });
+  final String message;
+  final VoidCallback? onRetry;
+  final VoidCallback? onDismiss;
+  final Color? backgroundColor;
+  final IconData? icon;
 
   @override
   Widget build(BuildContext context) {
@@ -208,7 +205,6 @@ class ErrorBanner extends StatelessWidget {
         borderRadius: BorderRadius.circular(12),
         border: Border.all(
           color: backgroundColor ?? AppTheme.accentRed.withOpacity(0.3),
-          width: 1,
         ),
       ),
       child: Row(
@@ -238,7 +234,10 @@ class ErrorBanner extends StatelessWidget {
             TextButton(
               onPressed: onRetry,
               style: TextButton.styleFrom(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 8,
+                ),
                 minimumSize: Size.zero,
                 tapTargetSize: MaterialTapTargetSize.shrinkWrap,
               ),
@@ -276,20 +275,19 @@ class ErrorBanner extends StatelessWidget {
 
 /// Empty state widget for when there's no data
 class EmptyState extends StatefulWidget {
+  const EmptyState({
+    required this.title,
+    required this.subtitle,
+    required this.icon,
+    super.key,
+    this.action,
+    this.iconColor,
+  });
   final String title;
   final String subtitle;
   final IconData icon;
   final Widget? action;
   final Color? iconColor;
-
-  const EmptyState({
-    super.key,
-    required this.title,
-    required this.subtitle,
-    required this.icon,
-    this.action,
-    this.iconColor,
-  });
 
   @override
   State<EmptyState> createState() => _EmptyStateState();
@@ -314,13 +312,16 @@ class _EmptyStateState extends State<EmptyState>
       curve: Curves.easeOut,
     );
 
-    _slideAnimation = Tween<Offset>(
-      begin: const Offset(0, 0.15),
-      end: Offset.zero,
-    ).animate(CurvedAnimation(
-      parent: _controller,
-      curve: Curves.easeOutCubic,
-    ));
+    _slideAnimation =
+        Tween<Offset>(
+          begin: const Offset(0, 0.15),
+          end: Offset.zero,
+        ).animate(
+          CurvedAnimation(
+            parent: _controller,
+            curve: Curves.easeOutCubic,
+          ),
+        );
 
     _controller.forward();
   }
@@ -366,8 +367,8 @@ class _EmptyStateState extends State<EmptyState>
                   widget.title,
                   textAlign: TextAlign.center,
                   style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                        fontWeight: FontWeight.w700,
-                      ),
+                    fontWeight: FontWeight.w700,
+                  ),
                 ),
                 const SizedBox(height: 12),
                 Text(
@@ -390,9 +391,8 @@ class _EmptyStateState extends State<EmptyState>
 
 /// Connection error widget with reconnect action
 class ConnectionError extends StatelessWidget {
-  final VoidCallback? onRetry;
-
   const ConnectionError({super.key, this.onRetry});
+  final VoidCallback? onRetry;
 
   @override
   Widget build(BuildContext context) {
@@ -407,20 +407,19 @@ class ConnectionError extends StatelessWidget {
 
 /// Not found error widget
 class NotFoundError extends StatelessWidget {
-  final String message;
-  final VoidCallback? onGoBack;
-
   const NotFoundError({
     super.key,
     this.message = 'Item Not Found',
     this.onGoBack,
   });
+  final String message;
+  final VoidCallback? onGoBack;
 
   @override
   Widget build(BuildContext context) {
     return ErrorView(
       message: message,
-      subtitle: 'The item you\'re looking for doesn\'t exist',
+      subtitle: "The item you're looking for doesn't exist",
       style: ErrorStyle.notFound,
       onRetry: onGoBack,
     );

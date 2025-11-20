@@ -4,7 +4,7 @@ import { logger } from './logger';
  * Circuit breaker implementation for provider failover
  */
 
-enum CircuitState {
+export enum CircuitState {
   CLOSED = 'closed', // Normal operation
   OPEN = 'open', // Failing, reject requests
   HALF_OPEN = 'half-open', // Testing if recovered

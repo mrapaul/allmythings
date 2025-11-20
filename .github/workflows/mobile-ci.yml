@@ -1,0 +1,295 @@
+name: Mobile App CI/CD Pipeline
+
+on:
+  push:
+    branches:
+      - main
+      - develop
+      - 'feature/**'
+    paths:
+      - 'mobile-app/**'
+      - '.github/workflows/mobile-ci.yml'
+  pull_request:
+    branches:
+      - main
+      - develop
+    paths:
+      - 'mobile-app/**'
+      - '.github/workflows/mobile-ci.yml'
+  workflow_dispatch:
+
+env:
+  FLUTTER_VERSION: '3.16.0'
+
+jobs:
+  # Dependencies Check
+  dependencies:
+    name: Check Dependencies
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: stable
+
+      - name: Get dependencies
+        working-directory: mobile-app
+        run: flutter pub get
+
+      - name: Check for outdated packages
+        working-directory: mobile-app
+        run: flutter pub outdated || true
+
+  # Linting and Analysis
+  lint:
+    name: Lint and Analyze
+    needs: dependencies
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: stable
+
+      - name: Get dependencies
+        working-directory: mobile-app
+        run: flutter pub get
+
+      - name: Run analyzer
+        working-directory: mobile-app
+        run: flutter analyze
+
+      - name: Run linter
+        working-directory: mobile-app
+        run: flutter pub run custom_lint
+
+  # Format Check
+  format-check:
+    name: Format Check
+    needs: dependencies
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: stable
+
+      - name: Get dependencies
+        working-directory: mobile-app
+        run: flutter pub get
+
+      - name: Check formatting
+        working-directory: mobile-app
+        run: dart format --set-exit-if-changed .
+
+  # Unit and Widget Tests
+  unit-tests:
+    name: Unit and Widget Tests
+    needs: [lint, format-check]
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: stable
+
+      - name: Get dependencies
+        working-directory: mobile-app
+        run: flutter pub get
+
+      - name: Run unit and widget tests
+        working-directory: mobile-app
+        run: flutter test --coverage
+
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v3
+        with:
+          files: ./mobile-app/coverage/lcov.info
+          flags: mobile-app
+          name: mobile-app-coverage
+
+  # Integration Tests
+  integration-tests:
+    name: Integration Tests
+    needs: [lint, format-check]
+    runs-on: macos-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: stable
+
+      - name: Get dependencies
+        working-directory: mobile-app
+        run: flutter pub get
+
+      - name: Run integration tests
+        working-directory: mobile-app
+        run: flutter test integration_test/full_workflow_test.dart
+
+  # Build Android APK
+  build-android:
+    name: Build Android APK
+    needs: [unit-tests, integration-tests]
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Java
+        uses: actions/setup-java@v3
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: stable
+
+      - name: Get dependencies
+        working-directory: mobile-app
+        run: flutter pub get
+
+      - name: Build APK
+        working-directory: mobile-app
+        run: flutter build apk --release
+
+      - name: Upload APK artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: app-release.apk
+          path: mobile-app/build/app/outputs/flutter-apk/app-release.apk
+          retention-days: 7
+
+  # Build iOS App
+  build-ios:
+    name: Build iOS App
+    needs: [unit-tests, integration-tests]
+    runs-on: macos-latest
+    timeout-minutes: 45
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: stable
+
+      - name: Get dependencies
+        working-directory: mobile-app
+        run: flutter pub get
+
+      - name: Build iOS
+        working-directory: mobile-app
+        run: flutter build ios --release --no-codesign
+
+      - name: Upload iOS build artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: ios-release-build
+          path: mobile-app/build/ios/iphoneos
+          retention-days: 7
+
+  # Security Scan - Dependency Check
+  security-scan:
+    name: Security Scan
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: stable
+
+      - name: Get dependencies
+        working-directory: mobile-app
+        run: flutter pub get
+
+      - name: Check for known vulnerabilities
+        working-directory: mobile-app
+        run: flutter pub security
+
+  # Deploy to TestFlight (iOS)
+  deploy-testflight:
+    name: Deploy to TestFlight
+    needs: [build-ios, security-scan]
+    runs-on: macos-latest
+    timeout-minutes: 30
+    if: github.ref == 'refs/heads/develop' && github.event_name == 'push'
+    environment:
+      name: testflight
+      url: https://testflight.apple.com
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Deploy to TestFlight
+        run: bash ./scripts/deploy-testflight.sh
+
+  # Deploy to Google Play Beta (Android)
+  deploy-google-play-beta:
+    name: Deploy to Google Play Beta
+    needs: [build-android, security-scan]
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    if: github.ref == 'refs/heads/develop' && github.event_name == 'push'
+    environment:
+      name: google-play-beta
+      url: https://play.google.com/console
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Deploy to Google Play Beta
+        run: bash ./scripts/deploy-google-play-beta.sh
+
+  # Deploy to Production
+  deploy-production:
+    name: Deploy to Production
+    needs: [build-android, build-ios, security-scan]
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    environment:
+      name: production
+      url: https://play.google.com/store
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Deploy to production
+        run: bash ./scripts/deploy-production.sh

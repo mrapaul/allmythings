@@ -1,9 +1,9 @@
+import 'package:all_my_things/application/providers/inventory_providers.dart';
+import 'package:all_my_things/presentation/common/custom_app_bar.dart'; // Added import
+import 'package:all_my_things/presentation/common/loading_indicator.dart';
+import 'package:all_my_things/presentation/profile/settings_screen.dart'; // Added import
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../../application/providers/inventory_providers.dart';
-import '../common/loading_indicator.dart';
-import '../common/custom_app_bar.dart'; // Added import
-import 'settings_screen.dart'; // Added import
 
 /// Profile screen with stats and settings
 class ProfileScreen extends ConsumerWidget {
@@ -203,28 +203,36 @@ class ProfileScreen extends ConsumerWidget {
                 style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
               ),
               SizedBox(height: 8),
-              Text('Tap the + icon to capture photos of your items. The AI will detect and label objects automatically.'),
+              Text(
+                'Tap the + icon to capture photos of your items. The AI will detect and label objects automatically.',
+              ),
               SizedBox(height: 16),
               Text(
                 '🏷️ Labels',
                 style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
               ),
               SizedBox(height: 8),
-              Text('Add custom labels like color, brand, or room to organize your items better.'),
+              Text(
+                'Add custom labels like color, brand, or room to organize your items better.',
+              ),
               SizedBox(height: 16),
               Text(
                 '🔍 Search',
                 style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
               ),
               SizedBox(height: 8),
-              Text('Use the search tab to quickly find items by their labels or descriptions.'),
+              Text(
+                'Use the search tab to quickly find items by their labels or descriptions.',
+              ),
               SizedBox(height: 16),
               Text(
                 '📊 Grid View',
                 style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
               ),
               SizedBox(height: 8),
-              Text('Browse your inventory in an Instagram-style photo grid on the home tab.'),
+              Text(
+                'Browse your inventory in an Instagram-style photo grid on the home tab.',
+              ),
             ],
           ),
         ),
@@ -240,15 +248,14 @@ class ProfileScreen extends ConsumerWidget {
 }
 
 class _StatCard extends StatelessWidget {
-  final String label;
-  final String value;
-  final IconData icon;
-
   const _StatCard({
     required this.label,
     required this.value,
     required this.icon,
   });
+  final String label;
+  final String value;
+  final IconData icon;
 
   @override
   Widget build(BuildContext context) {

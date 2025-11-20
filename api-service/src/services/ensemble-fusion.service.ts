@@ -1,4 +1,4 @@
-import { Detection } from '../schemas/detection.schema';
+import { BoundingBox, Detection } from '../schemas/detection.schema';
 import { NMSAlgorithm } from '../algorithms/nms.algorithm';
 import { envConfig } from '../config/env.config';
 import { logger } from '../utils/logger';
@@ -21,7 +21,7 @@ export class EnsembleFusionService {
   fuseDetections(providerDetections: Map<string, Detection[]>): Detection[] {
     // Combine all detections
     const allDetections: Detection[] = [];
-    for (const [provider, detections] of providerDetections) {
+    for (const [, detections] of providerDetections) {
       allDetections.push(...detections);
     }
 
@@ -105,10 +105,12 @@ export class EnsembleFusionService {
   }
 
   private isSimilarLabel(label1: string, label2: string): boolean {
-    return label1.toLowerCase() === label2.toLowerCase();
+    const l1 = label1.toLowerCase();
+    const l2 = label2.toLowerCase();
+    return l1 === l2 || l1.includes(l2) || l2.includes(l1);
   }
 
-  private isSimilarBoundingBox(box1: any, box2: any): boolean {
+  private isSimilarBoundingBox(box1: BoundingBox, box2: BoundingBox): boolean {
     const threshold = 0.3; // 30% overlap
     const dx = Math.abs(box1.x - box2.x);
     const dy = Math.abs(box1.y - box2.y);

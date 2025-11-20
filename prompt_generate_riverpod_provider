@@ -1,0 +1,1 @@
+Generate a Riverpod provider named {{provider_name}}. Use the provider type {{provider_type}} (e.g., FutureProvider, Provider, StateNotifierProvider).

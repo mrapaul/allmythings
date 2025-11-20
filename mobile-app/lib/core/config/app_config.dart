@@ -1,8 +1,10 @@
 /// Application configuration
 class AppConfig {
   // API Configuration
-  static const String apiBaseUrl =
-      String.fromEnvironment('API_BASE_URL', defaultValue: 'http://localhost:9100');
+  static const String apiBaseUrl = String.fromEnvironment(
+    'API_BASE_URL',
+    defaultValue: 'http://localhost:9100',
+  );
 
   static const int apiTimeout = 30000; // 30 seconds
 

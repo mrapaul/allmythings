@@ -13,9 +13,9 @@ part of 'detection.dart';
 T _$identity<T>(T value) => value;
 
 /// @nodoc
-mixin _$Detection implements DiagnosticableTreeMixin {
+mixin _$Detection {
 
- String? get id; String get label; double get confidence;@BoundingBoxConverter() BoundingBox get boundingBox;@EnsembleDetailsConverter() EnsembleDetails get ensembleDetails;@AlternativeLabelListConverter() List<AlternativeLabel> get alternativeLabels;
+ String get label; double get confidence; BoundingBox get boundingBox; EnsembleDetails get ensembleDetails; List<AlternativeLabel> get alternativeLabels; String? get id; DateTime? get createdAt; DateTime? get updatedAt;
 /// Create a copy of Detection
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
@@ -25,25 +25,19 @@ $DetectionCopyWith<Detection> get copyWith => _$DetectionCopyWithImpl<Detection>
   /// Serializes this Detection to a JSON map.
   Map<String, dynamic> toJson();
 
-@override
-void debugFillProperties(DiagnosticPropertiesBuilder properties) {
-  properties
-    ..add(DiagnosticsProperty('type', 'Detection'))
-    ..add(DiagnosticsProperty('id', id))..add(DiagnosticsProperty('label', label))..add(DiagnosticsProperty('confidence', confidence))..add(DiagnosticsProperty('boundingBox', boundingBox))..add(DiagnosticsProperty('ensembleDetails', ensembleDetails))..add(DiagnosticsProperty('alternativeLabels', alternativeLabels));
-}
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is Detection&&(identical(other.id, id) || other.id == id)&&(identical(other.label, label) || other.label == label)&&(identical(other.confidence, confidence) || other.confidence == confidence)&&(identical(other.boundingBox, boundingBox) || other.boundingBox == boundingBox)&&(identical(other.ensembleDetails, ensembleDetails) || other.ensembleDetails == ensembleDetails)&&const DeepCollectionEquality().equals(other.alternativeLabels, alternativeLabels));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is Detection&&(identical(other.label, label) || other.label == label)&&(identical(other.confidence, confidence) || other.confidence == confidence)&&(identical(other.boundingBox, boundingBox) || other.boundingBox == boundingBox)&&(identical(other.ensembleDetails, ensembleDetails) || other.ensembleDetails == ensembleDetails)&&const DeepCollectionEquality().equals(other.alternativeLabels, alternativeLabels)&&(identical(other.id, id) || other.id == id)&&(identical(other.createdAt, createdAt) || other.createdAt == createdAt)&&(identical(other.updatedAt, updatedAt) || other.updatedAt == updatedAt));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
-int get hashCode => Object.hash(runtimeType,id,label,confidence,boundingBox,ensembleDetails,const DeepCollectionEquality().hash(alternativeLabels));
+int get hashCode => Object.hash(runtimeType,label,confidence,boundingBox,ensembleDetails,const DeepCollectionEquality().hash(alternativeLabels),id,createdAt,updatedAt);
 
 @override
-String toString({ DiagnosticLevel minLevel = DiagnosticLevel.info }) {
-  return 'Detection(id: $id, label: $label, confidence: $confidence, boundingBox: $boundingBox, ensembleDetails: $ensembleDetails, alternativeLabels: $alternativeLabels)';
+String toString() {
+  return 'Detection(label: $label, confidence: $confidence, boundingBox: $boundingBox, ensembleDetails: $ensembleDetails, alternativeLabels: $alternativeLabels, id: $id, createdAt: $createdAt, updatedAt: $updatedAt)';
 }
 
 
@@ -54,7 +48,7 @@ abstract mixin class $DetectionCopyWith<$Res>  {
   factory $DetectionCopyWith(Detection value, $Res Function(Detection) _then) = _$DetectionCopyWithImpl;
 @useResult
 $Res call({
- String? id, String label, double confidence,@BoundingBoxConverter() BoundingBox boundingBox,@EnsembleDetailsConverter() EnsembleDetails ensembleDetails,@AlternativeLabelListConverter() List<AlternativeLabel> alternativeLabels
+ String label, double confidence, BoundingBox boundingBox, EnsembleDetails ensembleDetails, List<AlternativeLabel> alternativeLabels, String? id, DateTime? createdAt, DateTime? updatedAt
 });
 
 
@@ -71,15 +65,17 @@ class _$DetectionCopyWithImpl<$Res>
 
 /// Create a copy of Detection
 /// with the given fields replaced by the non-null parameter values.
-@pragma('vm:prefer-inline') @override $Res call({Object? id = freezed,Object? label = null,Object? confidence = null,Object? boundingBox = null,Object? ensembleDetails = null,Object? alternativeLabels = null,}) {
+@pragma('vm:prefer-inline') @override $Res call({Object? label = null,Object? confidence = null,Object? boundingBox = null,Object? ensembleDetails = null,Object? alternativeLabels = null,Object? id = freezed,Object? createdAt = freezed,Object? updatedAt = freezed,}) {
   return _then(_self.copyWith(
-id: freezed == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
-as String?,label: null == label ? _self.label : label // ignore: cast_nullable_to_non_nullable
+label: null == label ? _self.label : label // ignore: cast_nullable_to_non_nullable
 as String,confidence: null == confidence ? _self.confidence : confidence // ignore: cast_nullable_to_non_nullable
 as double,boundingBox: null == boundingBox ? _self.boundingBox : boundingBox // ignore: cast_nullable_to_non_nullable
 as BoundingBox,ensembleDetails: null == ensembleDetails ? _self.ensembleDetails : ensembleDetails // ignore: cast_nullable_to_non_nullable
 as EnsembleDetails,alternativeLabels: null == alternativeLabels ? _self.alternativeLabels : alternativeLabels // ignore: cast_nullable_to_non_nullable
-as List<AlternativeLabel>,
+as List<AlternativeLabel>,id: freezed == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
+as String?,createdAt: freezed == createdAt ? _self.createdAt : createdAt // ignore: cast_nullable_to_non_nullable
+as DateTime?,updatedAt: freezed == updatedAt ? _self.updatedAt : updatedAt // ignore: cast_nullable_to_non_nullable
+as DateTime?,
   ));
 }
 /// Create a copy of Detection
@@ -182,10 +178,10 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String? id,  String label,  double confidence, @BoundingBoxConverter()  BoundingBox boundingBox, @EnsembleDetailsConverter()  EnsembleDetails ensembleDetails, @AlternativeLabelListConverter()  List<AlternativeLabel> alternativeLabels)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String label,  double confidence,  BoundingBox boundingBox,  EnsembleDetails ensembleDetails,  List<AlternativeLabel> alternativeLabels,  String? id,  DateTime? createdAt,  DateTime? updatedAt)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _Detection() when $default != null:
-return $default(_that.id,_that.label,_that.confidence,_that.boundingBox,_that.ensembleDetails,_that.alternativeLabels);case _:
+return $default(_that.label,_that.confidence,_that.boundingBox,_that.ensembleDetails,_that.alternativeLabels,_that.id,_that.createdAt,_that.updatedAt);case _:
   return orElse();
 
 }
@@ -203,10 +199,10 @@ return $default(_that.id,_that.label,_that.confidence,_that.boundingBox,_that.en
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String? id,  String label,  double confidence, @BoundingBoxConverter()  BoundingBox boundingBox, @EnsembleDetailsConverter()  EnsembleDetails ensembleDetails, @AlternativeLabelListConverter()  List<AlternativeLabel> alternativeLabels)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String label,  double confidence,  BoundingBox boundingBox,  EnsembleDetails ensembleDetails,  List<AlternativeLabel> alternativeLabels,  String? id,  DateTime? createdAt,  DateTime? updatedAt)  $default,) {final _that = this;
 switch (_that) {
 case _Detection():
-return $default(_that.id,_that.label,_that.confidence,_that.boundingBox,_that.ensembleDetails,_that.alternativeLabels);case _:
+return $default(_that.label,_that.confidence,_that.boundingBox,_that.ensembleDetails,_that.alternativeLabels,_that.id,_that.createdAt,_that.updatedAt);case _:
   throw StateError('Unexpected subclass');
 
 }
@@ -223,10 +219,10 @@ return $default(_that.id,_that.label,_that.confidence,_that.boundingBox,_that.en
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String? id,  String label,  double confidence, @BoundingBoxConverter()  BoundingBox boundingBox, @EnsembleDetailsConverter()  EnsembleDetails ensembleDetails, @AlternativeLabelListConverter()  List<AlternativeLabel> alternativeLabels)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String label,  double confidence,  BoundingBox boundingBox,  EnsembleDetails ensembleDetails,  List<AlternativeLabel> alternativeLabels,  String? id,  DateTime? createdAt,  DateTime? updatedAt)?  $default,) {final _that = this;
 switch (_that) {
 case _Detection() when $default != null:
-return $default(_that.id,_that.label,_that.confidence,_that.boundingBox,_that.ensembleDetails,_that.alternativeLabels);case _:
+return $default(_that.label,_that.confidence,_that.boundingBox,_that.ensembleDetails,_that.alternativeLabels,_that.id,_that.createdAt,_that.updatedAt);case _:
   return null;
 
 }
@@ -235,24 +231,26 @@ return $default(_that.id,_that.label,_that.confidence,_that.boundingBox,_that.en
 }
 
 /// @nodoc
-@JsonSerializable()
 
-class _Detection with DiagnosticableTreeMixin implements Detection {
-  const _Detection({this.id, required this.label, required this.confidence, @BoundingBoxConverter() required this.boundingBox, @EnsembleDetailsConverter() required this.ensembleDetails, @AlternativeLabelListConverter() required final  List<AlternativeLabel> alternativeLabels}): _alternativeLabels = alternativeLabels;
+@JsonSerializable(explicitToJson: true)
+class _Detection extends Detection {
+  const _Detection({required this.label, required this.confidence, required this.boundingBox, required this.ensembleDetails, required final  List<AlternativeLabel> alternativeLabels, this.id, this.createdAt, this.updatedAt}): _alternativeLabels = alternativeLabels,super._();
   factory _Detection.fromJson(Map<String, dynamic> json) => _$DetectionFromJson(json);
 
-@override final  String? id;
 @override final  String label;
 @override final  double confidence;
-@override@BoundingBoxConverter() final  BoundingBox boundingBox;
-@override@EnsembleDetailsConverter() final  EnsembleDetails ensembleDetails;
+@override final  BoundingBox boundingBox;
+@override final  EnsembleDetails ensembleDetails;
  final  List<AlternativeLabel> _alternativeLabels;
-@override@AlternativeLabelListConverter() List<AlternativeLabel> get alternativeLabels {
+@override List<AlternativeLabel> get alternativeLabels {
   if (_alternativeLabels is EqualUnmodifiableListView) return _alternativeLabels;
   // ignore: implicit_dynamic_type
   return EqualUnmodifiableListView(_alternativeLabels);
 }
 
+@override final  String? id;
+@override final  DateTime? createdAt;
+@override final  DateTime? updatedAt;
 
 /// Create a copy of Detection
 /// with the given fields replaced by the non-null parameter values.
@@ -264,25 +262,19 @@ _$DetectionCopyWith<_Detection> get copyWith => __$DetectionCopyWithImpl<_Detect
 Map<String, dynamic> toJson() {
   return _$DetectionToJson(this, );
 }
-@override
-void debugFillProperties(DiagnosticPropertiesBuilder properties) {
-  properties
-    ..add(DiagnosticsProperty('type', 'Detection'))
-    ..add(DiagnosticsProperty('id', id))..add(DiagnosticsProperty('label', label))..add(DiagnosticsProperty('confidence', confidence))..add(DiagnosticsProperty('boundingBox', boundingBox))..add(DiagnosticsProperty('ensembleDetails', ensembleDetails))..add(DiagnosticsProperty('alternativeLabels', alternativeLabels));
-}
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is _Detection&&(identical(other.id, id) || other.id == id)&&(identical(other.label, label) || other.label == label)&&(identical(other.confidence, confidence) || other.confidence == confidence)&&(identical(other.boundingBox, boundingBox) || other.boundingBox == boundingBox)&&(identical(other.ensembleDetails, ensembleDetails) || other.ensembleDetails == ensembleDetails)&&const DeepCollectionEquality().equals(other._alternativeLabels, _alternativeLabels));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is _Detection&&(identical(other.label, label) || other.label == label)&&(identical(other.confidence, confidence) || other.confidence == confidence)&&(identical(other.boundingBox, boundingBox) || other.boundingBox == boundingBox)&&(identical(other.ensembleDetails, ensembleDetails) || other.ensembleDetails == ensembleDetails)&&const DeepCollectionEquality().equals(other._alternativeLabels, _alternativeLabels)&&(identical(other.id, id) || other.id == id)&&(identical(other.createdAt, createdAt) || other.createdAt == createdAt)&&(identical(other.updatedAt, updatedAt) || other.updatedAt == updatedAt));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
-int get hashCode => Object.hash(runtimeType,id,label,confidence,boundingBox,ensembleDetails,const DeepCollectionEquality().hash(_alternativeLabels));
+int get hashCode => Object.hash(runtimeType,label,confidence,boundingBox,ensembleDetails,const DeepCollectionEquality().hash(_alternativeLabels),id,createdAt,updatedAt);
 
 @override
-String toString({ DiagnosticLevel minLevel = DiagnosticLevel.info }) {
-  return 'Detection(id: $id, label: $label, confidence: $confidence, boundingBox: $boundingBox, ensembleDetails: $ensembleDetails, alternativeLabels: $alternativeLabels)';
+String toString() {
+  return 'Detection(label: $label, confidence: $confidence, boundingBox: $boundingBox, ensembleDetails: $ensembleDetails, alternativeLabels: $alternativeLabels, id: $id, createdAt: $createdAt, updatedAt: $updatedAt)';
 }
 
 
@@ -293,7 +285,7 @@ abstract mixin class _$DetectionCopyWith<$Res> implements $DetectionCopyWith<$Re
   factory _$DetectionCopyWith(_Detection value, $Res Function(_Detection) _then) = __$DetectionCopyWithImpl;
 @override @useResult
 $Res call({
- String? id, String label, double confidence,@BoundingBoxConverter() BoundingBox boundingBox,@EnsembleDetailsConverter() EnsembleDetails ensembleDetails,@AlternativeLabelListConverter() List<AlternativeLabel> alternativeLabels
+ String label, double confidence, BoundingBox boundingBox, EnsembleDetails ensembleDetails, List<AlternativeLabel> alternativeLabels, String? id, DateTime? createdAt, DateTime? updatedAt
 });
 
 
@@ -310,15 +302,17 @@ class __$DetectionCopyWithImpl<$Res>
 
 /// Create a copy of Detection
 /// with the given fields replaced by the non-null parameter values.
-@override @pragma('vm:prefer-inline') $Res call({Object? id = freezed,Object? label = null,Object? confidence = null,Object? boundingBox = null,Object? ensembleDetails = null,Object? alternativeLabels = null,}) {
+@override @pragma('vm:prefer-inline') $Res call({Object? label = null,Object? confidence = null,Object? boundingBox = null,Object? ensembleDetails = null,Object? alternativeLabels = null,Object? id = freezed,Object? createdAt = freezed,Object? updatedAt = freezed,}) {
   return _then(_Detection(
-id: freezed == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
-as String?,label: null == label ? _self.label : label // ignore: cast_nullable_to_non_nullable
+label: null == label ? _self.label : label // ignore: cast_nullable_to_non_nullable
 as String,confidence: null == confidence ? _self.confidence : confidence // ignore: cast_nullable_to_non_nullable
 as double,boundingBox: null == boundingBox ? _self.boundingBox : boundingBox // ignore: cast_nullable_to_non_nullable
 as BoundingBox,ensembleDetails: null == ensembleDetails ? _self.ensembleDetails : ensembleDetails // ignore: cast_nullable_to_non_nullable
 as EnsembleDetails,alternativeLabels: null == alternativeLabels ? _self._alternativeLabels : alternativeLabels // ignore: cast_nullable_to_non_nullable
-as List<AlternativeLabel>,
+as List<AlternativeLabel>,id: freezed == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
+as String?,createdAt: freezed == createdAt ? _self.createdAt : createdAt // ignore: cast_nullable_to_non_nullable
+as DateTime?,updatedAt: freezed == updatedAt ? _self.updatedAt : updatedAt // ignore: cast_nullable_to_non_nullable
+as DateTime?,
   ));
 }
 

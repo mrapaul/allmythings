@@ -2,14 +2,20 @@ import 'package:drift/drift.dart';
 
 /// Virtual table for full-text search on label values using SQLite FTS5
 @DataClassName('LabelSearchEntry')
-class LabelSearchFts extends Table with VirtualTableMixin {
+class LabelSearchFts extends Table {
+  /// Reference to labels(id) for result joining
+  IntColumn get labelId => integer().customConstraint('NOT NULL')();
+
   /// Label value indexed for full-text search
   TextColumn get value => text()();
 
-  /// Reference to labels(id) for result joining (not indexed for FTS)
-  IntColumn get labelId => integer()();
+  @override
+  Set<Column> get primaryKey => {labelId};
 
   @override
-  String get moduleAndArgs =>
-      'fts5(value, labelId UNINDEXED, tokenize="porter unicode61 remove_diacritics 1")';
+  bool get withoutRowId => true;
+
+  @override
+  String? get tableConstraints =>
+      'USING fts5(value, label_id UNINDEXED, tokenize="porter unicode61 remove_diacritics 1")';
 }

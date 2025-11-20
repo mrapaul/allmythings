@@ -1,0 +1,245 @@
+version: '3.9'
+
+# Observability Stack for Visual Home Inventory Manager
+# Includes: Prometheus, Grafana, Jaeger, Alertmanager, and Exporters
+
+networks:
+  observability:
+    driver: bridge
+  visual-inventory-network:
+    external: true
+
+volumes:
+  prometheus_data:
+  grafana_data:
+  alertmanager_data:
+  jaeger_data:
+
+services:
+  # ================================
+  # Prometheus - Metrics Collection
+  # ================================
+  prometheus:
+    image: prom/prometheus:v2.48.0
+    container_name: visual-inventory-prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--storage.tsdb.retention.time=30d'
+      - '--web.console.libraries=/usr/share/prometheus/console_libraries'
+      - '--web.console.templates=/usr/share/prometheus/consoles'
+      - '--web.enable-lifecycle'
+      - '--web.enable-admin-api'
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./prometheus/rules:/etc/prometheus/rules:ro
+      - prometheus_data:/prometheus
+    networks:
+      - observability
+      - visual-inventory-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--tries=1", "--spider", "http://localhost:9090/-/healthy"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    depends_on:
+      - node-exporter
+      - postgres-exporter
+      - redis-exporter
+
+  # ================================
+  # Grafana - Visualization
+  # ================================
+  grafana:
+    image: grafana/grafana:10.2.2
+    container_name: visual-inventory-grafana
+    environment:
+      - GF_SECURITY_ADMIN_USER=${GRAFANA_ADMIN_USER:-admin}
+      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_ADMIN_PASSWORD:-admin}
+      - GF_USERS_ALLOW_SIGN_UP=false
+      - GF_SERVER_ROOT_URL=http://localhost:3001
+      - GF_INSTALL_PLUGINS=grafana-piechart-panel,grafana-clock-panel
+      - GF_AUTH_ANONYMOUS_ENABLED=false
+      - GF_ALERTING_ENABLED=true
+      - GF_UNIFIED_ALERTING_ENABLED=true
+    ports:
+      - "3001:3000"
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./grafana/dashboards:/etc/grafana/provisioning/dashboards:ro
+      - ./grafana/datasources.yml:/etc/grafana/provisioning/datasources/datasources.yml:ro
+    networks:
+      - observability
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--tries=1", "--spider", "http://localhost:3000/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    depends_on:
+      - prometheus
+
+  # ================================
+  # Jaeger - Distributed Tracing
+  # ================================
+  jaeger:
+    image: jaegertracing/all-in-one:1.52
+    container_name: visual-inventory-jaeger
+    environment:
+      - COLLECTOR_OTLP_ENABLED=true
+      - SPAN_STORAGE_TYPE=badger
+      - BADGER_EPHEMERAL=false
+      - BADGER_DIRECTORY_VALUE=/badger/data
+      - BADGER_DIRECTORY_KEY=/badger/key
+    ports:
+      - "16686:16686"  # Jaeger UI
+      - "14268:14268"  # Jaeger collector HTTP
+      - "14250:14250"  # Jaeger collector gRPC
+      - "4317:4317"    # OTLP gRPC receiver
+      - "4318:4318"    # OTLP HTTP receiver
+      - "14269:14269"  # Jaeger health check
+    volumes:
+      - jaeger_data:/badger
+    networks:
+      - observability
+      - visual-inventory-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--tries=1", "--spider", "http://localhost:14269/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # ================================
+  # Alertmanager - Alert Management
+  # ================================
+  alertmanager:
+    image: prom/alertmanager:v0.26.0
+    container_name: visual-inventory-alertmanager
+    command:
+      - '--config.file=/etc/alertmanager/alertmanager.yml'
+      - '--storage.path=/alertmanager'
+      - '--web.external-url=http://localhost:9093'
+    ports:
+      - "9093:9093"
+    volumes:
+      - ./alertmanager/alertmanager.yml:/etc/alertmanager/alertmanager.yml:ro
+      - alertmanager_data:/alertmanager
+    networks:
+      - observability
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--tries=1", "--spider", "http://localhost:9093/-/healthy"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # ================================
+  # Node Exporter - System Metrics
+  # ================================
+  node-exporter:
+    image: prom/node-exporter:v1.7.0
+    container_name: visual-inventory-node-exporter
+    command:
+      - '--path.procfs=/host/proc'
+      - '--path.sysfs=/host/sys'
+      - '--path.rootfs=/host'
+      - '--collector.filesystem.mount-points-exclude=^/(sys|proc|dev|host|etc)($$|/)'
+    ports:
+      - "9100:9100"
+    volumes:
+      - /proc:/host/proc:ro
+      - /sys:/host/sys:ro
+      - /:/host:ro
+    networks:
+      - observability
+    restart: unless-stopped
+    pid: host
+
+  # ================================
+  # PostgreSQL Exporter - DB Metrics
+  # ================================
+  postgres-exporter:
+    image: prometheuscommunity/postgres-exporter:v0.15.0
+    container_name: visual-inventory-postgres-exporter
+    environment:
+      - DATA_SOURCE_NAME=postgresql://${DB_USER:-postgres}:${DB_PASSWORD:-postgres}@postgres:5432/${DB_NAME:-visual_inventory}?sslmode=disable
+    ports:
+      - "9187:9187"
+    networks:
+      - observability
+      - visual-inventory-network
+    restart: unless-stopped
+    depends_on:
+      - prometheus
+
+  # ================================
+  # Redis Exporter - Cache Metrics
+  # ================================
+  redis-exporter:
+    image: oliver006/redis_exporter:v1.55.0
+    container_name: visual-inventory-redis-exporter
+    environment:
+      - REDIS_ADDR=redis:6379
+      - REDIS_PASSWORD=${REDIS_PASSWORD:-redis_password}
+    ports:
+      - "9121:9121"
+    networks:
+      - observability
+      - visual-inventory-network
+    restart: unless-stopped
+    depends_on:
+      - prometheus
+
+  # ================================
+  # Loki - Log Aggregation (Optional)
+  # ================================
+  loki:
+    image: grafana/loki:2.9.3
+    container_name: visual-inventory-loki
+    command: -config.file=/etc/loki/loki.yml
+    ports:
+      - "3100:3100"
+    volumes:
+      - ./loki/loki.yml:/etc/loki/loki.yml:ro
+    networks:
+      - observability
+    restart: unless-stopped
+
+  # ================================
+  # Promtail - Log Shipper (Optional)
+  # ================================
+  promtail:
+    image: grafana/promtail:2.9.3
+    container_name: visual-inventory-promtail
+    command: -config.file=/etc/promtail/promtail.yml
+    volumes:
+      - ./promtail/promtail.yml:/etc/promtail/promtail.yml:ro
+      - /var/log:/var/log:ro
+      - /var/lib/docker/containers:/var/lib/docker/containers:ro
+    networks:
+      - observability
+      - visual-inventory-network
+    restart: unless-stopped
+    depends_on:
+      - loki
+
+  # ================================
+  # Tempo - Distributed Tracing (Alternative to Jaeger)
+  # ================================
+  # tempo:
+  #   image: grafana/tempo:2.3.1
+  #   container_name: visual-inventory-tempo
+  #   command: ["-config.file=/etc/tempo.yml"]
+  #   ports:
+  #     - "3200:3200"   # Tempo UI
+  #     - "4317:4317"   # OTLP gRPC
+  #     - "4318:4318"   # OTLP HTTP
+  #   volumes:
+  #     - ./tempo/tempo.yml:/etc/tempo.yml:ro
+  #   networks:
+  #     - observability
+  #   restart: unless-stopped

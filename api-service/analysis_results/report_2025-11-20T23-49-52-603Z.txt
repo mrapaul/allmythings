@@ -1,0 +1,50 @@
+======================================================================
+VISION PROVIDER ANALYSIS REPORT
+Generated: 2025-11-20T23:49:52.604Z
+======================================================================
+
+SUMMARY STATISTICS
+----------------------------------------------------------------------
+Total Images Analyzed: 48
+Best Provider: GOOGLE
+
+Images by Category:
+  bathroom: 6
+  bedroom: 6
+  dining_room: 6
+  hallway: 6
+  kitchen: 6
+  living_room: 6
+  office: 6
+  utility_room: 6
+
+PROVIDER STATISTICS
+----------------------------------------------------------------------
+
+MOCK:
+  Avg Objects Detected: 5.00
+  Total Detections: 240
+  Avg Confidence: 92.2%
+  Total Execution Time: 0.00s
+
+GOOGLE:
+  Avg Objects Detected: 6.00
+  Total Detections: 288
+  Avg Confidence: 87.3%
+  Total Execution Time: 0.00s
+
+AWS:
+  Avg Objects Detected: 5.00
+  Total Detections: 240
+  Avg Confidence: 85.8%
+  Total Execution Time: 0.00s
+
+RECOMMENDATIONS
+----------------------------------------------------------------------
+• Best performing provider: GOOGLE
+• Average objects detected: 5.333333333333333
+• Consider using google as primary provider for initial detection
+• Implement ensemble detection combining all three providers for improved accuracy
+• Add provider-specific tuning parameters based on room type
+
+======================================================================

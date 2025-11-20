@@ -1,6 +1,6 @@
-import 'package:permission_handler/permission_handler.dart';
+import 'package:all_my_things/core/errors/failures.dart';
 import 'package:fpdart/fpdart.dart';
-import '../errors/failures.dart';
+import 'package:permission_handler/permission_handler.dart';
 
 /// Camera permission handler
 class CameraPermissionHandler {
@@ -14,7 +14,8 @@ class CameraPermissionHandler {
       } else if (status.isPermanentlyDenied) {
         return left(
           const Failure.permission(
-            message: 'Camera permission permanently denied. Please enable in settings.',
+            message:
+                'Camera permission permanently denied. Please enable in settings.',
           ),
         );
       } else {

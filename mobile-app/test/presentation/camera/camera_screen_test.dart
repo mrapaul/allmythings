@@ -1,28 +1,27 @@
-import 'package:fpdart/fpdart.dart';
-import 'package:flutter/material.dart';
-import 'package:flutter_test/flutter_test.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:mocktail/mocktail.dart';
 import 'package:camera/camera.dart';
-import 'package:home_inventory/presentation/camera/camera_screen.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_test/flutter_test.dart';
+import 'package:fpdart/fpdart.dart';
 import 'package:home_inventory/application/providers/camera_providers.dart';
 import 'package:home_inventory/domain/services/photo_capture_service.dart';
+import 'package:home_inventory/presentation/camera/camera_screen.dart';
+import 'package:mocktail/mocktail.dart';
 
-/**
- * T048 [P] [US1] Widget test for camera screen
- *
- * Purpose: Validate camera screen UI and interactions
- *
- * Success Criteria:
- * - Renders camera preview when permission granted
- * - Shows permission request when permission denied
- * - Capture button visible and tappable
- * - Shows loading state during capture
- * - Navigates to detection results on success
- * - Shows error dialog on capture failure
- */
+/// T048 [P] [US1] Widget test for camera screen
+///
+/// Purpose: Validate camera screen UI and interactions
+///
+/// Success Criteria:
+/// - Renders camera preview when permission granted
+/// - Shows permission request when permission denied
+/// - Capture button visible and tappable
+/// - Shows loading state during capture
+/// - Navigates to detection results on success
+/// - Shows error dialog on capture failure
 
 class MockCameraController extends Mock implements CameraController {}
+
 class MockCameraService extends Mock implements PhotoCaptureService {}
 
 void main() {
@@ -52,10 +51,16 @@ void main() {
   }
 
   group('CameraScreen Widget Tests', () {
-    testWidgets('should render camera preview when permission granted', (tester) async {
+    testWidgets('should render camera preview when permission granted', (
+      tester,
+    ) async {
       // Arrange: Mock camera permission and initialization
-      when(() => mockCameraService.hasPermission()).thenAnswer((_) async => true);
-      when(() => mockCameraService.initialize()).thenAnswer((_) async => Right(mockController));
+      when(
+        () => mockCameraService.hasPermission(),
+      ).thenAnswer((_) async => true);
+      when(
+        () => mockCameraService.initialize(),
+      ).thenAnswer((_) async => Right(mockController));
       when(() => mockController.value).thenReturn(
         const CameraValue(
           isInitialized: true,
@@ -75,9 +80,13 @@ void main() {
       expect(find.byIcon(Icons.circle), findsOneWidget); // Capture button
     });
 
-    testWidgets('should show permission request when permission denied', (tester) async {
+    testWidgets('should show permission request when permission denied', (
+      tester,
+    ) async {
       // Arrange: Mock permission denied
-      when(() => mockCameraService.hasPermission()).thenAnswer((_) async => false);
+      when(
+        () => mockCameraService.hasPermission(),
+      ).thenAnswer((_) async => false);
 
       // Act: Build widget
       await tester.pumpWidget(createTestWidget(hasPermission: false));
@@ -91,10 +100,19 @@ void main() {
 
     testWidgets('should display capture button in center', (tester) async {
       // Arrange
-      when(() => mockCameraService.hasPermission()).thenAnswer((_) async => true);
-      when(() => mockCameraService.initialize()).thenAnswer((_) async => Right(mockController));
+      when(
+        () => mockCameraService.hasPermission(),
+      ).thenAnswer((_) async => true);
+      when(
+        () => mockCameraService.initialize(),
+      ).thenAnswer((_) async => Right(mockController));
       when(() => mockController.value).thenReturn(
-        const CameraValue(isInitialized: true, isRecordingVideo: false, isTakingPicture: false, isStreamingImages: false),
+        const CameraValue(
+          isInitialized: true,
+          isRecordingVideo: false,
+          isTakingPicture: false,
+          isStreamingImages: false,
+        ),
       );
 
       // Act
@@ -113,10 +131,19 @@ void main() {
 
     testWidgets('should show loading indicator during capture', (tester) async {
       // Arrange: Mock long capture operation
-      when(() => mockCameraService.hasPermission()).thenAnswer((_) async => true);
-      when(() => mockCameraService.initialize()).thenAnswer((_) async => Right(mockController));
+      when(
+        () => mockCameraService.hasPermission(),
+      ).thenAnswer((_) async => true);
+      when(
+        () => mockCameraService.initialize(),
+      ).thenAnswer((_) async => Right(mockController));
       when(() => mockController.value).thenReturn(
-        const CameraValue(isInitialized: true, isRecordingVideo: false, isTakingPicture: false, isStreamingImages: false),
+        const CameraValue(
+          isInitialized: true,
+          isRecordingVideo: false,
+          isTakingPicture: false,
+          isStreamingImages: false,
+        ),
       );
       when(() => mockCameraService.takePicture()).thenAnswer(
         (_) async {
@@ -139,12 +166,23 @@ void main() {
       await tester.pumpAndSettle();
     });
 
-    testWidgets('should navigate to detection results on successful capture', (tester) async {
+    testWidgets('should navigate to detection results on successful capture', (
+      tester,
+    ) async {
       // Arrange
-      when(() => mockCameraService.hasPermission()).thenAnswer((_) async => true);
-      when(() => mockCameraService.initialize()).thenAnswer((_) async => Right(mockController));
+      when(
+        () => mockCameraService.hasPermission(),
+      ).thenAnswer((_) async => true);
+      when(
+        () => mockCameraService.initialize(),
+      ).thenAnswer((_) async => Right(mockController));
       when(() => mockController.value).thenReturn(
-        const CameraValue(isInitialized: true, isRecordingVideo: false, isTakingPicture: false, isStreamingImages: false),
+        const CameraValue(
+          isInitialized: true,
+          isRecordingVideo: false,
+          isTakingPicture: false,
+          isStreamingImages: false,
+        ),
       );
       when(() => mockCameraService.takePicture()).thenAnswer(
         (_) async => XFile('/path/to/image.jpg'),
@@ -163,10 +201,19 @@ void main() {
 
     testWidgets('should show error dialog on capture failure', (tester) async {
       // Arrange: Mock capture failure
-      when(() => mockCameraService.hasPermission()).thenAnswer((_) async => true);
-      when(() => mockCameraService.initialize()).thenAnswer((_) async => mockController);
+      when(
+        () => mockCameraService.hasPermission(),
+      ).thenAnswer((_) async => true);
+      when(
+        () => mockCameraService.initialize(),
+      ).thenAnswer((_) async => mockController);
       when(() => mockController.value).thenReturn(
-        const CameraValue(isInitialized: true, isRecordingVideo: false, isTakingPicture: false, isStreamingImages: false),
+        const CameraValue(
+          isInitialized: true,
+          isRecordingVideo: false,
+          isTakingPicture: false,
+          isStreamingImages: false,
+        ),
       );
       when(() => mockCameraService.takePicture()).thenThrow(
         Exception('Camera capture failed'),
@@ -184,14 +231,27 @@ void main() {
       expect(find.text('Retry'), findsOneWidget);
     });
 
-    testWidgets('should toggle flash mode when flash button tapped', (tester) async {
+    testWidgets('should toggle flash mode when flash button tapped', (
+      tester,
+    ) async {
       // Arrange
-      when(() => mockCameraService.hasPermission()).thenAnswer((_) async => true);
-      when(() => mockCameraService.initialize()).thenAnswer((_) async => mockController);
+      when(
+        () => mockCameraService.hasPermission(),
+      ).thenAnswer((_) async => true);
+      when(
+        () => mockCameraService.initialize(),
+      ).thenAnswer((_) async => mockController);
       when(() => mockController.value).thenReturn(
-        const CameraValue(isInitialized: true, isRecordingVideo: false, isTakingPicture: false, flashMode: FlashMode.off),
+        const CameraValue(
+          isInitialized: true,
+          isRecordingVideo: false,
+          isTakingPicture: false,
+          flashMode: FlashMode.off,
+        ),
       );
-      when(() => mockCameraService.setFlashMode(any())).thenAnswer((_) async {});
+      when(() => mockCameraService.setFlashMode(any())).thenAnswer((_) async {
+        return null;
+      });
 
       // Act: Build widget and toggle flash
       await tester.pumpWidget(createTestWidget());
@@ -209,10 +269,19 @@ void main() {
 
     testWidgets('should show close button to exit camera', (tester) async {
       // Arrange
-      when(() => mockCameraService.hasPermission()).thenAnswer((_) async => true);
-      when(() => mockCameraService.initialize()).thenAnswer((_) async => mockController);
+      when(
+        () => mockCameraService.hasPermission(),
+      ).thenAnswer((_) async => true);
+      when(
+        () => mockCameraService.initialize(),
+      ).thenAnswer((_) async => mockController);
       when(() => mockController.value).thenReturn(
-        const CameraValue(isInitialized: true, isRecordingVideo: false, isTakingPicture: false, isStreamingImages: false),
+        const CameraValue(
+          isInitialized: true,
+          isRecordingVideo: false,
+          isTakingPicture: false,
+          isStreamingImages: false,
+        ),
       );
 
       // Act: Build widget
@@ -233,12 +302,23 @@ void main() {
 
     testWidgets('should dispose camera controller on exit', (tester) async {
       // Arrange
-      when(() => mockCameraService.hasPermission()).thenAnswer((_) async => true);
-      when(() => mockCameraService.initialize()).thenAnswer((_) async => mockController);
+      when(
+        () => mockCameraService.hasPermission(),
+      ).thenAnswer((_) async => true);
+      when(
+        () => mockCameraService.initialize(),
+      ).thenAnswer((_) async => mockController);
       when(() => mockController.value).thenReturn(
-        const CameraValue(isInitialized: true, isRecordingVideo: false, isTakingPicture: false, isStreamingImages: false),
+        const CameraValue(
+          isInitialized: true,
+          isRecordingVideo: false,
+          isTakingPicture: false,
+          isStreamingImages: false,
+        ),
       );
-      when(() => mockCameraService.dispose()).thenAnswer((_) async {});
+      when(() => mockCameraService.dispose()).thenAnswer((_) async {
+        return null;
+      });
 
       // Act: Build widget and exit
       await tester.pumpWidget(createTestWidget());
@@ -251,9 +331,13 @@ void main() {
       verify(() => mockCameraService.dispose()).called(1);
     });
 
-    testWidgets('should handle camera initialization error gracefully', (tester) async {
+    testWidgets('should handle camera initialization error gracefully', (
+      tester,
+    ) async {
       // Arrange: Mock initialization failure
-      when(() => mockCameraService.hasPermission()).thenAnswer((_) async => true);
+      when(
+        () => mockCameraService.hasPermission(),
+      ).thenAnswer((_) async => true);
       when(() => mockCameraService.initialize()).thenThrow(
         Exception('Camera initialization failed'),
       );
@@ -267,16 +351,26 @@ void main() {
       expect(find.text('Retry'), findsOneWidget);
     });
 
-    testWidgets('should request permission when "Grant Permission" tapped', (tester) async {
+    testWidgets('should request permission when "Grant Permission" tapped', (
+      tester,
+    ) async {
       // Arrange: Initially no permission
-      when(() => mockCameraService.hasPermission())
-        .thenAnswer((_) async => false);
-      when(() => mockCameraService.requestPermission())
-        .thenAnswer((_) async => true);
-      when(() => mockCameraService.initialize())
-        .thenAnswer((_) async => mockController);
+      when(
+        () => mockCameraService.hasPermission(),
+      ).thenAnswer((_) async => false);
+      when(
+        () => mockCameraService.requestPermission(),
+      ).thenAnswer((_) async => true);
+      when(
+        () => mockCameraService.initialize(),
+      ).thenAnswer((_) async => mockController);
       when(() => mockController.value).thenReturn(
-        const CameraValue(isInitialized: true, isRecordingVideo: false, isTakingPicture: false, isStreamingImages: false),
+        const CameraValue(
+          isInitialized: true,
+          isRecordingVideo: false,
+          isTakingPicture: false,
+          isStreamingImages: false,
+        ),
       );
 
       // Act: Build widget and grant permission

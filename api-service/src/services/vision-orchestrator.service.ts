@@ -10,12 +10,14 @@ import { logger } from '../utils/logger';
 /**
  * Vision orchestrator - coordinates multiple vision providers
  */
+type ProviderName = 'meta' | 'google' | 'aws' | 'tensorflow' | 'mock';
+
 export class VisionOrchestratorService {
-  private providers: Map<string, ProviderAdapter>;
+  private providers: Map<ProviderName, ProviderAdapter>;
   private fusionService: EnsembleFusionService;
 
   constructor() {
-    this.providers = new Map();
+    this.providers = new Map<ProviderName, ProviderAdapter>();
     this.fusionService = new EnsembleFusionService();
 
     // Use mock adapter in development when no credentials are configured
@@ -113,7 +115,7 @@ export class VisionOrchestratorService {
   private async executeProviderWithTimeout(
     provider: ProviderAdapter,
     imageBuffer: Buffer,
-    providerName: string
+    providerName: ProviderName
   ): Promise<ProviderResult> {
     const startTime = Date.now();
 
@@ -129,7 +131,7 @@ export class VisionOrchestratorService {
       const detections = await Promise.race([detectionPromise, timeoutPromise]);
 
       return {
-        provider: providerName as any,
+        provider: providerName,
         success: true,
         processingTimeMs: Date.now() - startTime,
         detections,
@@ -141,7 +143,7 @@ export class VisionOrchestratorService {
       );
 
       return {
-        provider: providerName as any,
+        provider: providerName,
         success: false,
         processingTimeMs: Date.now() - startTime,
         detections: [],
@@ -150,7 +152,7 @@ export class VisionOrchestratorService {
     }
   }
 
-  private determineEnsembleMode(providersUsed: number): string {
+  private determineEnsembleMode(providersUsed: number): 'full' | 'partial' | 'single' | 'none' {
     if (providersUsed === 0) return 'none';
     if (providersUsed === 1) return 'single';
     if (providersUsed >= 2 && providersUsed < 4) return 'partial';

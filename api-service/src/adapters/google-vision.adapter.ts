@@ -1,7 +1,7 @@
 import { ImageAnnotatorClient } from '@google-cloud/vision';
 import { ProviderAdapter } from './provider-adapter.interface';
 import { Detection, BoundingBox } from '../schemas/detection.schema';
-import { CircuitBreaker } from '../utils/circuit-breaker';
+import { CircuitBreaker, CircuitState } from '../utils/circuit-breaker';
 import { envConfig } from '../config/env.config';
 import { logger } from '../utils/logger';
 
@@ -27,6 +27,12 @@ export class GoogleVisionAdapter implements ProviderAdapter {
 
   async detectObjects(imageBuffer: Buffer): Promise<Detection[]> {
     return this.circuitBreaker.execute(async () => {
+      if (!this.client.objectLocalization) {
+        logger.error(
+          'objectLocalization method not found on Google Vision client'
+        );
+        return [];
+      }
       const [result] = await this.client.objectLocalization({
         image: { content: imageBuffer },
       });
@@ -63,7 +69,7 @@ export class GoogleVisionAdapter implements ProviderAdapter {
     });
   }
 
-  private normalizeBoundingBox(vertices: Array<{ x?: number; y?: number }>): BoundingBox {
+  private normalizeBoundingBox(vertices: Array<{ x?: number | null; y?: number | null }>): BoundingBox {
     const xs = vertices.map((v) => v.x || 0);
     const ys = vertices.map((v) => v.y || 0);
     const minX = Math.min(...xs);
@@ -79,12 +85,12 @@ export class GoogleVisionAdapter implements ProviderAdapter {
     };
   }
 
-  async health(): Promise<boolean> {
+  health(): Promise<boolean> {
     try {
       // Simple health check - verify client is initialized
-      return this.circuitBreaker.getState() !== 'open';
+      return Promise.resolve(this.circuitBreaker.getState() !== CircuitState.OPEN);
     } catch {
-      return false;
+      return Promise.resolve(false);
     }
   }
 

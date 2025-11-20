@@ -1,9 +1,10 @@
 import 'dart:io';
+
+import 'package:all_my_things/core/config/app_config.dart';
+import 'package:all_my_things/core/errors/failures.dart';
+import 'package:fpdart/fpdart.dart';
 import 'package:image/image.dart' as img;
 import 'package:path/path.dart' as p;
-import 'package:fpdart/fpdart.dart';
-import '../../core/errors/failures.dart';
-import '../../core/config/app_config.dart';
 
 /// Service for image processing (thumbnails, compression)
 class ImageProcessingService {

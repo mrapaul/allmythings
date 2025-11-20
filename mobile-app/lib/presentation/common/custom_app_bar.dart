@@ -1,15 +1,7 @@
+import 'package:all_my_things/presentation/theme/app_theme.dart';
 import 'package:flutter/material.dart';
-import '../theme/app_theme.dart';
 
 class CustomAppBar extends StatelessWidget implements PreferredSizeWidget {
-  final String? title;
-  final Widget? titleWidget; // Added titleWidget
-  final List<Widget>? actions;
-  final Widget? leading;
-  final bool centerTitle;
-  final Color? backgroundColor;
-  final Color? foregroundColor;
-
   const CustomAppBar({
     super.key,
     this.title,
@@ -20,11 +12,20 @@ class CustomAppBar extends StatelessWidget implements PreferredSizeWidget {
     this.backgroundColor,
     this.foregroundColor,
   });
+  final String? title;
+  final Widget? titleWidget; // Added titleWidget
+  final List<Widget>? actions;
+  final Widget? leading;
+  final bool centerTitle;
+  final Color? backgroundColor;
+  final Color? foregroundColor;
 
   @override
   Widget build(BuildContext context) {
     return AppBar(
-      title: titleWidget ?? (title != null ? Text(title!) : null), // Use titleWidget if provided
+      title:
+          titleWidget ??
+          (title != null ? Text(title!) : null), // Use titleWidget if provided
       actions: actions,
       leading: leading,
       centerTitle: centerTitle,

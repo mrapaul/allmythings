@@ -1,3 +1,4 @@
+/*
 import 'package:freezed_annotation/freezed_annotation.dart';
 
 part 'failures.freezed.dart';
@@ -30,3 +31,4 @@ class Failure with _$Failure {
     required String message,
   }) = UnexpectedFailure;
 }
+*/

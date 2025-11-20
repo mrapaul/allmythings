@@ -13,7 +13,7 @@ part of 'bounding_box.dart';
 T _$identity<T>(T value) => value;
 
 /// @nodoc
-mixin _$BoundingBox implements DiagnosticableTreeMixin {
+mixin _$BoundingBox {
 
  double get x; double get y; double get width; double get height;
 /// Create a copy of BoundingBox
@@ -25,12 +25,6 @@ $BoundingBoxCopyWith<BoundingBox> get copyWith => _$BoundingBoxCopyWithImpl<Boun
   /// Serializes this BoundingBox to a JSON map.
   Map<String, dynamic> toJson();
 
-@override
-void debugFillProperties(DiagnosticPropertiesBuilder properties) {
-  properties
-    ..add(DiagnosticsProperty('type', 'BoundingBox'))
-    ..add(DiagnosticsProperty('x', x))..add(DiagnosticsProperty('y', y))..add(DiagnosticsProperty('width', width))..add(DiagnosticsProperty('height', height));
-}
 
 @override
 bool operator ==(Object other) {
@@ -42,7 +36,7 @@ bool operator ==(Object other) {
 int get hashCode => Object.hash(runtimeType,x,y,width,height);
 
 @override
-String toString({ DiagnosticLevel minLevel = DiagnosticLevel.info }) {
+String toString() {
   return 'BoundingBox(x: $x, y: $y, width: $width, height: $height)';
 }
 
@@ -217,7 +211,7 @@ return $default(_that.x,_that.y,_that.width,_that.height);case _:
 /// @nodoc
 @JsonSerializable()
 
-class _BoundingBox with DiagnosticableTreeMixin implements BoundingBox {
+class _BoundingBox implements BoundingBox {
   const _BoundingBox({required this.x, required this.y, required this.width, required this.height});
   factory _BoundingBox.fromJson(Map<String, dynamic> json) => _$BoundingBoxFromJson(json);
 
@@ -236,12 +230,6 @@ _$BoundingBoxCopyWith<_BoundingBox> get copyWith => __$BoundingBoxCopyWithImpl<_
 Map<String, dynamic> toJson() {
   return _$BoundingBoxToJson(this, );
 }
-@override
-void debugFillProperties(DiagnosticPropertiesBuilder properties) {
-  properties
-    ..add(DiagnosticsProperty('type', 'BoundingBox'))
-    ..add(DiagnosticsProperty('x', x))..add(DiagnosticsProperty('y', y))..add(DiagnosticsProperty('width', width))..add(DiagnosticsProperty('height', height));
-}
 
 @override
 bool operator ==(Object other) {
@@ -253,7 +241,7 @@ bool operator ==(Object other) {
 int get hashCode => Object.hash(runtimeType,x,y,width,height);
 
 @override
-String toString({ DiagnosticLevel minLevel = DiagnosticLevel.info }) {
+String toString() {
   return 'BoundingBox(x: $x, y: $y, width: $width, height: $height)';
 }
 

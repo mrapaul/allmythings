@@ -1,0 +1,178 @@
+name: Flutter Tests
+
+on:
+  push:
+    branches: [develop, main, feature/**]
+    paths:
+      - 'mobile-app/**'
+      - '.github/workflows/flutter_test.yml'
+  pull_request:
+    branches: [develop, main]
+    paths:
+      - 'mobile-app/**'
+      - '.github/workflows/flutter_test.yml'
+
+jobs:
+  test:
+    name: Flutter Tests - ${{ matrix.channel }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+        channel: [stable]
+        include:
+          - os: ubuntu-latest
+            channel: beta
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version-file: mobile-app/pubspec.yaml
+          channel: ${{ matrix.channel }}
+          cache: true
+          cache-key: flutter-${{ hashFiles('mobile-app/pubspec.lock') }}
+
+      - name: Install dependencies
+        working-directory: mobile-app
+        run: flutter pub get
+
+      - name: Generate code
+        working-directory: mobile-app
+        run: flutter pub run build_runner build --delete-conflicting-outputs
+
+      - name: Analyze code
+        working-directory: mobile-app
+        run: flutter analyze
+
+      - name: Check code formatting
+        working-directory: mobile-app
+        run: flutter format --set-exit-if-changed .
+
+      - name: Run unit and widget tests
+        working-directory: mobile-app
+        run: |
+          flutter test \
+            --coverage \
+            --coverage-path=coverage/lcov.info \
+            --verbose \
+            test/
+
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v3
+        with:
+          files: ./mobile-app/coverage/lcov.info
+          flags: flutter-tests
+          name: flutter-tests-${{ matrix.os }}-${{ matrix.channel }}
+          fail_ci_if_error: false
+
+      - name: Generate coverage summary
+        working-directory: mobile-app
+        if: matrix.os == 'ubuntu-latest' && matrix.channel == 'stable'
+        run: |
+          if command -v lcov &> /dev/null; then
+            lcov --list coverage/lcov.info > coverage/coverage_summary.txt
+            cat coverage/coverage_summary.txt
+          fi
+
+      - name: Enable KVM
+        if: runner.os == 'Linux'
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+
+  test-summary:
+    name: Test Summary
+    runs-on: ubuntu-latest
+    needs: test
+    if: always()
+    steps:
+      - name: Check test results
+        run: |
+          if [ "${{ needs.test.result }}" == "success" ]; then
+            echo "✅ All tests passed!"
+            exit 0
+          else
+            echo "❌ Some tests failed"
+            exit 1
+          fi
+
+  benchmark:
+    name: Performance Benchmark
+    runs-on: ubuntu-latest
+    needs: test
+    if: github.event_name == 'push' && github.ref == 'refs/heads/develop'
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version-file: mobile-app/pubspec.yaml
+
+      - name: Install dependencies
+        working-directory: mobile-app
+        run: flutter pub get
+
+      - name: Run benchmark tests
+        working-directory: mobile-app
+        run: |
+          flutter test \
+            --profile \
+            test/ \
+            --reporter=json > benchmark_results.json
+
+      - name: Upload benchmark results
+        uses: actions/upload-artifact@v3
+        with:
+          name: benchmark-results
+          path: mobile-app/benchmark_results.json
+          retention-days: 30
+
+  a11y:
+    name: Accessibility Validation
+    runs-on: ubuntu-latest
+    needs: test
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version-file: mobile-app/pubspec.yaml
+
+      - name: Install dependencies
+        working-directory: mobile-app
+        run: flutter pub get
+
+      - name: Run accessibility tests
+        working-directory: mobile-app
+        run: |
+          flutter test \
+            --verbose \
+            test/accessibility/
+
+  coverage-report:
+    name: Coverage Report
+    runs-on: ubuntu-latest
+    needs: test
+    if: always()
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Publish coverage report
+        uses: 5monkeys/cobertura-action@master
+        if: always()
+        with:
+          path: ./mobile-app/coverage/lcov.info
+          minimum_coverage: 70
+          show_line: true
+          show_branch: true

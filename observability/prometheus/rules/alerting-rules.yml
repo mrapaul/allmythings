@@ -1,0 +1,412 @@
+# Alerting Rules for Visual Home Inventory Manager
+# Defines alert conditions based on SLIs and operational thresholds
+
+groups:
+  # ================================
+  # Service Availability Alerts
+  # ================================
+  - name: service_availability
+    interval: 30s
+    rules:
+      - alert: ServiceDown
+        expr: up{job="visual-inventory-api"} == 0
+        for: 1m
+        labels:
+          severity: critical
+          category: availability
+        annotations:
+          summary: "Visual Inventory API service is down"
+          description: "API service {{ $labels.instance }} has been down for more than 1 minute."
+          runbook_url: "https://wiki.company.com/runbooks/service-down"
+
+      - alert: HighErrorRate
+        expr: |
+          (
+            sum(rate(http_requests_total{status=~"5.."}[5m]))
+            /
+            sum(rate(http_requests_total[5m]))
+          ) > 0.05
+        for: 5m
+        labels:
+          severity: critical
+          category: availability
+        annotations:
+          summary: "High error rate detected (>5%)"
+          description: "Error rate is {{ $value | humanizePercentage }} over the last 5 minutes."
+          runbook_url: "https://wiki.company.com/runbooks/high-error-rate"
+
+      - alert: HighClientErrorRate
+        expr: |
+          (
+            sum(rate(http_requests_total{status=~"4.."}[5m]))
+            /
+            sum(rate(http_requests_total[5m]))
+          ) > 0.1
+        for: 10m
+        labels:
+          severity: warning
+          category: availability
+        annotations:
+          summary: "High client error rate (>10%)"
+          description: "Client error rate is {{ $value | humanizePercentage }}. This may indicate API contract issues."
+          runbook_url: "https://wiki.company.com/runbooks/high-client-error-rate"
+
+  # ================================
+  # Performance / Latency Alerts
+  # ================================
+  - name: performance_alerts
+    interval: 30s
+    rules:
+      - alert: HighLatencyP99
+        expr: |
+          histogram_quantile(0.99, sum(rate(http_request_duration_seconds_bucket[5m])) by (le, route)) > 5
+        for: 10m
+        labels:
+          severity: critical
+          category: performance
+        annotations:
+          summary: "P99 latency exceeds 5 seconds"
+          description: "Route {{ $labels.route }} has P99 latency of {{ $value | humanizeDuration }} (SLO: < 1s)."
+          runbook_url: "https://wiki.company.com/runbooks/high-latency"
+
+      - alert: HighLatencyP95
+        expr: |
+          histogram_quantile(0.95, sum(rate(http_request_duration_seconds_bucket[5m])) by (le, route)) > 1
+        for: 15m
+        labels:
+          severity: warning
+          category: performance
+        annotations:
+          summary: "P95 latency exceeds 1 second"
+          description: "Route {{ $labels.route }} has P95 latency of {{ $value | humanizeDuration }}."
+          runbook_url: "https://wiki.company.com/runbooks/high-latency"
+
+      - alert: SlowDatabaseQueries
+        expr: |
+          histogram_quantile(0.95, sum(rate(db_query_duration_seconds_bucket[5m])) by (le, operation, table)) > 1
+        for: 10m
+        labels:
+          severity: warning
+          category: performance
+        annotations:
+          summary: "Slow database queries detected"
+          description: "Database {{ $labels.operation }} on {{ $labels.table }} has P95 latency of {{ $value | humanizeDuration }}."
+          runbook_url: "https://wiki.company.com/runbooks/slow-queries"
+
+      - alert: VisionProviderSlowResponse
+        expr: |
+          histogram_quantile(0.95, sum(rate(vision_provider_duration_seconds_bucket[5m])) by (le, provider)) > 10
+        for: 5m
+        labels:
+          severity: warning
+          category: performance
+        annotations:
+          summary: "Vision provider responding slowly"
+          description: "Provider {{ $labels.provider }} has P95 latency of {{ $value | humanizeDuration }} (expected < 5s)."
+          runbook_url: "https://wiki.company.com/runbooks/vision-provider-slow"
+
+  # ================================
+  # Resource Utilization Alerts
+  # ================================
+  - name: resource_alerts
+    interval: 30s
+    rules:
+      - alert: HighCPUUsage
+        expr: |
+          (1 - avg(rate(node_cpu_seconds_total{mode="idle"}[5m]))) > 0.85
+        for: 10m
+        labels:
+          severity: warning
+          category: resources
+        annotations:
+          summary: "High CPU usage detected"
+          description: "CPU usage is {{ $value | humanizePercentage }} on {{ $labels.instance }}."
+          runbook_url: "https://wiki.company.com/runbooks/high-cpu"
+
+      - alert: HighMemoryUsage
+        expr: |
+          (1 - (node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes)) > 0.85
+        for: 10m
+        labels:
+          severity: warning
+          category: resources
+        annotations:
+          summary: "High memory usage detected"
+          description: "Memory usage is {{ $value | humanizePercentage }} on {{ $labels.instance }}."
+          runbook_url: "https://wiki.company.com/runbooks/high-memory"
+
+      - alert: HighDiskUsage
+        expr: |
+          (1 - (node_filesystem_avail_bytes{mountpoint="/"} / node_filesystem_size_bytes{mountpoint="/"})) > 0.80
+        for: 5m
+        labels:
+          severity: warning
+          category: resources
+        annotations:
+          summary: "Disk space running low"
+          description: "Disk usage is {{ $value | humanizePercentage }} on {{ $labels.instance }}."
+          runbook_url: "https://wiki.company.com/runbooks/disk-full"
+
+      - alert: CriticalDiskUsage
+        expr: |
+          (1 - (node_filesystem_avail_bytes{mountpoint="/"} / node_filesystem_size_bytes{mountpoint="/"})) > 0.90
+        for: 1m
+        labels:
+          severity: critical
+          category: resources
+        annotations:
+          summary: "Critical disk space remaining"
+          description: "Disk usage is {{ $value | humanizePercentage }} on {{ $labels.instance }}. Immediate action required."
+          runbook_url: "https://wiki.company.com/runbooks/disk-full"
+
+  # ================================
+  # Database Alerts
+  # ================================
+  - name: database_alerts
+    interval: 30s
+    rules:
+      - alert: DatabaseConnectionPoolExhausted
+        expr: |
+          db_connection_pool{state="waiting"} > 10
+        for: 5m
+        labels:
+          severity: critical
+          category: database
+        annotations:
+          summary: "Database connection pool exhausted"
+          description: "{{ $value }} connections are waiting. Pool may be undersized."
+          runbook_url: "https://wiki.company.com/runbooks/db-connection-pool"
+
+      - alert: DatabaseHighConnectionUsage
+        expr: |
+          (db_connection_pool{state="active"} / (db_connection_pool{state="active"} + db_connection_pool{state="idle"})) > 0.80
+        for: 10m
+        labels:
+          severity: warning
+          category: database
+        annotations:
+          summary: "Database connection pool usage high"
+          description: "Connection pool is {{ $value | humanizePercentage }} utilized."
+          runbook_url: "https://wiki.company.com/runbooks/db-connection-pool"
+
+      - alert: DatabaseDown
+        expr: |
+          up{job="postgres"} == 0
+        for: 1m
+        labels:
+          severity: critical
+          category: database
+        annotations:
+          summary: "PostgreSQL database is down"
+          description: "Database {{ $labels.instance }} has been unreachable for more than 1 minute."
+          runbook_url: "https://wiki.company.com/runbooks/database-down"
+
+      - alert: HighDatabaseErrorRate
+        expr: |
+          rate(db_errors_total[5m]) > 1
+        for: 5m
+        labels:
+          severity: warning
+          category: database
+        annotations:
+          summary: "High database error rate"
+          description: "Database errors occurring at {{ $value }} errors/sec."
+          runbook_url: "https://wiki.company.com/runbooks/db-errors"
+
+  # ================================
+  # Cache Alerts
+  # ================================
+  - name: cache_alerts
+    interval: 30s
+    rules:
+      - alert: LowCacheHitRate
+        expr: |
+          (
+            sum(rate(cache_hits_total[10m]))
+            /
+            (sum(rate(cache_hits_total[10m])) + sum(rate(cache_misses_total[10m])))
+          ) < 0.50
+        for: 15m
+        labels:
+          severity: warning
+          category: cache
+        annotations:
+          summary: "Low cache hit rate"
+          description: "Cache hit rate is {{ $value | humanizePercentage }} (expected > 80%)."
+          runbook_url: "https://wiki.company.com/runbooks/low-cache-hit-rate"
+
+      - alert: RedisDown
+        expr: |
+          up{job="redis"} == 0
+        for: 1m
+        labels:
+          severity: critical
+          category: cache
+        annotations:
+          summary: "Redis cache is down"
+          description: "Redis instance {{ $labels.instance }} has been unreachable for more than 1 minute."
+          runbook_url: "https://wiki.company.com/runbooks/redis-down"
+
+  # ================================
+  # Vision Provider Alerts
+  # ================================
+  - name: vision_provider_alerts
+    interval: 30s
+    rules:
+      - alert: VisionProviderDown
+        expr: |
+          vision_provider_active == 0
+        for: 5m
+        labels:
+          severity: warning
+          category: vision_providers
+        annotations:
+          summary: "Vision provider unavailable"
+          description: "Provider {{ $labels.provider }} has been inactive for 5 minutes."
+          runbook_url: "https://wiki.company.com/runbooks/vision-provider-down"
+
+      - alert: AllVisionProvidersDown
+        expr: |
+          sum(vision_provider_active) == 0
+        for: 2m
+        labels:
+          severity: critical
+          category: vision_providers
+        annotations:
+          summary: "All vision providers are down"
+          description: "No vision providers are available. Object detection is completely unavailable."
+          runbook_url: "https://wiki.company.com/runbooks/all-providers-down"
+
+      - alert: HighVisionProviderErrorRate
+        expr: |
+          (
+            sum(rate(vision_provider_requests_total{status="error"}[5m])) by (provider)
+            /
+            sum(rate(vision_provider_requests_total[5m])) by (provider)
+          ) > 0.20
+        for: 10m
+        labels:
+          severity: warning
+          category: vision_providers
+        annotations:
+          summary: "High error rate for vision provider"
+          description: "Provider {{ $labels.provider }} has error rate of {{ $value | humanizePercentage }}."
+          runbook_url: "https://wiki.company.com/runbooks/provider-errors"
+
+  # ================================
+  # Circuit Breaker Alerts
+  # ================================
+  - name: circuit_breaker_alerts
+    interval: 30s
+    rules:
+      - alert: CircuitBreakerOpen
+        expr: |
+          circuit_breaker_state == 1
+        for: 5m
+        labels:
+          severity: warning
+          category: reliability
+        annotations:
+          summary: "Circuit breaker is open"
+          description: "Circuit breaker for {{ $labels.provider }} is open, blocking requests."
+          runbook_url: "https://wiki.company.com/runbooks/circuit-breaker-open"
+
+      - alert: FrequentCircuitBreakerTrips
+        expr: |
+          rate(circuit_breaker_trips_total[15m]) > 1
+        for: 15m
+        labels:
+          severity: warning
+          category: reliability
+        annotations:
+          summary: "Frequent circuit breaker trips"
+          description: "Circuit breaker for {{ $labels.provider }} is tripping frequently ({{ $value }} trips/sec)."
+          runbook_url: "https://wiki.company.com/runbooks/circuit-breaker-trips"
+
+  # ================================
+  # Business Metrics Alerts
+  # ================================
+  - name: business_metrics_alerts
+    interval: 1m
+    rules:
+      - alert: LowSyncSuccessRate
+        expr: |
+          (
+            sum(rate(user_sync_total{status="success"}[10m]))
+            /
+            sum(rate(user_sync_total[10m]))
+          ) < 0.95
+        for: 15m
+        labels:
+          severity: warning
+          category: business
+        annotations:
+          summary: "Low sync success rate"
+          description: "Sync success rate is {{ $value | humanizePercentage }} (target > 99%)."
+          runbook_url: "https://wiki.company.com/runbooks/sync-failures"
+
+      - alert: NoDetectionsRecent
+        expr: |
+          rate(detections_total[30m]) == 0
+        for: 1h
+        labels:
+          severity: info
+          category: business
+        annotations:
+          summary: "No detections in past hour"
+          description: "No object detection requests received in the past hour. This may indicate a client issue."
+          runbook_url: "https://wiki.company.com/runbooks/no-traffic"
+
+  # ================================
+  # Rate Limiting Alerts
+  # ================================
+  - name: rate_limiting_alerts
+    interval: 30s
+    rules:
+      - alert: HighRateLimitViolations
+        expr: |
+          rate(rate_limit_exceeded_total[5m]) > 10
+        for: 5m
+        labels:
+          severity: warning
+          category: security
+        annotations:
+          summary: "High rate of rate limit violations"
+          description: "Rate limit violations occurring at {{ $value }} violations/sec."
+          runbook_url: "https://wiki.company.com/runbooks/rate-limit-violations"
+
+  # ================================
+  # SLO Alerts
+  # ================================
+  - name: slo_alerts
+    interval: 1m
+    rules:
+      - alert: SLOLatencyBreach
+        expr: |
+          (
+            sum(rate(http_request_duration_seconds_bucket{le="1"}[5m]))
+            /
+            sum(rate(http_request_duration_seconds_count[5m]))
+          ) < 0.99
+        for: 30m
+        labels:
+          severity: warning
+          category: slo
+        annotations:
+          summary: "SLO latency target breached"
+          description: "Only {{ $value | humanizePercentage }} of requests are completing within 1s (target: 99%)."
+          runbook_url: "https://wiki.company.com/runbooks/slo-breach"
+
+      - alert: SLOAvailabilityBreach
+        expr: |
+          (
+            1 - (sum(rate(http_requests_total{status=~"5.."}[1h])) / sum(rate(http_requests_total[1h])))
+          ) < 0.999
+        for: 1h
+        labels:
+          severity: critical
+          category: slo
+        annotations:
+          summary: "SLO availability target breached"
+          description: "Availability is {{ $value | humanizePercentage }} (target: 99.9%)."
+          runbook_url: "https://wiki.company.com/runbooks/slo-breach"

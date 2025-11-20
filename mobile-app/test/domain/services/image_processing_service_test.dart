@@ -1,11 +1,12 @@
-import 'package:flutter_test/flutter_test.dart';
-import 'package:mockito/mockito.dart';
-import 'package:fpdart/fpdart.dart';
-import 'package:home_inventory/domain/services/image_processing_service.dart';
-import 'package:home_inventory/core/errors/failures.dart';
-import 'package:home_inventory/core/config/app_config.dart';
 import 'dart:io';
+
+import 'package:flutter_test/flutter_test.dart';
+import 'package:fpdart/fpdart.dart';
+import 'package:home_inventory/core/config/app_config.dart';
+import 'package:home_inventory/core/errors/failures.dart';
+import 'package:home_inventory/domain/services/image_processing_service.dart';
 import 'package:image/image.dart' as img;
+import 'package:mockito/mockito.dart';
 import 'package:path/path.dart' as p;
 
 // Mock classes
@@ -37,7 +38,9 @@ void main() {
       when(mockImageFile.path).thenReturn('/test/path/image.jpg');
 
       final mockThumbnailFile = MockFile();
-      when(mockThumbnailFile.writeAsBytes(any)).thenAnswer((_) async => mockThumbnailFile);
+      when(
+        mockThumbnailFile.writeAsBytes(any),
+      ).thenAnswer((_) async => mockThumbnailFile);
       when(mockThumbnailFile.path).thenReturn('/test/path/image_thumb.jpg');
 
       // Mock the global File constructor
@@ -59,19 +62,27 @@ void main() {
       verify(mockImageFile.readAsBytes()).called(1);
     });
 
-    test('generateThumbnail returns Failure when image decoding fails', () async {
-      when(mockImageFile.readAsBytes()).thenAnswer((_) async => []); // Empty bytes to simulate decode failure
-      when(mockImageFile.path).thenReturn('/test/path/image.jpg');
+    test(
+      'generateThumbnail returns Failure when image decoding fails',
+      () async {
+        when(
+          mockImageFile.readAsBytes(),
+        ).thenAnswer((_) async => []); // Empty bytes to simulate decode failure
+        when(mockImageFile.path).thenReturn('/test/path/image.jpg');
 
-      final result = await service.generateThumbnail(mockImageFile);
+        final result = await service.generateThumbnail(mockImageFile);
 
-      expect(result.isLeft(), true);
-      result.fold(
-        (l) => expect(l, const Failure.storage(message: 'Failed to decode image')),
-        (r) => fail('Should have failed'),
-      );
-      verify(mockImageFile.readAsBytes()).called(1);
-    });
+        expect(result.isLeft(), true);
+        result.fold(
+          (l) => expect(
+            l,
+            const Failure.storage(message: 'Failed to decode image'),
+          ),
+          (r) => fail('Should have failed'),
+        );
+        verify(mockImageFile.readAsBytes()).called(1);
+      },
+    );
 
     // Note: Mocking `File().writeAsBytes` directly is hard without `file` package.
     // The current test setup focuses on the service's logic given successful/failed internal operations.

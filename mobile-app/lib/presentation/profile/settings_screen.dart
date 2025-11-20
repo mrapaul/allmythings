@@ -1,6 +1,6 @@
+import 'package:all_my_things/presentation/common/custom_app_bar.dart'; // Added import
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../common/custom_app_bar.dart'; // Added import
 
 class SettingsScreen extends ConsumerWidget {
   const SettingsScreen({super.key});

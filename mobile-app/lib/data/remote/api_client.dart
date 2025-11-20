@@ -1,11 +1,9 @@
+import 'package:all_my_things/core/config/app_config.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../../core/config/app_config.dart';
 
 /// Dio HTTP client for API communication
 class ApiClient {
-  final Dio _dio;
-
   ApiClient() : _dio = Dio() {
     _dio.options = BaseOptions(
       baseUrl: AppConfig.apiBaseUrl,
@@ -35,6 +33,7 @@ class ApiClient {
       ),
     );
   }
+  final Dio _dio;
 
   Dio get dio => _dio;
 }

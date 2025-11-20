@@ -1,0 +1,261 @@
+{
+  "dashboard": {
+    "title": "Visual Inventory - System Health",
+    "description": "System health overview with uptime, error rates, and service availability",
+    "tags": ["visual-inventory", "system-health", "monitoring"],
+    "timezone": "browser",
+    "editable": true,
+    "graphTooltip": 1,
+    "time": {
+      "from": "now-1h",
+      "to": "now"
+    },
+    "refresh": "30s",
+    "panels": [
+      {
+        "id": 1,
+        "title": "Service Uptime",
+        "type": "stat",
+        "targets": [
+          {
+            "expr": "up{job=\"visual-inventory-api\"}",
+            "legendFormat": "API Service"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "mappings": [
+              {
+                "type": "value",
+                "options": {
+                  "0": { "text": "DOWN", "color": "red" },
+                  "1": { "text": "UP", "color": "green" }
+                }
+              }
+            ],
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                { "value": 0, "color": "red" },
+                { "value": 1, "color": "green" }
+              ]
+            }
+          }
+        },
+        "gridPos": { "x": 0, "y": 0, "w": 6, "h": 4 }
+      },
+      {
+        "id": 2,
+        "title": "Request Rate (requests/sec)",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "rate(http_requests_total[5m])",
+            "legendFormat": "{{method}} {{route}}"
+          }
+        ],
+        "gridPos": { "x": 6, "y": 0, "w": 9, "h": 4 }
+      },
+      {
+        "id": 3,
+        "title": "Error Rate (%)",
+        "type": "stat",
+        "targets": [
+          {
+            "expr": "sum(rate(http_requests_total{status=~\"5..\"}[5m])) / sum(rate(http_requests_total[5m])) * 100",
+            "legendFormat": "Error Rate"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "percent",
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                { "value": 0, "color": "green" },
+                { "value": 1, "color": "yellow" },
+                { "value": 5, "color": "red" }
+              ]
+            }
+          }
+        },
+        "gridPos": { "x": 15, "y": 0, "w": 5, "h": 4 }
+      },
+      {
+        "id": 4,
+        "title": "Request Success Rate by Status Code",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "sum by (status) (rate(http_requests_total[5m]))",
+            "legendFormat": "{{status}}"
+          }
+        ],
+        "gridPos": { "x": 20, "y": 0, "w": 4, "h": 4 }
+      },
+      {
+        "id": 5,
+        "title": "API Latency (p50, p95, p99)",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "histogram_quantile(0.50, sum(rate(http_request_duration_seconds_bucket[5m])) by (le))",
+            "legendFormat": "p50"
+          },
+          {
+            "expr": "histogram_quantile(0.95, sum(rate(http_request_duration_seconds_bucket[5m])) by (le))",
+            "legendFormat": "p95"
+          },
+          {
+            "expr": "histogram_quantile(0.99, sum(rate(http_request_duration_seconds_bucket[5m])) by (le))",
+            "legendFormat": "p99"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "s"
+          }
+        },
+        "gridPos": { "x": 0, "y": 4, "w": 12, "h": 6 }
+      },
+      {
+        "id": 6,
+        "title": "Vision Provider Status",
+        "type": "table",
+        "targets": [
+          {
+            "expr": "sum by (provider, status) (rate(vision_provider_requests_total[5m]))",
+            "format": "table",
+            "instant": true
+          }
+        ],
+        "gridPos": { "x": 12, "y": 4, "w": 12, "h": 6 }
+      },
+      {
+        "id": 7,
+        "title": "Database Connection Pool",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "db_connection_pool{state=\"active\"}",
+            "legendFormat": "Active"
+          },
+          {
+            "expr": "db_connection_pool{state=\"idle\"}",
+            "legendFormat": "Idle"
+          },
+          {
+            "expr": "db_connection_pool{state=\"waiting\"}",
+            "legendFormat": "Waiting"
+          }
+        ],
+        "gridPos": { "x": 0, "y": 10, "w": 12, "h": 6 }
+      },
+      {
+        "id": 8,
+        "title": "Cache Hit Rate (%)",
+        "type": "stat",
+        "targets": [
+          {
+            "expr": "sum(rate(cache_hits_total[5m])) / (sum(rate(cache_hits_total[5m])) + sum(rate(cache_misses_total[5m]))) * 100",
+            "legendFormat": "Hit Rate"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "percent",
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                { "value": 0, "color": "red" },
+                { "value": 50, "color": "yellow" },
+                { "value": 80, "color": "green" }
+              ]
+            }
+          }
+        },
+        "gridPos": { "x": 12, "y": 10, "w": 6, "h": 6 }
+      },
+      {
+        "id": 9,
+        "title": "Circuit Breaker Status",
+        "type": "stat",
+        "targets": [
+          {
+            "expr": "circuit_breaker_state",
+            "legendFormat": "{{provider}}"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "mappings": [
+              {
+                "type": "value",
+                "options": {
+                  "0": { "text": "CLOSED", "color": "green" },
+                  "1": { "text": "OPEN", "color": "red" },
+                  "2": { "text": "HALF-OPEN", "color": "yellow" }
+                }
+              }
+            ]
+          }
+        },
+        "gridPos": { "x": 18, "y": 10, "w": 6, "h": 6 }
+      },
+      {
+        "id": 10,
+        "title": "Error Types Distribution",
+        "type": "piechart",
+        "targets": [
+          {
+            "expr": "sum by (error_type) (rate(http_errors_total[5m]))",
+            "legendFormat": "{{error_type}}"
+          }
+        ],
+        "gridPos": { "x": 0, "y": 16, "w": 8, "h": 6 }
+      },
+      {
+        "id": 11,
+        "title": "Database Query Latency",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "histogram_quantile(0.95, sum(rate(db_query_duration_seconds_bucket[5m])) by (le, operation))",
+            "legendFormat": "p95 - {{operation}}"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "s"
+          }
+        },
+        "gridPos": { "x": 8, "y": 16, "w": 8, "h": 6 }
+      },
+      {
+        "id": 12,
+        "title": "Rate Limit Violations",
+        "type": "stat",
+        "targets": [
+          {
+            "expr": "sum(rate(rate_limit_exceeded_total[5m]))",
+            "legendFormat": "Violations/sec"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "reqps",
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                { "value": 0, "color": "green" },
+                { "value": 1, "color": "yellow" },
+                { "value": 10, "color": "red" }
+              ]
+            }
+          }
+        },
+        "gridPos": { "x": 16, "y": 16, "w": 8, "h": 6 }
+      }
+    ]
+  }
+}

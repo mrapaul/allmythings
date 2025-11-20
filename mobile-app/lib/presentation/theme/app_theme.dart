@@ -74,13 +74,13 @@ class AppTheme {
     end: Alignment.bottomRight,
   );
 
-  static LinearGradient get shimmerGradient => LinearGradient(
+  static LinearGradient get shimmerGradient => const LinearGradient(
     colors: [
       surfaceMedium,
       surfaceLight,
       surfaceMedium,
     ],
-    stops: const [0.0, 0.5, 1.0],
+    stops: [0.0, 0.5, 1.0],
   );
 
   static ThemeData get light => ThemeData(
@@ -90,14 +90,11 @@ class AppTheme {
     // Color scheme
     colorScheme: const ColorScheme.light(
       primary: primaryBlack,
-      onPrimary: primaryWhite,
       secondary: accentBlue,
       onSecondary: primaryWhite,
       tertiary: accentGreen,
       onTertiary: primaryWhite,
       error: accentRed,
-      onError: primaryWhite,
-      surface: primaryWhite,
       onSurface: textPrimary,
       surfaceContainerHighest: surfaceLight,
       outline: borderLight,
@@ -108,21 +105,21 @@ class AppTheme {
     scaffoldBackgroundColor: primaryWhite,
 
     // App bar
-    appBarTheme: AppBarTheme(
+    appBarTheme: const AppBarTheme(
       backgroundColor: primaryWhite,
       foregroundColor: primaryBlack,
       elevation: 0,
       centerTitle: true,
       scrolledUnderElevation: 0,
       systemOverlayStyle: SystemUiOverlayStyle.dark,
-      titleTextStyle: const TextStyle(
+      titleTextStyle: TextStyle(
         color: primaryBlack,
         fontSize: 22,
         fontWeight: FontWeight.w700,
         letterSpacing: -0.5,
         height: 1.2,
       ),
-      iconTheme: const IconThemeData(
+      iconTheme: IconThemeData(
         color: primaryBlack,
         size: 24,
       ),
@@ -135,7 +132,7 @@ class AppTheme {
       surfaceTintColor: Colors.transparent,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(16),
-        side: const BorderSide(color: borderLight, width: 1),
+        side: const BorderSide(color: borderLight),
       ),
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
     ),
@@ -318,11 +315,11 @@ class AppTheme {
       contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
       border: OutlineInputBorder(
         borderRadius: BorderRadius.circular(12),
-        borderSide: const BorderSide(color: borderLight, width: 1),
+        borderSide: const BorderSide(color: borderLight),
       ),
       enabledBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(12),
-        borderSide: const BorderSide(color: borderLight, width: 1),
+        borderSide: const BorderSide(color: borderLight),
       ),
       focusedBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(12),
@@ -330,7 +327,7 @@ class AppTheme {
       ),
       errorBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(12),
-        borderSide: const BorderSide(color: accentRed, width: 1),
+        borderSide: const BorderSide(color: accentRed),
       ),
       focusedErrorBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(12),
@@ -434,7 +431,7 @@ class AppTheme {
         fontSize: 13,
         fontWeight: FontWeight.w500,
       ),
-      side: const BorderSide(color: borderLight, width: 1),
+      side: const BorderSide(color: borderLight),
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(8),
       ),

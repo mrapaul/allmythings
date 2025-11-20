@@ -1,12 +1,13 @@
-import 'package:flutter_test/flutter_test.dart';
-import 'package:mockito/mockito.dart';
-import 'package:fpdart/fpdart.dart';
-import 'package:home_inventory/domain/services/photo_capture_service.dart';
-import 'package:home_inventory/core/errors/failures.dart';
+import 'dart:io';
+
 import 'package:camera/camera.dart';
+import 'package:flutter_test/flutter_test.dart';
+import 'package:fpdart/fpdart.dart';
+import 'package:home_inventory/core/errors/failures.dart';
+import 'package:home_inventory/domain/services/photo_capture_service.dart';
+import 'package:mockito/mockito.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:permission_handler/permission_handler.dart';
-import 'dart:io';
 
 // Mocks
 class MockCameraController extends Mock implements CameraController {}
@@ -54,8 +55,12 @@ void main() {
 
       // Mock CameraController behavior
       when(mockCameraController.initialize()).thenAnswer((_) async => {});
-      when(mockCameraController.value).thenReturn(CameraControllerValue(isInitialized: true));
-      when(mockCameraController.takePicture()).thenAnswer((_) async => mockXFile);
+      when(
+        mockCameraController.value,
+      ).thenReturn(CameraControllerValue(isInitialized: true));
+      when(
+        mockCameraController.takePicture(),
+      ).thenAnswer((_) async => mockXFile);
       when(mockCameraController.dispose()).thenAnswer((_) async => {});
       when(mockCameraController.setFlashMode(any)).thenAnswer((_) async => {});
 
@@ -64,15 +69,21 @@ void main() {
 
       // Mock Directory behavior
       when(mockDirectory.exists()).thenAnswer((_) async => true);
-      when(mockDirectory.create(recursive: anyNamed('recursive'))).thenAnswer((_) async => mockDirectory);
+      when(
+        mockDirectory.create(recursive: anyNamed('recursive')),
+      ).thenAnswer((_) async => mockDirectory);
 
       // Mock File behavior
       when(mockFile.copy(any)).thenAnswer((_) async => mockFile);
       when(mockFile.path).thenReturn('/app/docs/photos/photo_123.jpg');
 
       // Mock Permission.camera.status and request
-      when(Permission.camera.status).thenAnswer((_) async => PermissionStatus.granted);
-      when(Permission.camera.request()).thenAnswer((_) async => PermissionStatus.granted);
+      when(
+        Permission.camera.status,
+      ).thenAnswer((_) async => PermissionStatus.granted);
+      when(
+        Permission.camera.request(),
+      ).thenAnswer((_) async => PermissionStatus.granted);
     });
 
     test('initialize returns right on success', () async {
@@ -93,7 +104,9 @@ void main() {
     });
 
     test('initialize returns Failure on camera initialization error', () async {
-      when(mockCameraController.initialize()).thenThrow(CameraException('code', 'description'));
+      when(
+        mockCameraController.initialize(),
+      ).thenThrow(CameraException('code', 'description'));
       // Need to re-setup service after mocking initialize to throw
       service = PhotoCaptureService();
       final result = await service.initialize();
@@ -110,10 +123,14 @@ void main() {
       // to mock the platform channel directly.
       // For now, we'll assume getApplicationDocumentsDirectory returns a valid path string.
       // And then mock the Directory and File operations.
-      when(getApplicationDocumentsDirectory()).thenAnswer((_) async => mockDirectory);
+      when(
+        getApplicationDocumentsDirectory(),
+      ).thenAnswer((_) async => mockDirectory);
       when(mockDirectory.path).thenReturn('/app/docs');
       when(mockDirectory.exists()).thenAnswer((_) async => true);
-      when(mockDirectory.create(recursive: anyNamed('recursive'))).thenAnswer((_) async => mockDirectory);
+      when(
+        mockDirectory.create(recursive: anyNamed('recursive')),
+      ).thenAnswer((_) async => mockDirectory);
 
       // Mock File constructor for the copy operation
       // This is also tricky. We'll mock the copy method on the returned XFile.
@@ -133,18 +150,22 @@ void main() {
     });
 
     test('capturePhoto returns Failure when camera not initialized', () async {
-      service = PhotoCaptureService(); // Reset service without initializing controller
+      service =
+          PhotoCaptureService(); // Reset service without initializing controller
       final result = await service.capturePhoto();
       expect(result.isLeft(), true);
       result.fold(
-        (l) => expect(l, const Failure.camera(message: 'Camera not initialized')),
+        (l) =>
+            expect(l, const Failure.camera(message: 'Camera not initialized')),
         (r) => fail('Should have failed'),
       );
     });
 
     test('capturePhoto returns Failure on photo capture error', () async {
       await service.initialize();
-      when(mockCameraController.takePicture()).thenThrow(CameraException('code', 'description'));
+      when(
+        mockCameraController.takePicture(),
+      ).thenThrow(CameraException('code', 'description'));
 
       final result = await service.capturePhoto();
 
@@ -163,22 +184,30 @@ void main() {
     });
 
     test('hasPermission returns true if granted', () async {
-      when(Permission.camera.status).thenAnswer((_) async => PermissionStatus.granted);
+      when(
+        Permission.camera.status,
+      ).thenAnswer((_) async => PermissionStatus.granted);
       expect(await service.hasPermission(), true);
     });
 
     test('hasPermission returns false if denied', () async {
-      when(Permission.camera.status).thenAnswer((_) async => PermissionStatus.denied);
+      when(
+        Permission.camera.status,
+      ).thenAnswer((_) async => PermissionStatus.denied);
       expect(await service.hasPermission(), false);
     });
 
     test('requestPermission returns true if granted', () async {
-      when(Permission.camera.request()).thenAnswer((_) async => PermissionStatus.granted);
+      when(
+        Permission.camera.request(),
+      ).thenAnswer((_) async => PermissionStatus.granted);
       expect(await service.requestPermission(), true);
     });
 
     test('requestPermission returns false if denied', () async {
-      when(Permission.camera.request()).thenAnswer((_) async => PermissionStatus.denied);
+      when(
+        Permission.camera.request(),
+      ).thenAnswer((_) async => PermissionStatus.denied);
       expect(await service.requestPermission(), false);
     });
 
@@ -189,7 +218,8 @@ void main() {
     });
 
     test('setFlashMode does nothing if controller not initialized', () async {
-      service = PhotoCaptureService(); // Reset service without initializing controller
+      service =
+          PhotoCaptureService(); // Reset service without initializing controller
       await service.setFlashMode(FlashMode.always);
       verifyNever(mockCameraController.setFlashMode(any));
     });

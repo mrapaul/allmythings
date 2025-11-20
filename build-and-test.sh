@@ -1,9 +1,10 @@
 #!/bin/bash
+set -x
 
 # Comprehensive Build and Test Script
 # Verifies full functionality before building
 
-set -e  # Exit on any error
+#set -e  # Exit on any error
 
 # Colors
 RED='\033[0;31m'

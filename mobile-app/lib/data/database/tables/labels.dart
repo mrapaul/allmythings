@@ -1,5 +1,5 @@
+import 'package:all_my_things/data/database/tables/inventory_items.dart';
 import 'package:drift/drift.dart';
-import 'inventory_items.dart';
 
 /// Table definition for labels attached to inventory items
 @DataClassName('Label')
@@ -8,7 +8,8 @@ class Labels extends Table {
   IntColumn get id => integer().autoIncrement()();
 
   /// Foreign key to inventory_items table
-  IntColumn get itemId => integer().references(InventoryItems, #id, onDelete: KeyAction.cascade)();
+  IntColumn get itemId =>
+      integer().references(InventoryItems, #id, onDelete: KeyAction.cascade)();
 
   /// Optional category (type, color, brand, room)
   TextColumn get key => text().nullable()();
