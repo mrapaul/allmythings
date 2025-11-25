@@ -19,7 +19,7 @@ import { syncRoute } from './routes/sync.route';
  * Main Fastify application
  */
 
-async function buildApp(): Promise<FastifyInstance> {
+async function buildApp(options?: { disableRateLimit?: boolean }): Promise<FastifyInstance> {
   const app = Fastify({
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     logger: logger as any,
@@ -46,11 +46,14 @@ async function buildApp(): Promise<FastifyInstance> {
     },
   });
 
-  await app.register(rateLimit, {
-    max: 100, // 100 requests
-    timeWindow: '1 minute',
-    ban: 10, // Ban after 10 violations
-  });
+  // Skip rate limiting in test mode
+  if (!options?.disableRateLimit) {
+    await app.register(rateLimit, {
+      max: 100, // 100 requests
+      timeWindow: '1 minute',
+      ban: 10, // Ban after 10 violations
+    });
+  }
 
   // Initialize database (optional for testing detection endpoint)
   try {

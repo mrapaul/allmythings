@@ -12,7 +12,7 @@ let testApp: FastifyInstance | null = null;
  */
 export async function getTestApp(): Promise<FastifyInstance> {
   if (!testApp) {
-    testApp = await buildApp();
+    testApp = await buildApp({ disableRateLimit: true });
   }
   return testApp;
 }

@@ -1,0 +1,137 @@
+name: 'Complete Test Suite - All Platforms'
+
+on:
+  push:
+    branches: [develop, main]
+  pull_request:
+    branches: [develop, main]
+
+env:
+  FLUTTER_VERSION: '3.16.0'
+  NODE_VERSION: '20'
+
+jobs:
+  backend-tests:
+    name: 'Backend Tests'
+    runs-on: ubuntu-latest
+    steps:
+      - name: 'Checkout code'
+        uses: actions/checkout@v3
+
+      - name: 'Setup Node.js'
+        uses: actions/setup-node@v3
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          cache-dependency-path: api-service/package-lock.json
+
+      - name: 'Install dependencies'
+        run: cd api-service && npm install
+
+      - name: 'Run linter'
+        run: cd api-service && npm run lint
+
+      - name: 'Type check'
+        run: cd api-service && npm run type-check
+
+      - name: 'Run unit tests'
+        run: cd api-service && npm test
+
+      - name: 'Run integration tests'
+        run: cd api-service && npm run test:integration
+
+      - name: 'Generate coverage'
+        run: cd api-service && npm run test:coverage
+
+      - name: 'Upload coverage to Codecov'
+        uses: codecov/codecov-action@v3
+        with:
+          files: ./api-service/coverage/coverage-final.json
+          flags: backend
+          name: backend-coverage
+
+  mobile-unit-tests:
+    name: 'Mobile Unit & Functional Tests'
+    runs-on: macos-latest
+    steps:
+      - name: 'Checkout code'
+        uses: actions/checkout@v3
+
+      - name: 'Setup Flutter'
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          cache: true
+
+      - name: 'Get Flutter dependencies'
+        run: cd mobile-app && flutter pub get
+
+      - name: 'Generate code'
+        run: cd mobile-app && flutter pub run build_runner build --delete-conflicting-outputs
+
+      - name: 'Analyze Dart code'
+        run: cd mobile-app && flutter analyze
+
+      - name: 'Format check'
+        run: cd mobile-app && dart format --set-exit-if-changed lib test
+
+      - name: 'Run unit and functional tests'
+        run: cd mobile-app && flutter test --coverage
+
+      - name: 'Upload coverage to Codecov'
+        uses: codecov/codecov-action@v3
+        with:
+          files: ./mobile-app/coverage/lcov.info
+          flags: mobile
+          name: mobile-coverage
+
+  build-verification:
+    name: 'Build Verification'
+    runs-on: macos-latest
+    steps:
+      - name: 'Checkout code'
+        uses: actions/checkout@v3
+
+      - name: 'Setup Flutter'
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+
+      - name: 'Setup Node.js'
+        uses: actions/setup-node@v3
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: 'Get mobile dependencies'
+        run: cd mobile-app && flutter pub get
+
+      - name: 'Build iOS'
+        run: cd mobile-app && flutter build ios --simulator --release
+
+      - name: 'Get API dependencies'
+        run: cd api-service && npm install
+
+      - name: 'Build API'
+        run: cd api-service && npm run build
+
+  test-summary:
+    name: 'Test Summary'
+    runs-on: ubuntu-latest
+    needs: [backend-tests, mobile-unit-tests, build-verification]
+    if: always()
+    steps:
+      - name: 'Check test results'
+        run: |
+          echo "Backend Tests completed"
+          echo "Mobile Tests completed"
+          echo "Build Verification completed"
+
+      - name: 'Fail if any job failed'
+        if: |
+          needs.backend-tests.result == 'failure' ||
+          needs.mobile-unit-tests.result == 'failure' ||
+          needs.build-verification.result == 'failure'
+        run: exit 1
+
+      - name: 'Success message'
+        run: echo "All tests passed successfully!"
