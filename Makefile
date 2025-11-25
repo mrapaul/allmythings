@@ -28,9 +28,12 @@ help:
 	@echo "  build-mobile    Build mobile app"
 	@echo ""
 	@echo "${YELLOW}Testing:${NC}"
-	@echo "  test            Run all tests"
-	@echo "  test-api        Run API tests"
-	@echo "  test-mobile     Run mobile app tests"
+	@echo "  test                Run all tests"
+	@echo "  test-api            Run API tests"
+	@echo "  test-mobile         Run mobile app tests"
+	@echo "  test-coverage       Run all tests with coverage (80% target)"
+	@echo "  test-coverage-api   Run API tests with coverage"
+	@echo "  test-coverage-mobile Run mobile tests with coverage"
 	@echo ""
 	@echo "${YELLOW}Code Quality:${NC}"
 	@echo "  lint            Run all linters"
@@ -94,6 +97,18 @@ test-mobile:
 	@echo "${GREEN}Running Flutter tests...${NC}"
 	@cd $(MOBILE_DIR) && flutter test
 
+test-coverage:
+	@echo "${GREEN}Running all tests with coverage...${NC}"
+	@bash scripts/test-with-coverage.sh
+
+test-coverage-api:
+	@echo "${GREEN}Running API tests with coverage...${NC}"
+	@cd $(API_DIR) && npm run test:coverage
+
+test-coverage-mobile:
+	@echo "${GREEN}Running Flutter tests with coverage...${NC}"
+	@cd $(MOBILE_DIR) && flutter test --coverage
+
 # Code Quality
 lint:
 	@echo "${GREEN}Running all linters...${NC}"
@@ -140,4 +155,4 @@ clean-mobile:
 	@echo "${GREEN}Cleaning Flutter app...${NC}"
 	@cd $(MOBILE_DIR) && flutter clean
 
-.PHONY: help setup install install-api install-mobile dev dev-api dev-mobile build build-api build-mobile test test-api test-mobile lint lint-api lint-mobile format format-api format-mobile generate clean clean-api clean-mobile
+.PHONY: help setup install install-api install-mobile dev dev-api dev-mobile build build-api build-mobile test test-api test-mobile test-coverage test-coverage-api test-coverage-mobile lint lint-api lint-mobile format format-api format-mobile generate clean clean-api clean-mobile
