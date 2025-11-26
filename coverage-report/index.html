@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Test Coverage Report</title>
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 20px;
+      background: #f5f5f5;
+    }
+    .header {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      padding: 30px;
+      border-radius: 8px;
+      margin-bottom: 30px;
+    }
+    .header h1 {
+      margin: 0;
+      font-size: 2em;
+    }
+    .section {
+      background: white;
+      padding: 20px;
+      margin-bottom: 20px;
+      border-radius: 8px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    .metric {
+      display: flex;
+      justify-content: space-between;
+      padding: 15px 0;
+      border-bottom: 1px solid #eee;
+    }
+    .metric:last-child {
+      border-bottom: none;
+    }
+    .metric-name {
+      font-weight: 600;
+      color: #333;
+    }
+    .metric-value {
+      font-size: 1.2em;
+      font-weight: bold;
+    }
+    .pass { color: #28a745; }
+    .fail { color: #dc3545; }
+    .pending { color: #ffc107; }
+    .target-box {
+      background: #e7f3ff;
+      border-left: 4px solid #2196F3;
+      padding: 15px;
+      margin: 15px 0;
+      border-radius: 4px;
+    }
+    .timestamp {
+      color: #666;
+      font-size: 0.9em;
+      margin-top: 10px;
+    }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <h1>📊 Test Coverage Report</h1>
+    <p>Visual Home Inventory Manager - Comprehensive Testing Suite</p>
+  </div>
+
+  <div class="section">
+    <h2>Coverage Summary</h2>
+    <div class="target-box">
+      <strong>Target Coverage:</strong> 80% across all modules
+    </div>
+    <div class="metric">
+      <span class="metric-name">API Service</span>
+      <span class="metric-value pass" id="api-coverage">--</span>
+    </div>
+    <div class="metric">
+      <span class="metric-name">Mobile App</span>
+      <span class="metric-value pending" id="mobile-coverage">⏳</span>
+    </div>
+    <div class="metric">
+      <span class="metric-name">E2E Tests</span>
+      <span class="metric-value pending" id="e2e-coverage">⏳</span>
+    </div>
+  </div>
+
+  <div class="section">
+    <h2>Test Results</h2>
+    <div class="metric">
+      <span class="metric-name">Unit Tests</span>
+      <span class="metric-value pass">✅ Passing</span>
+    </div>
+    <div class="metric">
+      <span class="metric-name">Integration Tests</span>
+      <span class="metric-value pending">⏳ In Progress</span>
+    </div>
+    <div class="metric">
+      <span class="metric-name">E2E Tests</span>
+      <span class="metric-value pending">⏳ Configured</span>
+    </div>
+  </div>
+
+  <div class="section">
+    <h2>Next Steps</h2>
+    <ol>
+      <li>Increase unit test coverage to 85%+</li>
+      <li>Add comprehensive integration tests</li>
+      <li>Configure E2E test suite</li>
+      <li>Set up CI/CD pipeline validation</li>
+      <li>Establish coverage thresholds in build</li>
+    </ol>
+    <div class="timestamp">
+      Generated: <span id="timestamp"></span>
+    </div>
+  </div>
+
+  <script>
+    document.getElementById('timestamp').textContent = new Date().toLocaleString();
+  </script>
+</body>
+</html>
