@@ -3,10 +3,9 @@
  * Provides realistic test data for all API endpoints
  */
 
-import { v4 as uuidv4 } from 'crypto';
+import { v4 as uuidv4 } from 'uuid';
 import { Detection, DetectionResponse } from '../../schemas/detection.schema';
 import { CreateItemRequest } from '../../schemas/inventory.schema';
-import { CreateLabelSchema } from '../../schemas/inventory.schema';
 
 /**
  * Create test detection object
@@ -111,10 +110,7 @@ export function createTestItemRequest(
 /**
  * Create test image buffer (minimal valid JPEG)
  */
-export function createTestImageBuffer(
-  width: number = 100,
-  height: number = 100
-): Buffer {
+export function createTestImageBuffer(): Buffer {
   // Minimal JPEG binary data
   // In real tests, you might use a library like 'sharp' to generate actual images
   return Buffer.from([

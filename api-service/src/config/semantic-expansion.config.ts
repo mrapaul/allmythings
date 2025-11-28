@@ -102,7 +102,7 @@ export const SEMANTIC_EXPANSION_DATABASE: SemanticExpansionConfig = {
     relatedObjects: ['toilet seat', 'tank', 'bowl'],
     category: 'fixture',
   },
-  sink: {
+  bathroom_sink: {
     synonyms: ['washbasin', 'basin', 'bathroom sink', 'vanity sink'],
     relatedObjects: ['faucet', 'mirror', 'cabinet', 'counter'],
     category: 'fixture',

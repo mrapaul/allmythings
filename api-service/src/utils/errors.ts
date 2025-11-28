@@ -231,18 +231,6 @@ export class DatabaseError extends AppError {
 }
 
 /**
- * Cache Error
- * Cache operation failed (non-critical)
- */
-export class CacheError extends Error {
-  isOperational = true;
-
-  constructor(message: string = 'Cache operation failed') {
-    super(message);
-  }
-}
-
-/**
  * Helper function to check if error is operational
  */
 export function isOperationalError(error: Error): boolean {

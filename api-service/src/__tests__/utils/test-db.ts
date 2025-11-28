@@ -3,7 +3,7 @@
  * Provides database seeding, cleanup, and transaction management for tests
  */
 
-import { Database, getDatabase, closeDatabase } from '../../db/database';
+import { Database, getDatabase } from '../../db/database';
 
 /**
  * Clear all tables in test database
@@ -35,7 +35,6 @@ export async function seedTestData(): Promise<{
   itemIds: string[];
   labelIds: string[];
 }> {
-  const db = getDatabase();
   const itemIds: string[] = [];
   const labelIds: string[] = [];
 
@@ -57,7 +56,7 @@ export async function withTransaction<T>(
 ): Promise<T> {
   const db = getDatabase();
 
-  return db.transaction(async (client) => {
+  return db.transaction(async () => {
     // Transaction is already started by db.transaction
     return callback(db);
   });

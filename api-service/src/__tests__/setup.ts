@@ -4,7 +4,7 @@
  */
 
 import { beforeAll, afterAll, afterEach, vi } from 'vitest';
-import { closeDatabase, getDatabase } from '../db/database';
+import { closeDatabase } from '../db/database';
 
 /**
  * Global test setup
