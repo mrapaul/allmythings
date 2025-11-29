@@ -1,0 +1,169 @@
+name: Comprehensive Regression Test Suite
+
+on:
+  push:
+    branches: [ develop, main, feature/* ]
+  pull_request:
+    branches: [ develop, main ]
+  schedule:
+    - cron: '0 2 * * *'
+
+env:
+  FLUTTER_VERSION: '3.16.0'
+  NODE_VERSION: '20.x'
+
+jobs:
+  api-tests:
+    name: API Service Tests
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        test-suite:
+          - unit
+          - integration
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          cache-dependency-path: 'api-service/package-lock.json'
+
+      - name: Install API dependencies
+        run: cd api-service && npm install
+
+      - name: Run API tests
+        run: cd api-service && npm run test -- --coverage
+        env:
+          NODE_ENV: test
+
+      - name: Upload API coverage
+        uses: codecov/codecov-action@v3
+        with:
+          files: ./api-service/coverage/coverage-final.json
+          flags: api-${{ matrix.test-suite }}
+          name: api-service-${{ matrix.test-suite }}
+
+  mobile-unit-tests:
+    name: Mobile App Unit Tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          cache: true
+
+      - name: Install mobile dependencies
+        run: cd mobile-app && flutter pub get
+
+      - name: Run Flutter analyzer
+        run: cd mobile-app && flutter analyze
+
+      - name: Run unit tests with coverage
+        run: cd mobile-app && flutter test --coverage --no-test-assets
+
+      - name: Upload mobile coverage
+        uses: codecov/codecov-action@v3
+        with:
+          files: ./mobile-app/coverage/lcov.info
+          flags: mobile-unit
+          name: mobile-app-unit
+
+  mobile-integration-tests:
+    name: Mobile App Integration Tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          cache: true
+
+      - name: Install mobile dependencies
+        run: cd mobile-app && flutter pub get
+
+      - name: Run integration tests
+        run: cd mobile-app && flutter test test/application/providers/*_functional_test.dart --coverage
+
+      - name: Upload integration coverage
+        uses: codecov/codecov-action@v3
+        with:
+          files: ./mobile-app/coverage/lcov.info
+          flags: mobile-integration
+          name: mobile-app-integration
+
+  mobile-e2e-tests:
+    name: Mobile App E2E Tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          cache: true
+
+      - name: Install mobile dependencies
+        run: cd mobile-app && flutter pub get
+
+      - name: Run E2E tests
+        run: cd mobile-app && flutter test test/e2e/*.dart --coverage
+
+      - name: Upload E2E coverage
+        uses: codecov/codecov-action@v3
+        with:
+          files: ./mobile-app/coverage/lcov.info
+          flags: mobile-e2e
+          name: mobile-app-e2e
+
+  build-verification:
+    name: Build Verification
+    runs-on: ubuntu-latest
+    needs: [api-tests, mobile-unit-tests]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          cache-dependency-path: 'api-service/package-lock.json'
+
+      - name: Build API service
+        run: cd api-service && npm run build
+
+      - name: Type check API
+        run: cd api-service && npm run type-check
+
+  test-results:
+    name: Test Results Summary
+    runs-on: ubuntu-latest
+    needs: [api-tests, mobile-unit-tests, mobile-integration-tests, mobile-e2e-tests, build-verification]
+    if: always()
+    steps:
+      - name: Check test status
+        env:
+          API_RESULT: ${{ needs.api-tests.result }}
+          MOBILE_UNIT_RESULT: ${{ needs.mobile-unit-tests.result }}
+          MOBILE_INT_RESULT: ${{ needs.mobile-integration-tests.result }}
+          MOBILE_E2E_RESULT: ${{ needs.mobile-e2e-tests.result }}
+          BUILD_RESULT: ${{ needs.build-verification.result }}
+        run: |
+          if [ "$API_RESULT" = "failure" ] || \
+             [ "$MOBILE_UNIT_RESULT" = "failure" ] || \
+             [ "$MOBILE_INT_RESULT" = "failure" ] || \
+             [ "$MOBILE_E2E_RESULT" = "failure" ] || \
+             [ "$BUILD_RESULT" = "failure" ]; then
+            echo "Test suite failed"
+            exit 1
+          fi
+          echo "All tests passed successfully"
