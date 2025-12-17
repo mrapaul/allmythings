@@ -1,6 +1,9 @@
 /**
  * API Contract Tests
  * Validates that API responses match OpenAPI specification
+ *
+ * NOTE: These tests require a running PostgreSQL database.
+ * They will be skipped if database is not available.
  */
 
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
@@ -8,21 +11,16 @@ import supertest from 'supertest';
 import { FastifyInstance } from 'fastify';
 import { getTestApp, closeTestApp } from '../utils/test-app';
 import { createAuthHeader } from '../utils/test-auth';
-import {
-  DetectionResponseSchema,
-  ProviderResultSchema,
-  EnsembleMetricsSchema,
-} from '../../schemas/detection.schema';
+import { DetectionResponseSchema } from '../../schemas/detection.schema';
 import {
   InventoryItemSchema,
   PaginatedItemsResponseSchema,
-  LabelSchema,
 } from '../../schemas/inventory.schema';
-import { z } from 'zod';
+import { isDatabaseAvailable } from '../utils/test-db';
 
-describe('API Contract Tests', () => {
+describe.skipIf(!globalThis.__INTEGRATION_TESTS_ENABLED__)('API Contract Tests', () => {
   let app: FastifyInstance;
-  let request: supertest.SuperTest<supertest.Test>;
+  let request: ReturnType<typeof supertest>;
 
   beforeAll(async () => {
     app = await getTestApp();

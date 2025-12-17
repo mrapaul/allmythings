@@ -25,10 +25,47 @@ export interface EnvConfig {
   googleProjectId: string;
   googleCredentials: string;
 
+  // Google AI (Gemini)
+  geminiApiKey: string;
+
   // AWS Rekognition
   awsAccessKeyId?: string;
   awsSecretAccessKey?: string;
   awsRegion: string;
+
+  // Roboflow (YOLO models)
+  roboflowApiKey: string;
+  roboflowWorkspace: string;
+  roboflowProject: string;
+  roboflowVersion: string;
+
+  // Replicate (Detectron2, etc.)
+  replicateApiToken: string;
+
+  // DeepSeek Vision
+  deepseekApiKey: string;
+
+  // Anthropic (Claude Vision)
+  anthropicApiKey: string;
+
+  // OpenAI (GPT-4 Vision)
+  openaiApiKey: string;
+
+  // Detection Mode: 'fast' | 'standard' | 'thorough' | 'multipass'
+  detectionMode: string;
+
+  // Local ONNX YOLO
+  yoloModelPath: string;
+  yoloEnabled: boolean;
+
+  // YOLO-World (Python service)
+  yoloWorldServiceUrl: string;
+  yoloWorldEnabled: boolean;
+
+  // Ollama (Local LLM)
+  ollamaBaseUrl: string;
+  ollamaModel: string;
+  ollamaEnabled: boolean;
 
   // Ensemble Configuration
   ensembleConfidenceThreshold: number;
@@ -63,12 +100,48 @@ export const envConfig: EnvConfig = {
   googleProjectId: process.env.GOOGLE_CLOUD_PROJECT_ID || '',
   googleCredentials: process.env.GOOGLE_APPLICATION_CREDENTIALS || '',
 
+  geminiApiKey: process.env.GOOGLE_AI_API_KEY || '',
+
   awsAccessKeyId: process.env.AWS_ACCESS_KEY_ID,
   awsSecretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
   awsRegion: process.env.AWS_REGION || 'us-east-1',
 
+  // Roboflow (YOLO)
+  roboflowApiKey: process.env.ROBOFLOW_API_KEY || '',
+  roboflowWorkspace: process.env.ROBOFLOW_WORKSPACE || 'home-inventory',
+  roboflowProject: process.env.ROBOFLOW_PROJECT || 'coco-object-detection',
+  roboflowVersion: process.env.ROBOFLOW_VERSION || '1',
+
+  // Replicate (Detectron2)
+  replicateApiToken: process.env.REPLICATE_API_TOKEN || '',
+
+  // DeepSeek Vision
+  deepseekApiKey: process.env.DEEPSEEK_API_KEY || '',
+
+  // Anthropic (Claude Vision)
+  anthropicApiKey: process.env.ANTHROPIC_API_KEY || '',
+
+  // OpenAI (GPT-4 Vision)
+  openaiApiKey: process.env.OPENAI_API_KEY || '',
+
+  // Detection Mode: 'fast' | 'standard' | 'thorough' | 'multipass'
+  detectionMode: process.env.DETECTION_MODE || 'standard',
+
+  // Local ONNX YOLO
+  yoloModelPath: process.env.YOLO_MODEL_PATH || './models/yolov8m.onnx',
+  yoloEnabled: process.env.YOLO_ENABLED !== 'false',
+
+  // YOLO-World (Python service) - Primary detection provider for home objects
+  yoloWorldServiceUrl: process.env.YOLO_WORLD_SERVICE_URL || 'http://localhost:8001',
+  yoloWorldEnabled: process.env.YOLO_WORLD_ENABLED !== 'false',
+
+  // Ollama (Local LLM) - Free local vision model for detailed detection
+  ollamaBaseUrl: process.env.OLLAMA_BASE_URL || 'http://localhost:11434',
+  ollamaModel: process.env.OLLAMA_MODEL || 'llava:13b',
+  ollamaEnabled: process.env.OLLAMA_ENABLED !== 'false',
+
   ensembleConfidenceThreshold: parseFloat(
-    process.env.ENSEMBLE_CONFIDENCE_THRESHOLD || '0.7'
+    process.env.ENSEMBLE_CONFIDENCE_THRESHOLD || '0.35'
   ),
   providerTimeoutMs: parseInt(process.env.PROVIDER_TIMEOUT_MS || '4000', 10),
   nmsIouThreshold: parseFloat(process.env.NMS_IOU_THRESHOLD || '0.5'),

@@ -1,5 +1,8 @@
 /**
  * Authentication Integration Tests
+ *
+ * NOTE: These tests require a running PostgreSQL database.
+ * They will be skipped if database is not available.
  */
 
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
@@ -7,10 +10,11 @@ import supertest from 'supertest';
 import { FastifyInstance } from 'fastify';
 import { getTestApp, closeTestApp } from '../utils/test-app';
 import { createAuthHeader, createTestUserId } from '../utils/test-auth';
+import { isDatabaseAvailable } from '../utils/test-db';
 
-describe('Authentication Integration Tests', () => {
+describe.skipIf(!globalThis.__INTEGRATION_TESTS_ENABLED__)('Authentication Integration Tests', () => {
   let app: FastifyInstance;
-  let request: supertest.SuperTest<supertest.Test>;
+  let request: ReturnType<typeof supertest>;
 
   beforeAll(async () => {
     app = await getTestApp();

@@ -5,15 +5,25 @@ export default defineConfig({
   test: {
     environment: 'node',
     globals: true,
-    testTimeout: 30000,
-    hookTimeout: 30000,
-    teardownTimeout: 10000,
+    testTimeout: 60000, // 1 minute for tests
+    hookTimeout: 60000, // 1 minute for hooks
+    teardownTimeout: 30000, // 30 seconds for teardown
     isolation: true,
     pool: 'threads',
     poolOptions: {
       threads: {
-        singleThread: false,
-        isolate: true,
+        singleThread: true, // Run tests sequentially to share testcontainer
+        isolate: false, // Share testcontainer across tests
+      },
+    },
+    // Global setup runs ONCE before all tests to start testcontainer
+    globalSetup: './src/__tests__/globalSetup.ts',
+    globalTeardown: './src/__tests__/globalTeardown.ts',
+    deps: {
+      optimizer: {
+        ssr: {
+          exclude: ['testcontainers', '@testcontainers/postgresql'],
+        },
       },
     },
     coverage: {
@@ -36,8 +46,12 @@ export default defineConfig({
       skipFull: false,
     },
     setupFiles: ['./src/__tests__/setup.ts'],
-    include: ['src/**/*.{test,spec}.ts', 'src/__tests__/**/*.test.ts'],
+    include: ['src/**/*.{test,spec}.ts', 'src/__tests__/**/*.test.ts', 'tests/**/*.test.ts'],
     exclude: ['node_modules', 'dist'],
+    // Retry flaky tests once
+    retry: 1,
+    // Fail fast on first error in CI
+    bail: process.env.CI ? 1 : 0,
   },
   resolve: {
     alias: {

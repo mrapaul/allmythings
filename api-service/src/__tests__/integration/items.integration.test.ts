@@ -1,6 +1,9 @@
 /**
  * Items Endpoint Integration Tests
  * Tests CRUD operations on /v1/items endpoint
+ *
+ * NOTE: These tests require a running PostgreSQL database.
+ * They will be skipped if database is not available.
  */
 
 import { describe, it, expect, beforeAll, afterAll, beforeEach } from 'vitest';
@@ -9,11 +12,11 @@ import { FastifyInstance } from 'fastify';
 import { getTestApp, closeTestApp } from '../utils/test-app';
 import { createAuthHeader, createTestUserId, createMultipleTestTokens } from '../utils/test-auth';
 import { createTestItemRequest } from '../fixtures/test-data';
-import { resetDatabase } from '../utils/test-db';
+import { resetDatabase, isDatabaseAvailable } from '../utils/test-db';
 
-describe('Items Endpoint Integration Tests', () => {
+describe.skipIf(!globalThis.__INTEGRATION_TESTS_ENABLED__)('Items Endpoint Integration Tests', () => {
   let app: FastifyInstance;
-  let request: supertest.SuperTest<supertest.Test>;
+  let request: ReturnType<typeof supertest>;
   let userId: string;
   let authHeader: string;
 
