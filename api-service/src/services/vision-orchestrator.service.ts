@@ -1,5 +1,6 @@
 import { ProviderAdapter } from '../adapters/provider-adapter.interface';
 import { GoogleVisionAdapter } from '../adapters/google-vision.adapter';
+import { GeminiVisionAdapter } from '../adapters/gemini-vision.adapter';
 import { AWSRekognitionAdapter } from '../adapters/aws-rekognition.adapter';
 import { MockVisionAdapter } from '../adapters/mock-vision.adapter';
 import { EnsembleFusionService } from './ensemble-fusion.service';
@@ -10,7 +11,7 @@ import { logger } from '../utils/logger';
 /**
  * Vision orchestrator - coordinates multiple vision providers
  */
-type ProviderName = 'meta' | 'google' | 'aws' | 'tensorflow' | 'mock';
+type ProviderName = 'meta' | 'google' | 'gemini' | 'aws' | 'tensorflow' | 'mock';
 
 export class VisionOrchestratorService {
   private providers: Map<ProviderName, ProviderAdapter>;
@@ -35,6 +36,14 @@ export class VisionOrchestratorService {
       this.providers.set('google', new GoogleVisionAdapter());
     } catch (error) {
       logger.warn({ error }, 'Failed to initialize Google Vision adapter');
+    }
+
+    try {
+      if (envConfig.geminiApiKey) {
+        this.providers.set('gemini', new GeminiVisionAdapter());
+      }
+    } catch (error) {
+      logger.warn({ error }, 'Failed to initialize Gemini Vision adapter');
     }
 
     try {

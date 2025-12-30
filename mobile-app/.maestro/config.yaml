@@ -1,0 +1,27 @@
+# Maestro Configuration
+# Home Inventory Mobile App E2E Tests
+
+# App configuration
+appId: com.homeinventory.home_inventory
+
+# Test settings
+flows:
+  - "*_test.yaml"
+
+# Screenshot settings
+screenshots:
+  enabled: true
+  format: png
+
+# Timeouts
+timeout: 30000
+
+# Retry settings
+retries: 2
+
+# Tags for selective test execution
+tags:
+  - smoke
+  - regression
+  - detection
+  - inventory

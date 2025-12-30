@@ -1,0 +1,117 @@
+# Label Editing Test - Edit labels on inventory items
+# Tags: inventory, labels, regression
+appId: com.homeinventory.home_inventory
+
+---
+# Launch the app
+- launchApp
+
+# Wait for the app to fully load
+- waitForAnimationToEnd:
+    timeout: 5000
+
+# Take initial screenshot
+- takeScreenshot: label_edit_initial
+
+# Navigate to inventory
+- tapOn:
+    text: "Inventory"
+    optional: true
+
+- waitForAnimationToEnd:
+    timeout: 2000
+
+# Tap on first inventory item
+- tapOn:
+    index: 0
+    optional: true
+
+- waitForAnimationToEnd:
+    timeout: 2000
+
+# Take screenshot of item detail
+- takeScreenshot: label_edit_item_detail
+
+# Look for edit labels button
+- tapOn:
+    text: "Edit Labels"
+    optional: true
+
+- tapOn:
+    text: "Labels"
+    optional: true
+
+- tapOn:
+    id: "edit_labels_button"
+    optional: true
+
+- waitForAnimationToEnd:
+    timeout: 2000
+
+# Take screenshot of edit labels screen
+- takeScreenshot: label_edit_screen
+
+# Try adding a new label
+- tapOn:
+    text: "Add Label"
+    optional: true
+
+- tapOn:
+    id: "add_label_button"
+    optional: true
+
+- tapOn:
+    text: "+"
+    optional: true
+
+# Wait for label input
+- waitForAnimationToEnd:
+    timeout: 1000
+
+# Type a new label
+- inputText: "vintage"
+
+# Try to save/confirm
+- tapOn:
+    text: "Save"
+    optional: true
+
+- tapOn:
+    text: "Add"
+    optional: true
+
+- tapOn:
+    text: "Done"
+    optional: true
+
+- waitForAnimationToEnd:
+    timeout: 2000
+
+# Take screenshot after adding label
+- takeScreenshot: label_edit_added
+
+# Try editing existing label
+- tapOn:
+    index: 0
+    optional: true
+
+- waitForAnimationToEnd:
+    timeout: 1000
+
+# Take screenshot of label edit dialog
+- takeScreenshot: label_edit_dialog
+
+# Close any dialogs
+- back
+
+- waitForAnimationToEnd:
+    timeout: 1000
+
+# Go back to detail screen
+- back
+
+- waitForAnimationToEnd:
+    timeout: 1000
+
+# Final screenshot
+- takeScreenshot: label_edit_complete

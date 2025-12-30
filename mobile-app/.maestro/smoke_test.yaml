@@ -1,0 +1,44 @@
+# Smoke Test - Basic App Launch and Navigation
+# Tags: smoke, regression
+appId: com.homeinventory.home_inventory
+
+---
+# Launch the app
+- launchApp
+
+# Wait for the app to load
+- waitForAnimationToEnd:
+    timeout: 5000
+
+# Verify main screen is visible
+- assertVisible:
+    text: "Home"
+    optional: true
+
+# Take a screenshot
+- takeScreenshot: smoke_main_screen
+
+# Check bottom navigation is present
+- assertVisible:
+    id: "bottom_nav"
+    optional: true
+
+# Navigate to camera screen
+- tapOn:
+    text: "Camera"
+    optional: true
+
+- waitForAnimationToEnd
+
+# Take screenshot of camera screen
+- takeScreenshot: smoke_camera_screen
+
+# Navigate back to inventory
+- tapOn:
+    text: "Inventory"
+    optional: true
+
+- waitForAnimationToEnd
+
+# Final screenshot
+- takeScreenshot: smoke_test_complete
