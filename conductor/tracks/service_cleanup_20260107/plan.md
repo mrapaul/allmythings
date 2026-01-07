@@ -2,7 +2,7 @@
 
 ## Phase 1: Repository Cleanup
 - [x] Task: Delete `guardian-service` directory. [56bedea]
-- [ ] Task: Remove references to `guardian-service` in `Makefile` and `docker-compose.yml`.
+- [~] Task: Remove references to `guardian-service` in `Makefile` and `docker-compose.yml`.
 - [ ] Task: Conductor - User Manual Verification 'Repository Cleanup' (Protocol in workflow.md)
 
 ## Phase 2: AI Provider Restoration
