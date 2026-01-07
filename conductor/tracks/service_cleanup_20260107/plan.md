@@ -12,6 +12,6 @@
 - [x] Task: Conductor - User Manual Verification 'AI Provider Restoration' (Protocol in workflow.md) [1ad174f]
 
 ## Phase 3: Accuracy and Completeness Validation
-- [ ] Task: Enhance Gemini system prompt for detailed attribute and spatial extraction.
-- [ ] Task: Run end-to-end test on `test_images/ai_interior.jpg` and compare results against requirements.
+- [x] Task: Enhance Gemini system prompt for detailed attribute and spatial extraction. [manual-verify]
+- [x] Task: Run end-to-end test on `test_images/ai_interior.jpg` and compare results against requirements. [validated-ollama]
 - [ ] Task: Conductor - User Manual Verification 'Accuracy and Completeness Validation' (Protocol in workflow.md)

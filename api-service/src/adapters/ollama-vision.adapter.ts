@@ -21,17 +21,17 @@ export class OllamaVisionAdapter implements ProviderAdapter {
       const base64Image = imageBuffer.toString('base64');
       
       const prompt = `
-        Analyze this image and identify the items in it for a home inventory.
-        Return a JSON array where each object has:
-        - "label": Name of the item
-        - "category": Category (Furniture, Electronics, etc.)
-        - "confidence": 0.0 to 1.0
-        - "box_2d": [ymin, xmin, ymax, xmax] coordinates (0-100 scale) if possible, otherwise null.
+        Analyze this image and list the main inventory items (furniture, electronics, decor).
+        Return ONLY a JSON array. Do not use markdown blocks.
+        
+        Each item must have:
+        - "label": A short descriptive name (string)
+        - "category": The item category (string)
+        - "confidence": A number between 0.0 and 1.0
+        - "box_2d": An array of 4 integers [ymin, xmin, ymax, xmax] normalized to 0-100.
         
         Example:
-        [{"label": "Sofa", "category": "Furniture", "confidence": 0.9, "box_2d": [20, 10, 80, 90]}]
-        
-        Output ONLY valid JSON.
+        [{"label": "Wooden Chair", "category": "Furniture", "confidence": 0.9, "box_2d": [50, 10, 90, 40]}]
       `;
 
       const response = await fetch(`${this.baseUrl}/api/generate`, {
@@ -53,17 +53,35 @@ export class OllamaVisionAdapter implements ProviderAdapter {
       }
 
       const data: any = await response.json();
+      
+      // Log raw response for debugging
+      logger.info({ rawResponse: data.response }, 'Ollama Raw Output');
+
       let detections: any[] = [];
       
       try {
         // LLaVA often outputs text before/after JSON
-        const jsonStr = data.response;
-        // Try to find array bracket
-        const firstBracket = jsonStr.indexOf('[');
-        const lastBracket = jsonStr.lastIndexOf(']');
+        const jsonStr = data.response.trim();
         
-        if (firstBracket !== -1 && lastBracket !== -1) {
-             const jsonPart = jsonStr.substring(firstBracket, lastBracket + 1);
+        let firstOpen = -1;
+        let lastClose = -1;
+        
+        // Find the outer-most JSON structure (either [] or {})
+        const firstSquare = jsonStr.indexOf('[');
+        const firstCurly = jsonStr.indexOf('{');
+        
+        if (firstSquare !== -1 && (firstCurly === -1 || firstSquare < firstCurly)) {
+            // Array starts first
+            firstOpen = firstSquare;
+            lastClose = jsonStr.lastIndexOf(']');
+        } else if (firstCurly !== -1) {
+            // Object starts first
+            firstOpen = firstCurly;
+            lastClose = jsonStr.lastIndexOf('}');
+        }
+        
+        if (firstOpen !== -1 && lastClose !== -1) {
+             const jsonPart = jsonStr.substring(firstOpen, lastClose + 1);
              detections = JSON.parse(jsonPart);
         } else {
              detections = JSON.parse(jsonStr);
@@ -73,9 +91,17 @@ export class OllamaVisionAdapter implements ProviderAdapter {
         return [];
       }
 
-      if (!Array.isArray(detections)) return [];
+      if (!Array.isArray(detections)) {
+          if (typeof detections === 'object' && detections !== null) {
+              detections = [detections];
+          } else {
+              return [];
+          }
+      }
 
       return detections.map((d: any) => {
+        logger.info({ item: d }, 'Ollama detection item');
+        
         // Handle bounding box normalization
         let box: BoundingBox = { x: 0, y: 0, width: 1, height: 1 };
         if (d.box_2d && Array.isArray(d.box_2d) && d.box_2d.length === 4) {

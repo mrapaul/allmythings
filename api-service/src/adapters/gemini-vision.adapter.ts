@@ -38,10 +38,21 @@ export class GeminiVisionAdapter implements ProviderAdapter {
           - "category": Broad category (e.g., "Furniture", "Electronics", "Decor").
           - "confidence": Estimated confidence score (0.0 to 1.0).
           - "box_2d": Bounding box [ymin, xmin, ymax, xmax] using 0-1000 scale.
+          - "attributes": Key-value pairs for details like "brand", "model", "material", "color", "condition" (e.g., "new", "used", "antique").
           
           Example:
           [
-            {"label": "Coffee Table", "category": "Furniture", "confidence": 0.95, "box_2d": [500, 200, 700, 800]}
+            {
+              "label": "Coffee Table", 
+              "category": "Furniture", 
+              "confidence": 0.95, 
+              "box_2d": [500, 200, 700, 800],
+              "attributes": {
+                "material": "oak wood",
+                "color": "dark brown",
+                "condition": "good"
+              }
+            }
           ]
           
           Output ONLY valid JSON.
@@ -90,6 +101,7 @@ export class GeminiVisionAdapter implements ProviderAdapter {
                 category: item.category,
                 confidence: item.confidence || 0.0,
                 boundingBox: normalizedBox,
+                attributes: item.attributes || {},
                 ensembleDetails: {
                     providerAgreement: 1,
                     confidenceByProvider: { gemini: item.confidence },

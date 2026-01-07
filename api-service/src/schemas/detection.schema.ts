@@ -29,6 +29,7 @@ export const DetectionSchema = z.object({
   category: z.string().optional(),
   confidence: z.number().min(0).max(1),
   boundingBox: BoundingBoxSchema,
+  attributes: z.record(z.any()).optional(),
   ensembleDetails: EnsembleDetailsSchema,
   alternativeLabels: z.array(AlternativeLabelSchema),
 });
