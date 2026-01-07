@@ -4,5 +4,3 @@ This file tracks all major tracks for the project. Each track has its own detail
 
 ---
 
-## [~] Track: Service Cleanup and AI Functional Restoration
-*Link: [./conductor/tracks/service_cleanup_20260107/](./conductor/tracks/service_cleanup_20260107/)*
