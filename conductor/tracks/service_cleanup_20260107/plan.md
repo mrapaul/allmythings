@@ -1,7 +1,7 @@
 # Track Plan: Service Cleanup and AI Functional Restoration
 
 ## Phase 1: Repository Cleanup
-- [ ] Task: Delete `guardian-service` directory.
+- [~] Task: Delete `guardian-service` directory.
 - [ ] Task: Remove references to `guardian-service` in `Makefile` and `docker-compose.yml`.
 - [ ] Task: Conductor - User Manual Verification 'Repository Cleanup' (Protocol in workflow.md)
 

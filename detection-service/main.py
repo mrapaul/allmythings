@@ -20,8 +20,8 @@ import numpy as np
 model_world = None
 model_rtdetr = None
 
-# Default open vocabulary if none provided
-DEFAULT_VOCABULARY = ["object", "furniture", "electronics", "clothing", "book", "tool", "toy", "plant", "food"]
+# Default open vocabulary (common home items)
+DEFAULT_VOCABULARY = ["furniture", "chair", "table", "sofa", "electronics", "tv", "lamp", "plant", "painting", "window", "door", "rug", "shelf"]
 
 # Create a thread pool for concurrent model execution
 import asyncio
@@ -191,15 +191,16 @@ def process_results(results, model_name, img_width, img_height, custom_classes=N
         
         # Resolve Label
         label = "unknown"
-        if custom_classes:
-            if cls_id < len(custom_classes):
-                label = custom_classes[cls_id]
-            else:
-                label = f"object_{cls_id}"
-        elif hasattr(result, 'names') and cls_id in result.names:
+        cls_id = int(box.cls[0])
+        
+        # Priority 1: Use the model's internal name mapping (Ground Truth)
+        if hasattr(result, 'names') and cls_id in result.names:
             label = result.names[cls_id]
+        # Priority 2: Fallback to custom classes list by index (if model names missing)
+        elif custom_classes and cls_id < len(custom_classes):
+             label = custom_classes[cls_id]
         else:
-            label = f"class_{cls_id}"
+            label = f"object_{cls_id}"
             
         processed.append({
             "box": [norm_x, norm_y, norm_w, norm_h],

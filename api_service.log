@@ -1,0 +1,419 @@
+
+> api-service@1.0.0 dev
+> tsx watch src/app.ts
+
+[06:37:45 UTC] [31mERROR[39m: [36mFailed to connect to database[39m
+    error: {
+      "length": 101,
+      "name": "error",
+      "severity": "FATAL",
+      "code": "3D000",
+      "file": "postinit.c",
+      "line": "890",
+      "routine": "InitPostgres"
+    }
+[06:37:45 UTC] [33mWARN[39m: [36mDatabase initialization failed, continuing without database[39m
+[06:37:45 UTC] [32mINFO[39m: [36mServer listening at http://0.0.0.0:3000[39m
+[06:37:45 UTC] [32mINFO[39m: [36mServer started successfully[39m
+    port: 3000
+    nodeEnv: "development"
+[06:37:57 UTC] [32mINFO[39m: [36mincoming request[39m
+    requestId: "req-1"
+    req: {
+      "method": "POST",
+      "url": "/v1/detect",
+      "hostname": "localhost:3000",
+      "remoteAddress": "127.0.0.1",
+      "remotePort": 51579
+    }
+[06:37:57 UTC] [31mERROR[39m: [36mRequest error[39m
+    stack: "Error: Missing authorization header\n    at new AppError (/Users/mrarindampaul/Develop/allmythings/api-service/src/utils/errors.ts:13:11)\n    at new UnauthorizedError (/Users/mrarindampaul/Develop/allmythings/api-service/src/utils/errors.ts:48:5)\n    at Object.authMiddleware (/Users/mrarindampaul/Develop/allmythings/api-service/src/middleware/auth.middleware.ts:41:13)\n    at hookIterator (/Users/mrarindampaul/Develop/allmythings/api-service/node_modules/fastify/lib/hooks.js:405:10)\n    at next (/Users/mrarindampaul/Develop/allmythings/api-service/node_modules/fastify/lib/hooks.js:239:18)\n    at hookRunner (/Users/mrarindampaul/Develop/allmythings/api-service/node_modules/fastify/lib/hooks.js:261:5)\n    at validationCompleted (/Users/mrarindampaul/Develop/allmythings/api-service/node_modules/fastify/lib/handleRequest.js:116:5)\n    at preValidationCallback (/Users/mrarindampaul/Develop/allmythings/api-service/node_modules/fastify/lib/handleRequest.js:100:5)\n    at handler (/Users/mrarindampaul/Develop/allmythings/api-service/node_modules/fastify/lib/handleRequest.js:77:7)\n    at /Users/mrarindampaul/Develop/allmythings/api-service/node_modules/fastify/lib/contentTypeParser.js:199:9"
+    requestId: "req-1"
+    method: "POST"
+    url: "/v1/detect"
+    error: "Missing authorization header"
+[06:37:57 UTC] [32mINFO[39m: [36mrequest completed[39m
+    requestId: "req-1"
+    res: {
+      "statusCode": 401
+    }
+    responseTime: 3.5968329906463623
+[06:39:42 UTC] [32mINFO[39m: [36mincoming request[39m
+    requestId: "req-2"
+    req: {
+      "method": "POST",
+      "url": "/v1/detect",
+      "hostname": "localhost:3000",
+      "remoteAddress": "127.0.0.1",
+      "remotePort": 51609
+    }
+[06:39:42 UTC] [34mDEBUG[39m: [36mUser authenticated[39m
+    userId: "test-user"
+[06:39:42 UTC] [34mDEBUG[39m: [36mstarting multipart parsing[39m
+    requestId: "req-2"
+[06:39:42 UTC] [32mINFO[39m: [36mProcessing detection request[39m
+    userId: "test-user"
+    filename: "ai_interior.jpg"
+    mimetype: "text/plain"
+    size: 165667
+[06:39:42 UTC] [32mINFO[39m: [36mImage validated successfully[39m
+    metadata: {
+      "width": 1920,
+      "height": 1080,
+      "format": "jpeg",
+      "size": 165667,
+      "mimeType": "image/jpeg"
+    }
+[06:39:42 UTC] [34mDEBUG[39m: [36mAnalyzing image quality[39m
+    format: "jpeg"
+    bufferSize: 165667
+[06:39:42 UTC] [32mINFO[39m: [36mImage quality analysis complete[39m
+    metrics: {
+      "isBlurry": false,
+      "blurScore": 0.05659566351553047,
+      "brightness": 0.481592039800995,
+      "contrast": 0.5954040804594464,
+      "resolution": {
+        "width": 605,
+        "height": 455,
+        "megapixels": 0.275275
+      },
+      "qualityLevel": "good",
+      "feedback": [
+        "Resolution too low: 0.3MP. Please use at least 1MP camera."
+      ],
+      "recommendedAction": "process"
+    }
+[06:39:42 UTC] [32mINFO[39m: [36mImage quality analyzed[39m
+    imageQuality: {
+      "isBlurry": false,
+      "blurScore": 0.05659566351553047,
+      "brightness": 0.481592039800995,
+      "contrast": 0.5954040804594464,
+      "resolution": {
+        "width": 605,
+        "height": 455,
+        "megapixels": 0.275275
+      },
+      "qualityLevel": "good",
+      "feedback": [
+        "Resolution too low: 0.3MP. Please use at least 1MP camera."
+      ],
+      "recommendedAction": "process"
+    }
+[06:39:42 UTC] [33mWARN[39m: [36mOllama API error: 404 Not Found[39m
+[06:39:42 UTC] [32mINFO[39m: [36mDetection completed[39m
+    detectionsCount: 0
+    processingTimeMs: 28
+    qualityLevel: "good"
+    userId: "test-user"
+[06:39:42 UTC] [32mINFO[39m: [36mrequest completed[39m
+    requestId: "req-2"
+    res: {
+      "statusCode": 200
+    }
+    responseTime: 32.40958297252655
+[06:40:52 UTC] [32mINFO[39m: [36mincoming request[39m
+    requestId: "req-3"
+    req: {
+      "method": "POST",
+      "url": "/v1/detect",
+      "hostname": "localhost:3000",
+      "remoteAddress": "127.0.0.1",
+      "remotePort": 51648
+    }
+[06:40:52 UTC] [34mDEBUG[39m: [36mUser authenticated[39m
+    userId: "test-user"
+[06:40:52 UTC] [34mDEBUG[39m: [36mstarting multipart parsing[39m
+    requestId: "req-3"
+[06:40:52 UTC] [32mINFO[39m: [36mProcessing detection request[39m
+    userId: "test-user"
+    filename: "ai_interior.jpg"
+    mimetype: "text/plain"
+    size: 165667
+[06:40:52 UTC] [32mINFO[39m: [36mImage validated successfully[39m
+    metadata: {
+      "width": 1920,
+      "height": 1080,
+      "format": "jpeg",
+      "size": 165667,
+      "mimeType": "image/jpeg"
+    }
+[06:40:52 UTC] [34mDEBUG[39m: [36mAnalyzing image quality[39m
+    format: "jpeg"
+    bufferSize: 165667
+[06:40:52 UTC] [32mINFO[39m: [36mImage quality analysis complete[39m
+    metrics: {
+      "isBlurry": false,
+      "blurScore": 0.05659566351553047,
+      "brightness": 0.481592039800995,
+      "contrast": 0.5954040804594464,
+      "resolution": {
+        "width": 605,
+        "height": 455,
+        "megapixels": 0.275275
+      },
+      "qualityLevel": "good",
+      "feedback": [
+        "Resolution too low: 0.3MP. Please use at least 1MP camera."
+      ],
+      "recommendedAction": "process"
+    }
+[06:40:52 UTC] [32mINFO[39m: [36mImage quality analyzed[39m
+    imageQuality: {
+      "isBlurry": false,
+      "blurScore": 0.05659566351553047,
+      "brightness": 0.481592039800995,
+      "contrast": 0.5954040804594464,
+      "resolution": {
+        "width": 605,
+        "height": 455,
+        "megapixels": 0.275275
+      },
+      "qualityLevel": "good",
+      "feedback": [
+        "Resolution too low: 0.3MP. Please use at least 1MP camera."
+      ],
+      "recommendedAction": "process"
+    }
+[06:40:52 UTC] [33mWARN[39m: [36mOllama API error: 404 Not Found[39m
+[06:40:52 UTC] [32mINFO[39m: [36mDetection completed[39m
+    detectionsCount: 0
+    processingTimeMs: 10
+    qualityLevel: "good"
+    userId: "test-user"
+[06:40:52 UTC] [32mINFO[39m: [36mrequest completed[39m
+    requestId: "req-3"
+    res: {
+      "statusCode": 200
+    }
+    responseTime: 10.650458037853241
+[06:41:17 UTC] [32mINFO[39m: [36mincoming request[39m
+    requestId: "req-4"
+    req: {
+      "method": "POST",
+      "url": "/v1/detect",
+      "hostname": "localhost:3000",
+      "remoteAddress": "127.0.0.1",
+      "remotePort": 51661
+    }
+[06:41:17 UTC] [34mDEBUG[39m: [36mUser authenticated[39m
+    userId: "test-user"
+[06:41:17 UTC] [34mDEBUG[39m: [36mstarting multipart parsing[39m
+    requestId: "req-4"
+[06:41:17 UTC] [32mINFO[39m: [36mProcessing detection request[39m
+    userId: "test-user"
+    filename: "ai_interior.jpg"
+    mimetype: "text/plain"
+    size: 165667
+[06:41:17 UTC] [32mINFO[39m: [36mImage validated successfully[39m
+    metadata: {
+      "width": 1920,
+      "height": 1080,
+      "format": "jpeg",
+      "size": 165667,
+      "mimeType": "image/jpeg"
+    }
+[06:41:17 UTC] [34mDEBUG[39m: [36mAnalyzing image quality[39m
+    format: "jpeg"
+    bufferSize: 165667
+[06:41:17 UTC] [32mINFO[39m: [36mImage quality analysis complete[39m
+    metrics: {
+      "isBlurry": false,
+      "blurScore": 0.05659566351553047,
+      "brightness": 0.481592039800995,
+      "contrast": 0.5954040804594464,
+      "resolution": {
+        "width": 605,
+        "height": 455,
+        "megapixels": 0.275275
+      },
+      "qualityLevel": "good",
+      "feedback": [
+        "Resolution too low: 0.3MP. Please use at least 1MP camera."
+      ],
+      "recommendedAction": "process"
+    }
+[06:41:17 UTC] [32mINFO[39m: [36mImage quality analyzed[39m
+    imageQuality: {
+      "isBlurry": false,
+      "blurScore": 0.05659566351553047,
+      "brightness": 0.481592039800995,
+      "contrast": 0.5954040804594464,
+      "resolution": {
+        "width": 605,
+        "height": 455,
+        "megapixels": 0.275275
+      },
+      "qualityLevel": "good",
+      "feedback": [
+        "Resolution too low: 0.3MP. Please use at least 1MP camera."
+      ],
+      "recommendedAction": "process"
+    }
+[06:41:17 UTC] [33mWARN[39m: [36mOllama API error: 404 Not Found[39m
+[06:41:17 UTC] [32mINFO[39m: [36mDetection completed[39m
+    detectionsCount: 0
+    processingTimeMs: 13
+    qualityLevel: "good"
+    userId: "test-user"
+[06:41:17 UTC] [32mINFO[39m: [36mrequest completed[39m
+    requestId: "req-4"
+    res: {
+      "statusCode": 200
+    }
+    responseTime: 13.138458967208862
+[06:42:11 UTC] [32mINFO[39m: [36mincoming request[39m
+    requestId: "req-5"
+    req: {
+      "method": "POST",
+      "url": "/v1/detect",
+      "hostname": "localhost:3000",
+      "remoteAddress": "127.0.0.1",
+      "remotePort": 51702
+    }
+[06:42:11 UTC] [34mDEBUG[39m: [36mUser authenticated[39m
+    userId: "test-user"
+[06:42:11 UTC] [34mDEBUG[39m: [36mstarting multipart parsing[39m
+    requestId: "req-5"
+[06:42:11 UTC] [32mINFO[39m: [36mProcessing detection request[39m
+    userId: "test-user"
+    filename: "ai_interior.jpg"
+    mimetype: "text/plain"
+    size: 165667
+[06:42:11 UTC] [32mINFO[39m: [36mImage validated successfully[39m
+    metadata: {
+      "width": 1920,
+      "height": 1080,
+      "format": "jpeg",
+      "size": 165667,
+      "mimeType": "image/jpeg"
+    }
+[06:42:11 UTC] [34mDEBUG[39m: [36mAnalyzing image quality[39m
+    format: "jpeg"
+    bufferSize: 165667
+[06:42:11 UTC] [32mINFO[39m: [36mImage quality analysis complete[39m
+    metrics: {
+      "isBlurry": false,
+      "blurScore": 0.05659566351553047,
+      "brightness": 0.481592039800995,
+      "contrast": 0.5954040804594464,
+      "resolution": {
+        "width": 605,
+        "height": 455,
+        "megapixels": 0.275275
+      },
+      "qualityLevel": "good",
+      "feedback": [
+        "Resolution too low: 0.3MP. Please use at least 1MP camera."
+      ],
+      "recommendedAction": "process"
+    }
+[06:42:11 UTC] [32mINFO[39m: [36mImage quality analyzed[39m
+    imageQuality: {
+      "isBlurry": false,
+      "blurScore": 0.05659566351553047,
+      "brightness": 0.481592039800995,
+      "contrast": 0.5954040804594464,
+      "resolution": {
+        "width": 605,
+        "height": 455,
+        "megapixels": 0.275275
+      },
+      "qualityLevel": "good",
+      "feedback": [
+        "Resolution too low: 0.3MP. Please use at least 1MP camera."
+      ],
+      "recommendedAction": "process"
+    }
+[06:42:11 UTC] [33mWARN[39m: [36mOllama API error: 404 Not Found[39m
+[06:42:11 UTC] [32mINFO[39m: [36mDetection completed[39m
+    detectionsCount: 0
+    processingTimeMs: 11
+    qualityLevel: "good"
+    userId: "test-user"
+[06:42:11 UTC] [32mINFO[39m: [36mrequest completed[39m
+    requestId: "req-5"
+    res: {
+      "statusCode": 200
+    }
+    responseTime: 11.843291997909546
+[07:15:10 UTC] [32mINFO[39m: [36mincoming request[39m
+    requestId: "req-6"
+    req: {
+      "method": "POST",
+      "url": "/v1/detect",
+      "hostname": "localhost:3000",
+      "remoteAddress": "127.0.0.1",
+      "remotePort": 54140
+    }
+[07:15:10 UTC] [34mDEBUG[39m: [36mUser authenticated[39m
+    userId: "test-user"
+[07:15:10 UTC] [34mDEBUG[39m: [36mstarting multipart parsing[39m
+    requestId: "req-6"
+[07:15:10 UTC] [32mINFO[39m: [36mProcessing detection request[39m
+    userId: "test-user"
+    filename: "ai_interior.jpg"
+    mimetype: "text/plain"
+    size: 165667
+[07:15:10 UTC] [32mINFO[39m: [36mImage validated successfully[39m
+    metadata: {
+      "width": 1920,
+      "height": 1080,
+      "format": "jpeg",
+      "size": 165667,
+      "mimeType": "image/jpeg"
+    }
+[07:15:10 UTC] [34mDEBUG[39m: [36mAnalyzing image quality[39m
+    format: "jpeg"
+    bufferSize: 165667
+[07:15:10 UTC] [32mINFO[39m: [36mImage quality analysis complete[39m
+    metrics: {
+      "isBlurry": false,
+      "blurScore": 0.05659566351553047,
+      "brightness": 0.481592039800995,
+      "contrast": 0.5954040804594464,
+      "resolution": {
+        "width": 605,
+        "height": 455,
+        "megapixels": 0.275275
+      },
+      "qualityLevel": "good",
+      "feedback": [
+        "Resolution too low: 0.3MP. Please use at least 1MP camera."
+      ],
+      "recommendedAction": "process"
+    }
+[07:15:10 UTC] [32mINFO[39m: [36mImage quality analyzed[39m
+    imageQuality: {
+      "isBlurry": false,
+      "blurScore": 0.05659566351553047,
+      "brightness": 0.481592039800995,
+      "contrast": 0.5954040804594464,
+      "resolution": {
+        "width": 605,
+        "height": 455,
+        "megapixels": 0.275275
+      },
+      "qualityLevel": "good",
+      "feedback": [
+        "Resolution too low: 0.3MP. Please use at least 1MP camera."
+      ],
+      "recommendedAction": "process"
+    }
+[07:15:10 UTC] [33mWARN[39m: [36mOllama API error: 404 Not Found[39m
+[07:15:10 UTC] [32mINFO[39m: [36mDetection completed[39m
+    detectionsCount: 0
+    processingTimeMs: 12
+    qualityLevel: "good"
+    userId: "test-user"
+[07:15:10 UTC] [32mINFO[39m: [36mrequest completed[39m
+    requestId: "req-6"
+    res: {
+      "statusCode": 200
+    }
+    responseTime: 15.19504201412201
+[02:03:37 UTC] [32mINFO[39m: [36mReceived shutdown signal[39m
+    signal: "SIGTERM"
+[02:03:37 UTC] [32mINFO[39m: [36mClosing database connection[39m
+[02:03:37 UTC] [32mINFO[39m: [36mDatabase disconnected[39m

@@ -1,0 +1,6 @@
+Traceback (most recent call last):
+  File "/Users/mrarindampaul/Develop/allmythings/detection-service/main.py", line 13, in <module>
+    from fastapi import FastAPI, File, UploadFile, HTTPException
+  File "/Users/mrarindampaul/Develop/allmythings/detection-service/venv/lib/python3.12/site-packages/fastapi/__init__.py", line 5, in <module>
+    from starlette import status as status
+ModuleNotFoundError: No module named 'starlette'

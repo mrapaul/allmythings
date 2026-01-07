@@ -1,6 +1,7 @@
 import { ProviderAdapter } from '../adapters/provider-adapter.interface';
 import { GoogleVisionAdapter } from '../adapters/google-vision.adapter';
 import { GeminiVisionAdapter } from '../adapters/gemini-vision.adapter';
+import { OllamaVisionAdapter } from '../adapters/ollama-vision.adapter';
 import { AWSRekognitionAdapter } from '../adapters/aws-rekognition.adapter';
 import { MockVisionAdapter } from '../adapters/mock-vision.adapter';
 import { EnsembleFusionService } from './ensemble-fusion.service';
@@ -11,7 +12,7 @@ import { logger } from '../utils/logger';
 /**
  * Vision orchestrator - coordinates multiple vision providers
  */
-type ProviderName = 'meta' | 'google' | 'gemini' | 'aws' | 'tensorflow' | 'mock';
+type ProviderName = 'meta' | 'google' | 'gemini' | 'ollama' | 'aws' | 'tensorflow' | 'mock';
 
 export class VisionOrchestratorService {
   private providers: Map<ProviderName, ProviderAdapter>;
@@ -21,19 +22,12 @@ export class VisionOrchestratorService {
     this.providers = new Map<ProviderName, ProviderAdapter>();
     this.fusionService = new EnsembleFusionService();
 
-    // Use mock adapter in development when no credentials are configured
-    const useMockMode = envConfig.nodeEnv === 'development' &&
-                       (envConfig.googleProjectId === 'your-project-id' || envConfig.googleProjectId === '');
-
-    if (useMockMode) {
-      logger.info('Using mock vision adapter for development');
-      this.providers.set('mock', new MockVisionAdapter());
-      return;
-    }
-
     // Initialize real providers
     try {
-      this.providers.set('google', new GoogleVisionAdapter());
+      // Only check Google Project ID if we really intend to use Google Vision
+      if (envConfig.googleProjectId && envConfig.googleProjectId !== 'your-project-id') {
+        this.providers.set('google', new GoogleVisionAdapter());
+      }
     } catch (error) {
       logger.warn({ error }, 'Failed to initialize Google Vision adapter');
     }
@@ -47,16 +41,20 @@ export class VisionOrchestratorService {
     }
 
     try {
+      if (envConfig.ollamaEnabled) {
+        this.providers.set('ollama', new OllamaVisionAdapter());
+      }
+    } catch (error) {
+      logger.warn({ error }, 'Failed to initialize Ollama Vision adapter');
+    }
+
+    try {
       if (envConfig.awsAccessKeyId) {
         this.providers.set('aws', new AWSRekognitionAdapter());
       }
     } catch (error) {
       logger.warn({ error }, 'Failed to initialize AWS Rekognition adapter');
     }
-
-    // Meta and TensorFlow adapters would be added here (Phase 7)
-    // this.providers.set('meta', new MetaDetectron2Adapter());
-    // this.providers.set('tensorflow', new TensorFlowAdapter());
 
     // Fallback to mock if no providers initialized
     if (this.providers.size === 0) {

@@ -14,7 +14,7 @@ export const BoundingBoxSchema = z.object({
 export const AlternativeLabelSchema = z.object({
   label: z.string(),
   confidence: z.number().min(0).max(1),
-  provider: z.enum(['meta', 'google', 'aws', 'tensorflow', 'mock']),
+  provider: z.enum(['meta', 'google', 'aws', 'tensorflow', 'mock', 'gemini', 'ollama']),
 });
 
 export const EnsembleDetailsSchema = z.object({
@@ -26,6 +26,7 @@ export const EnsembleDetailsSchema = z.object({
 export const DetectionSchema = z.object({
   id: z.string(),
   label: z.string(),
+  category: z.string().optional(),
   confidence: z.number().min(0).max(1),
   boundingBox: BoundingBoxSchema,
   ensembleDetails: EnsembleDetailsSchema,
@@ -33,7 +34,7 @@ export const DetectionSchema = z.object({
 });
 
 export const ProviderResultSchema = z.object({
-  provider: z.enum(['meta', 'google', 'aws', 'tensorflow', 'mock']),
+  provider: z.enum(['meta', 'google', 'aws', 'tensorflow', 'mock', 'gemini', 'ollama']),
   success: z.boolean(),
   processingTimeMs: z.number().int().min(0),
   detections: z.array(DetectionSchema),

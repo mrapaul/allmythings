@@ -35,12 +35,13 @@ export class GeminiVisionAdapter implements ProviderAdapter {
           
           Return a JSON array of objects. Each object must have:
           - "label": Specific name of the item (e.g., "Eames Chair", "Sony TV", "Vase").
+          - "category": Broad category (e.g., "Furniture", "Electronics", "Decor").
           - "confidence": Estimated confidence score (0.0 to 1.0).
           - "box_2d": Bounding box [ymin, xmin, ymax, xmax] using 0-1000 scale.
           
           Example:
           [
-            {"label": "Coffee Table", "confidence": 0.95, "box_2d": [500, 200, 700, 800]}
+            {"label": "Coffee Table", "category": "Furniture", "confidence": 0.95, "box_2d": [500, 200, 700, 800]}
           ]
           
           Output ONLY valid JSON.
@@ -86,6 +87,7 @@ export class GeminiVisionAdapter implements ProviderAdapter {
             return {
                 id: `gemini-${Math.random().toString(36).substr(2, 9)}`,
                 label: item.label || 'unknown',
+                category: item.category,
                 confidence: item.confidence || 0.0,
                 boundingBox: normalizedBox,
                 ensembleDetails: {
