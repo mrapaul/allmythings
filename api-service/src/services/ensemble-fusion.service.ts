@@ -13,6 +13,8 @@ export class EnsembleFusionService {
     google: envConfig.googleWeight,
     aws: envConfig.awsWeight,
     tensorflow: envConfig.tensorflowWeight,
+    gemini: envConfig.geminiWeight,
+    ollama: envConfig.ollamaWeight,
   };
 
   /**

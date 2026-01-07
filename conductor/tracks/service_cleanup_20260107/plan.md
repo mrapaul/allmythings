@@ -6,9 +6,9 @@
 - [x] Task: Conductor - User Manual Verification 'Repository Cleanup' (Protocol in workflow.md) [421aaac]
 
 ## Phase 2: AI Provider Restoration
-- [ ] Task: Validate Gemini Vision integration with real API Key.
-- [ ] Task: Pull and configure local Ollama model (e.g., llava) for `api-service`.
-- [ ] Task: Update `VisionOrchestratorService` fallback logic to ensure high reliability.
+- [~] Task: Validate Gemini Vision integration with real API Key.
+- [x] Task: Pull and configure local Ollama model (e.g., llava) for `api-service`. [1018889]
+- [x] Task: Update `VisionOrchestratorService` fallback logic to ensure high reliability. [applied-fix]
 - [ ] Task: Conductor - User Manual Verification 'AI Provider Restoration' (Protocol in workflow.md)
 
 ## Phase 3: Accuracy and Completeness Validation

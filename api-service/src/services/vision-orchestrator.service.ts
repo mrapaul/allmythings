@@ -93,13 +93,30 @@ export class VisionOrchestratorService {
     }
 
     // Fuse detections using ensemble techniques
-    const fusedDetections = this.fusionService.fuseDetections(providerDetections);
+    let fusedDetections: Detection[] = [];
+    let ensembleMetrics;
 
-    // Calculate metrics
-    const ensembleMetrics = this.fusionService.calculateMetrics(
-      fusedDetections,
-      providerDetections.size
-    );
+    try {
+      fusedDetections = this.fusionService.fuseDetections(providerDetections);
+      // Calculate metrics
+      ensembleMetrics = this.fusionService.calculateMetrics(
+        fusedDetections,
+        providerDetections.size
+      );
+    } catch (error) {
+      logger.error({ error }, 'Ensemble fusion failed, falling back to raw detections');
+      // Fallback: flatten all detections
+      for (const [, dets] of providerDetections) {
+        fusedDetections.push(...dets);
+      }
+      ensembleMetrics = {
+        providersUsed: providerDetections.size,
+        averageConfidence: 0,
+        consensusRate: 0,
+      };
+    }
+
+    // Determine ensemble mode
 
     // Determine ensemble mode
     const ensembleMode = this.determineEnsembleMode(providerDetections.size);

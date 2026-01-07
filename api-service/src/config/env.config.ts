@@ -77,6 +77,8 @@ export interface EnvConfig {
   googleWeight: number;
   awsWeight: number;
   tensorflowWeight: number;
+  geminiWeight: number;
+  ollamaWeight: number;
 }
 
 export const envConfig: EnvConfig = {
@@ -150,4 +152,6 @@ export const envConfig: EnvConfig = {
   googleWeight: parseFloat(process.env.GOOGLE_WEIGHT || '0.30'),
   awsWeight: parseFloat(process.env.AWS_WEIGHT || '0.25'),
   tensorflowWeight: parseFloat(process.env.TENSORFLOW_WEIGHT || '0.15'),
+  geminiWeight: parseFloat(process.env.GEMINI_WEIGHT || '0.35'),
+  ollamaWeight: parseFloat(process.env.OLLAMA_WEIGHT || '0.25'),
 };
