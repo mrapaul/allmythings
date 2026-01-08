@@ -15,7 +15,7 @@
 - [x] Task: Conductor - User Manual Verification 'Code and Script Cleanup' (Protocol in workflow.md) [c1a9608]
 
 ## Phase 3: Final Verification [checkpoint: pending]
-- [ ] Task: Run `make build` or equivalent to ensure the application still builds correctly.
-- [ ] Task: Run core unit tests for `api-service` and `mobile-app`.
-- [ ] Task: Run E2E verification to ensure the hybrid detection pipeline is functional.
+- [x] Task: Run `make build` or equivalent to ensure the application still builds correctly.
+- [x] Task: Run core unit tests for `api-service` and `mobile-app`.
+- [x] Task: Run E2E verification to ensure the hybrid detection pipeline is functional.
 - [ ] Task: Conductor - User Manual Verification 'Final Verification' (Protocol in workflow.md)

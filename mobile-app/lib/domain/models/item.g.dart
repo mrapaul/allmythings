@@ -9,9 +9,9 @@ part of 'item.dart';
 _Item _$ItemFromJson(Map<String, dynamic> json) => _Item(
   id: json['id'] as String,
   name: json['name'] as String,
-  description: json['description'] as String?,
   imagePath: json['imagePath'] as String,
   labels: (json['labels'] as List<dynamic>).map((e) => e as String).toList(),
+  description: json['description'] as String?,
   roomType: json['roomType'] as String?,
   confidence: (json['confidence'] as num?)?.toDouble() ?? 1.0,
   createdAt: json['createdAt'] == null
@@ -25,9 +25,9 @@ _Item _$ItemFromJson(Map<String, dynamic> json) => _Item(
 Map<String, dynamic> _$ItemToJson(_Item instance) => <String, dynamic>{
   'id': instance.id,
   'name': instance.name,
-  'description': instance.description,
   'imagePath': instance.imagePath,
   'labels': instance.labels,
+  'description': instance.description,
   'roomType': instance.roomType,
   'confidence': instance.confidence,
   'createdAt': instance.createdAt?.toIso8601String(),

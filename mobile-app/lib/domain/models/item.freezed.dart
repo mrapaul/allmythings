@@ -17,10 +17,10 @@ mixin _$Item {
 
 /// Unique identifier for the item
  String get id;/// Display name of the item
- String get name;/// Optional description of the item
- String? get description;/// Path to the item's image/photo
+ String get name;/// Path to the item's image/photo
  String get imagePath;/// List of labels/tags assigned to this item
- List<String> get labels;/// Optional room type where item is located
+ List<String> get labels;/// Optional description of the item
+ String? get description;/// Optional room type where item is located
  String? get roomType;/// Confidence score from detection (0-1)
  double get confidence;/// Timestamp when item was created
  DateTime? get createdAt;/// Timestamp when item was last updated
@@ -37,16 +37,16 @@ $ItemCopyWith<Item> get copyWith => _$ItemCopyWithImpl<Item>(this as Item, _$ide
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is Item&&(identical(other.id, id) || other.id == id)&&(identical(other.name, name) || other.name == name)&&(identical(other.description, description) || other.description == description)&&(identical(other.imagePath, imagePath) || other.imagePath == imagePath)&&const DeepCollectionEquality().equals(other.labels, labels)&&(identical(other.roomType, roomType) || other.roomType == roomType)&&(identical(other.confidence, confidence) || other.confidence == confidence)&&(identical(other.createdAt, createdAt) || other.createdAt == createdAt)&&(identical(other.updatedAt, updatedAt) || other.updatedAt == updatedAt));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is Item&&(identical(other.id, id) || other.id == id)&&(identical(other.name, name) || other.name == name)&&(identical(other.imagePath, imagePath) || other.imagePath == imagePath)&&const DeepCollectionEquality().equals(other.labels, labels)&&(identical(other.description, description) || other.description == description)&&(identical(other.roomType, roomType) || other.roomType == roomType)&&(identical(other.confidence, confidence) || other.confidence == confidence)&&(identical(other.createdAt, createdAt) || other.createdAt == createdAt)&&(identical(other.updatedAt, updatedAt) || other.updatedAt == updatedAt));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
-int get hashCode => Object.hash(runtimeType,id,name,description,imagePath,const DeepCollectionEquality().hash(labels),roomType,confidence,createdAt,updatedAt);
+int get hashCode => Object.hash(runtimeType,id,name,imagePath,const DeepCollectionEquality().hash(labels),description,roomType,confidence,createdAt,updatedAt);
 
 @override
 String toString() {
-  return 'Item(id: $id, name: $name, description: $description, imagePath: $imagePath, labels: $labels, roomType: $roomType, confidence: $confidence, createdAt: $createdAt, updatedAt: $updatedAt)';
+  return 'Item(id: $id, name: $name, imagePath: $imagePath, labels: $labels, description: $description, roomType: $roomType, confidence: $confidence, createdAt: $createdAt, updatedAt: $updatedAt)';
 }
 
 
@@ -57,7 +57,7 @@ abstract mixin class $ItemCopyWith<$Res>  {
   factory $ItemCopyWith(Item value, $Res Function(Item) _then) = _$ItemCopyWithImpl;
 @useResult
 $Res call({
- String id, String name, String? description, String imagePath, List<String> labels, String? roomType, double confidence, DateTime? createdAt, DateTime? updatedAt
+ String id, String name, String imagePath, List<String> labels, String? description, String? roomType, double confidence, DateTime? createdAt, DateTime? updatedAt
 });
 
 
@@ -74,14 +74,14 @@ class _$ItemCopyWithImpl<$Res>
 
 /// Create a copy of Item
 /// with the given fields replaced by the non-null parameter values.
-@pragma('vm:prefer-inline') @override $Res call({Object? id = null,Object? name = null,Object? description = freezed,Object? imagePath = null,Object? labels = null,Object? roomType = freezed,Object? confidence = null,Object? createdAt = freezed,Object? updatedAt = freezed,}) {
+@pragma('vm:prefer-inline') @override $Res call({Object? id = null,Object? name = null,Object? imagePath = null,Object? labels = null,Object? description = freezed,Object? roomType = freezed,Object? confidence = null,Object? createdAt = freezed,Object? updatedAt = freezed,}) {
   return _then(_self.copyWith(
 id: null == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
 as String,name: null == name ? _self.name : name // ignore: cast_nullable_to_non_nullable
-as String,description: freezed == description ? _self.description : description // ignore: cast_nullable_to_non_nullable
-as String?,imagePath: null == imagePath ? _self.imagePath : imagePath // ignore: cast_nullable_to_non_nullable
+as String,imagePath: null == imagePath ? _self.imagePath : imagePath // ignore: cast_nullable_to_non_nullable
 as String,labels: null == labels ? _self.labels : labels // ignore: cast_nullable_to_non_nullable
-as List<String>,roomType: freezed == roomType ? _self.roomType : roomType // ignore: cast_nullable_to_non_nullable
+as List<String>,description: freezed == description ? _self.description : description // ignore: cast_nullable_to_non_nullable
+as String?,roomType: freezed == roomType ? _self.roomType : roomType // ignore: cast_nullable_to_non_nullable
 as String?,confidence: null == confidence ? _self.confidence : confidence // ignore: cast_nullable_to_non_nullable
 as double,createdAt: freezed == createdAt ? _self.createdAt : createdAt // ignore: cast_nullable_to_non_nullable
 as DateTime?,updatedAt: freezed == updatedAt ? _self.updatedAt : updatedAt // ignore: cast_nullable_to_non_nullable
@@ -170,10 +170,10 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String id,  String name,  String? description,  String imagePath,  List<String> labels,  String? roomType,  double confidence,  DateTime? createdAt,  DateTime? updatedAt)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String id,  String name,  String imagePath,  List<String> labels,  String? description,  String? roomType,  double confidence,  DateTime? createdAt,  DateTime? updatedAt)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _Item() when $default != null:
-return $default(_that.id,_that.name,_that.description,_that.imagePath,_that.labels,_that.roomType,_that.confidence,_that.createdAt,_that.updatedAt);case _:
+return $default(_that.id,_that.name,_that.imagePath,_that.labels,_that.description,_that.roomType,_that.confidence,_that.createdAt,_that.updatedAt);case _:
   return orElse();
 
 }
@@ -191,10 +191,10 @@ return $default(_that.id,_that.name,_that.description,_that.imagePath,_that.labe
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String id,  String name,  String? description,  String imagePath,  List<String> labels,  String? roomType,  double confidence,  DateTime? createdAt,  DateTime? updatedAt)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String id,  String name,  String imagePath,  List<String> labels,  String? description,  String? roomType,  double confidence,  DateTime? createdAt,  DateTime? updatedAt)  $default,) {final _that = this;
 switch (_that) {
 case _Item():
-return $default(_that.id,_that.name,_that.description,_that.imagePath,_that.labels,_that.roomType,_that.confidence,_that.createdAt,_that.updatedAt);case _:
+return $default(_that.id,_that.name,_that.imagePath,_that.labels,_that.description,_that.roomType,_that.confidence,_that.createdAt,_that.updatedAt);case _:
   throw StateError('Unexpected subclass');
 
 }
@@ -211,10 +211,10 @@ return $default(_that.id,_that.name,_that.description,_that.imagePath,_that.labe
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String id,  String name,  String? description,  String imagePath,  List<String> labels,  String? roomType,  double confidence,  DateTime? createdAt,  DateTime? updatedAt)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String id,  String name,  String imagePath,  List<String> labels,  String? description,  String? roomType,  double confidence,  DateTime? createdAt,  DateTime? updatedAt)?  $default,) {final _that = this;
 switch (_that) {
 case _Item() when $default != null:
-return $default(_that.id,_that.name,_that.description,_that.imagePath,_that.labels,_that.roomType,_that.confidence,_that.createdAt,_that.updatedAt);case _:
+return $default(_that.id,_that.name,_that.imagePath,_that.labels,_that.description,_that.roomType,_that.confidence,_that.createdAt,_that.updatedAt);case _:
   return null;
 
 }
@@ -226,15 +226,13 @@ return $default(_that.id,_that.name,_that.description,_that.imagePath,_that.labe
 @JsonSerializable()
 
 class _Item implements Item {
-  const _Item({required this.id, required this.name, this.description, required this.imagePath, required final  List<String> labels, this.roomType, this.confidence = 1.0, this.createdAt, this.updatedAt}): _labels = labels;
+  const _Item({required this.id, required this.name, required this.imagePath, required final  List<String> labels, this.description, this.roomType, this.confidence = 1.0, this.createdAt, this.updatedAt}): _labels = labels;
   factory _Item.fromJson(Map<String, dynamic> json) => _$ItemFromJson(json);
 
 /// Unique identifier for the item
 @override final  String id;
 /// Display name of the item
 @override final  String name;
-/// Optional description of the item
-@override final  String? description;
 /// Path to the item's image/photo
 @override final  String imagePath;
 /// List of labels/tags assigned to this item
@@ -246,6 +244,8 @@ class _Item implements Item {
   return EqualUnmodifiableListView(_labels);
 }
 
+/// Optional description of the item
+@override final  String? description;
 /// Optional room type where item is located
 @override final  String? roomType;
 /// Confidence score from detection (0-1)
@@ -268,16 +268,16 @@ Map<String, dynamic> toJson() {
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is _Item&&(identical(other.id, id) || other.id == id)&&(identical(other.name, name) || other.name == name)&&(identical(other.description, description) || other.description == description)&&(identical(other.imagePath, imagePath) || other.imagePath == imagePath)&&const DeepCollectionEquality().equals(other._labels, _labels)&&(identical(other.roomType, roomType) || other.roomType == roomType)&&(identical(other.confidence, confidence) || other.confidence == confidence)&&(identical(other.createdAt, createdAt) || other.createdAt == createdAt)&&(identical(other.updatedAt, updatedAt) || other.updatedAt == updatedAt));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is _Item&&(identical(other.id, id) || other.id == id)&&(identical(other.name, name) || other.name == name)&&(identical(other.imagePath, imagePath) || other.imagePath == imagePath)&&const DeepCollectionEquality().equals(other._labels, _labels)&&(identical(other.description, description) || other.description == description)&&(identical(other.roomType, roomType) || other.roomType == roomType)&&(identical(other.confidence, confidence) || other.confidence == confidence)&&(identical(other.createdAt, createdAt) || other.createdAt == createdAt)&&(identical(other.updatedAt, updatedAt) || other.updatedAt == updatedAt));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
-int get hashCode => Object.hash(runtimeType,id,name,description,imagePath,const DeepCollectionEquality().hash(_labels),roomType,confidence,createdAt,updatedAt);
+int get hashCode => Object.hash(runtimeType,id,name,imagePath,const DeepCollectionEquality().hash(_labels),description,roomType,confidence,createdAt,updatedAt);
 
 @override
 String toString() {
-  return 'Item(id: $id, name: $name, description: $description, imagePath: $imagePath, labels: $labels, roomType: $roomType, confidence: $confidence, createdAt: $createdAt, updatedAt: $updatedAt)';
+  return 'Item(id: $id, name: $name, imagePath: $imagePath, labels: $labels, description: $description, roomType: $roomType, confidence: $confidence, createdAt: $createdAt, updatedAt: $updatedAt)';
 }
 
 
@@ -288,7 +288,7 @@ abstract mixin class _$ItemCopyWith<$Res> implements $ItemCopyWith<$Res> {
   factory _$ItemCopyWith(_Item value, $Res Function(_Item) _then) = __$ItemCopyWithImpl;
 @override @useResult
 $Res call({
- String id, String name, String? description, String imagePath, List<String> labels, String? roomType, double confidence, DateTime? createdAt, DateTime? updatedAt
+ String id, String name, String imagePath, List<String> labels, String? description, String? roomType, double confidence, DateTime? createdAt, DateTime? updatedAt
 });
 
 
@@ -305,14 +305,14 @@ class __$ItemCopyWithImpl<$Res>
 
 /// Create a copy of Item
 /// with the given fields replaced by the non-null parameter values.
-@override @pragma('vm:prefer-inline') $Res call({Object? id = null,Object? name = null,Object? description = freezed,Object? imagePath = null,Object? labels = null,Object? roomType = freezed,Object? confidence = null,Object? createdAt = freezed,Object? updatedAt = freezed,}) {
+@override @pragma('vm:prefer-inline') $Res call({Object? id = null,Object? name = null,Object? imagePath = null,Object? labels = null,Object? description = freezed,Object? roomType = freezed,Object? confidence = null,Object? createdAt = freezed,Object? updatedAt = freezed,}) {
   return _then(_Item(
 id: null == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
 as String,name: null == name ? _self.name : name // ignore: cast_nullable_to_non_nullable
-as String,description: freezed == description ? _self.description : description // ignore: cast_nullable_to_non_nullable
-as String?,imagePath: null == imagePath ? _self.imagePath : imagePath // ignore: cast_nullable_to_non_nullable
+as String,imagePath: null == imagePath ? _self.imagePath : imagePath // ignore: cast_nullable_to_non_nullable
 as String,labels: null == labels ? _self._labels : labels // ignore: cast_nullable_to_non_nullable
-as List<String>,roomType: freezed == roomType ? _self.roomType : roomType // ignore: cast_nullable_to_non_nullable
+as List<String>,description: freezed == description ? _self.description : description // ignore: cast_nullable_to_non_nullable
+as String?,roomType: freezed == roomType ? _self.roomType : roomType // ignore: cast_nullable_to_non_nullable
 as String?,confidence: null == confidence ? _self.confidence : confidence // ignore: cast_nullable_to_non_nullable
 as double,createdAt: freezed == createdAt ? _self.createdAt : createdAt // ignore: cast_nullable_to_non_nullable
 as DateTime?,updatedAt: freezed == updatedAt ? _self.updatedAt : updatedAt // ignore: cast_nullable_to_non_nullable
