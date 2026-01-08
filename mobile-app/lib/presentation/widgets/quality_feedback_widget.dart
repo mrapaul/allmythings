@@ -6,9 +6,6 @@ import 'package:all_my_things/domain/models/quality_metrics.dart';
 /// Shows blur, brightness, contrast, and resolution metrics
 /// Provides actionable recommendations for improvement
 class QualityFeedbackWidget extends ConsumerWidget {
-  final QualityMetrics? qualityMetrics;
-  final VoidCallback? onRetry;
-  final bool isLoading;
 
   const QualityFeedbackWidget({
     required this.qualityMetrics,
@@ -16,6 +13,9 @@ class QualityFeedbackWidget extends ConsumerWidget {
     this.isLoading = false,
     Key? key,
   }) : super(key: key);
+  final QualityMetrics? qualityMetrics;
+  final VoidCallback? onRetry;
+  final bool isLoading;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -248,9 +248,9 @@ class QualityFeedbackWidget extends ConsumerWidget {
 
 /// Icon display for quality level
 class _QualityIcon extends StatelessWidget {
-  final String qualityLevel;
 
   const _QualityIcon({required this.qualityLevel});
+  final String qualityLevel;
 
   @override
   Widget build(BuildContext context) {
@@ -278,10 +278,6 @@ class _QualityIcon extends StatelessWidget {
 
 /// Individual metric display tile
 class _MetricTile extends StatelessWidget {
-  final String label;
-  final String value;
-  final String status;
-  final bool isGood;
 
   const _MetricTile({
     required this.label,
@@ -289,6 +285,10 @@ class _MetricTile extends StatelessWidget {
     required this.status,
     required this.isGood,
   });
+  final String label;
+  final String value;
+  final String status;
+  final bool isGood;
 
   @override
   Widget build(BuildContext context) {
@@ -301,12 +301,10 @@ class _MetricTile extends StatelessWidget {
         borderRadius: BorderRadius.circular(8),
         border: Border.all(
           color: isGood ? Colors.green.withOpacity(0.3) : Colors.orange.withOpacity(0.3),
-          width: 1,
         ),
       ),
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
-        crossAxisAlignment: CrossAxisAlignment.center,
         children: [
           Text(
             label,

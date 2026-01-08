@@ -22,7 +22,12 @@
     - **Core ML:** Ultralytics YOLO (Object Detection)
     - **Inference:** ONNX / PyTorch
 
-## 4. Infrastructure & DevOps
+## 4. AI & Machine Learning (Vision Pipeline)
+- **Primary Provider (Cloud):** Google Gemini 1.5 Flash (Multimodal)
+- **Secondary Provider (Local):** Ollama (LLaVA)
+- **Fallback:** Mock Adapter (Development)
+
+## 5. Infrastructure & DevOps
 - **Containerization:** Docker & Docker Compose
 - **Orchestration & IaC:** Terraform
 - **Deployment Strategy:** Production-grade build & deployment system (Custom/To be defined)

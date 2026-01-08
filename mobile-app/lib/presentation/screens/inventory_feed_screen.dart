@@ -31,7 +31,7 @@ class InventoryFeedScreen extends ConsumerWidget {
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Icon(
+                  const Icon(
                     Icons.inventory_2_outlined,
                     size: 80,
                     color: AppTheme.textTertiary,

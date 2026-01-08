@@ -55,8 +55,8 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/camera',
         name: 'camera',
-        pageBuilder: (context, state) => CustomTransitionPage(
-          child: const CameraCaptureScreen(),
+        pageBuilder: (context, state) => const CustomTransitionPage(
+          child: CameraCaptureScreen(),
           transitionsBuilder: _slideUpTransition,
         ),
       ),
@@ -96,8 +96,8 @@ final routerProvider = Provider<GoRouter>((ref) {
             );
           }
 
-          return CustomTransitionPage(
-            child: const Scaffold(
+          return const CustomTransitionPage(
+            child: Scaffold(
               body: Center(child: Text('Edit Labels - To be implemented')),
             ),
             transitionsBuilder: _slideLeftTransition,

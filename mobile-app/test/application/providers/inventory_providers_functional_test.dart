@@ -354,7 +354,7 @@ void main() {
         )).thenAnswer((_) async => 'item-id');
 
         // Act
-        for (int i = 0; i < 10; i++) {
+        for (var i = 0; i < 10; i++) {
           await mockRepository.addItem(
             label: 'item-$i',
             confidence: 0.85,

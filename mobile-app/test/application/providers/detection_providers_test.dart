@@ -104,7 +104,7 @@ void main() {
       'should pass correct image path to repository',
       () async {
         // Arrange
-        final imagePath = '/path/to/test_image.jpg';
+        const imagePath = '/path/to/test_image.jpg';
         final response = MockDataFactory.createDetectionResponse();
         when(() => mockRepository.detectObjects(imagePath)).thenAnswer(
           (_) async => response,
@@ -137,7 +137,7 @@ void main() {
       () async {
         // Arrange
         final detections = [
-          MockDataFactory.createDetection(confidence: 0.95),
+          MockDataFactory.createDetection(),
           MockDataFactory.createDetection(confidence: 0.92),
           MockDataFactory.createDetection(confidence: 0.88),
         ];
@@ -171,7 +171,7 @@ void main() {
       'should track selected detections',
       () async {
         // Arrange
-        final detection1 = MockDataFactory.createDetection(label: 'lamp');
+        final detection1 = MockDataFactory.createDetection();
         final detection2 = MockDataFactory.createDetection(label: 'chair');
 
         final container = ProviderContainer();
@@ -252,7 +252,7 @@ void main() {
       () async {
         // Arrange
         final detections = [
-          MockDataFactory.createDetection(confidence: 0.95),
+          MockDataFactory.createDetection(),
           MockDataFactory.createDetection(confidence: 0.70),
           MockDataFactory.createDetection(confidence: 0.50),
         ];
@@ -306,7 +306,7 @@ void main() {
         // Arrange
         final response1 = MockDataFactory.createDetectionResponse(
           detections: [
-            MockDataFactory.createDetection(label: 'lamp'),
+            MockDataFactory.createDetection(),
           ],
         );
         final response2 = MockDataFactory.createDetectionResponse(

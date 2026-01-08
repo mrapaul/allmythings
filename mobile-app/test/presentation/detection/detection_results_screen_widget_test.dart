@@ -47,7 +47,6 @@ void main() {
       (WidgetTester tester) async {
         // Arrange
         final detection = MockDataFactory.createDetection(
-          label: 'lamp',
           confidence: 0.95,
         );
         final response = MockDataFactory.createDetectionResponse(
@@ -304,9 +303,9 @@ void main() {
       (WidgetTester tester) async {
         // Arrange
         final detections = [
-          MockDataFactory.createDetection(label: 'chair', confidence: 0.95),
+          MockDataFactory.createDetection(label: 'chair'),
           MockDataFactory.createDetection(label: 'table', confidence: 0.80),
-          MockDataFactory.createDetection(label: 'lamp', confidence: 0.72),
+          MockDataFactory.createDetection(confidence: 0.72),
         ];
         final response = MockDataFactory.createDetectionResponse(
           detections: detections,

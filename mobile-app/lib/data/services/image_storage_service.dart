@@ -15,7 +15,7 @@ class ImageStorageService {
   static const String _originalsFolder = 'originals';
   static const String _thumbnailsFolder = 'thumbnails';
 
-  static final _uuid = Uuid();
+  static const _uuid = Uuid();
 
   /// Get the app's images directory
   static Future<Directory> _getImagesDir() async {
@@ -151,7 +151,7 @@ class ImageStorageService {
       );
 
       // Draw rectangle (4 lines)
-      final strokeWidth = 4;
+      const strokeWidth = 4;
 
       // Top line
       img.drawLine(sourceImage, x1: x, y1: y, x2: x + w, y2: y, color: boxColorObj, thickness: strokeWidth);
@@ -163,8 +163,8 @@ class ImageStorageService {
       img.drawLine(sourceImage, x1: x + w, y1: y, x2: x + w, y2: y + h, color: boxColorObj, thickness: strokeWidth);
 
       // Draw corner accents (thicker)
-      final cornerLength = 20;
-      final cornerWidth = 6;
+      const cornerLength = 20;
+      const cornerWidth = 6;
 
       // Top-left corner
       img.drawLine(sourceImage, x1: x, y1: y, x2: x + cornerLength, y2: y, color: boxColorObj, thickness: cornerWidth);

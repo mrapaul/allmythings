@@ -1,6 +1,6 @@
-import 'package:freezed_annotation/freezed_annotation.dart';
-import 'package:all_my_things/domain/models/vision_provider.dart';
 import 'package:all_my_things/core/converters/vision_provider_converter.dart';
+import 'package:all_my_things/domain/models/vision_provider.dart';
+import 'package:freezed_annotation/freezed_annotation.dart';
 
 part 'alternative_label.freezed.dart';
 part 'alternative_label.g.dart';

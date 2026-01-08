@@ -87,7 +87,7 @@ class _RoomsScreenState extends ConsumerState<RoomsScreen> {
         children: [
           // Stats header
           statsAsync.when(
-            data: (stats) => _buildStatsHeader(stats),
+            data: _buildStatsHeader,
             loading: () => const SizedBox.shrink(),
             error: (_, __) => const SizedBox.shrink(),
           ),

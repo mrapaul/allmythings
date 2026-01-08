@@ -1,6 +1,6 @@
 import 'package:drift/drift.dart';
-import 'inventory_items.dart';
-import 'categories.dart';
+import 'package:all_my_things/data/database/tables/inventory_items.dart';
+import 'package:all_my_things/data/database/tables/categories.dart';
 
 /// Junction table linking items to categories (many-to-many)
 @DataClassName('ItemCategory')

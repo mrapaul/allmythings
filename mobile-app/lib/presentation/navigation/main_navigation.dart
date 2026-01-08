@@ -1,6 +1,6 @@
 import 'package:all_my_things/presentation/camera/camera_capture_screen.dart';
-import 'package:all_my_things/presentation/screens/inventory_feed_screen.dart';
 import 'package:all_my_things/presentation/profile/profile_screen.dart';
+import 'package:all_my_things/presentation/screens/inventory_feed_screen.dart';
 import 'package:all_my_things/presentation/search/search_screen.dart';
 import 'package:all_my_things/presentation/theme/app_theme.dart';
 import 'package:flutter/material.dart';

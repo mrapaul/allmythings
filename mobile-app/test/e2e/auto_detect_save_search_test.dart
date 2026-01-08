@@ -14,16 +14,16 @@ import 'package:flutter_test/flutter_test.dart';
 // A lightweight, deterministic detector used only for automated tests.
 List<Detection> fakeDetectLivingRoomObjects() {
   return [
-    Detection(
+    const Detection(
       label: 'sofa',
       confidence: 0.95,
-      boundingBox: const BoundingBox(
+      boundingBox: BoundingBox(
         x: 0.15,
         y: 0.55,
         width: 0.6,
         height: 0.25,
       ),
-      ensembleDetails: const EnsembleDetails(
+      ensembleDetails: EnsembleDetails(
         providersUsed: 3,
         providerAgreement: 3,
         labelConsensus: 'sofa',
@@ -33,7 +33,7 @@ List<Detection> fakeDetectLivingRoomObjects() {
           VisionProvider.tensorflow: 0.94,
         },
       ),
-      alternativeLabels: const [
+      alternativeLabels: [
         AlternativeLabel(
           label: 'couch',
           confidence: 0.88,
@@ -62,16 +62,16 @@ List<Detection> fakeDetectLivingRoomObjects() {
       ),
       alternativeLabels: [],
     ),
-    Detection(
+    const Detection(
       label: 'armchair',
       confidence: 0.88,
-      boundingBox: const BoundingBox(
+      boundingBox: BoundingBox(
         x: 0.08,
         y: 0.62,
         width: 0.22,
         height: 0.22,
       ),
-      ensembleDetails: const EnsembleDetails(
+      ensembleDetails: EnsembleDetails(
         providersUsed: 3,
         providerAgreement: 2,
         labelConsensus: 'armchair',
@@ -81,7 +81,7 @@ List<Detection> fakeDetectLivingRoomObjects() {
           VisionProvider.tensorflow: 0.89,
         },
       ),
-      alternativeLabels: const [
+      alternativeLabels: [
         AlternativeLabel(
           label: 'chair',
           confidence: 0.80,

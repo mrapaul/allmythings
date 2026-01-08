@@ -132,7 +132,7 @@ void expectMinimumTouchTarget(Finder finder) {
 /// Helper to get widget size
 Size _getWidgetSize(Finder finder) {
   expect(finder, findsOneWidget);
-  final RenderBox renderBox = finder.evaluate().single.renderObject as RenderBox;
+  final renderBox = finder.evaluate().single.renderObject! as RenderBox;
   return renderBox.size;
 }
 
@@ -151,7 +151,7 @@ void expectAccessibilityEnabled(WidgetTester tester) {
 /// Helper to get widget offset
 Offset getWidgetOffset(Finder finder) {
   expect(finder, findsOneWidget);
-  final RenderBox renderBox = finder.evaluate().single.renderObject as RenderBox;
+  final renderBox = finder.evaluate().single.renderObject! as RenderBox;
   return renderBox.localToGlobal(Offset.zero);
 }
 

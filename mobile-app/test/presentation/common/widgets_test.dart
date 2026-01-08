@@ -131,7 +131,7 @@ void main() {
       'should handle long error messages',
       (WidgetTester tester) async {
         // Arrange
-        final longMessage =
+        const longMessage =
             'This is a very long error message that should wrap properly without overflow and maintain readability';
 
         // Act
@@ -194,11 +194,11 @@ void main() {
         // Act
         await tester.pumpWidget(
           createFullScreenTestWidget(
-            Scaffold(
-              appBar: const CustomAppBar(
+            const Scaffold(
+              appBar: CustomAppBar(
                 title: 'Details',
               ),
-              body: const SizedBox(),
+              body: SizedBox(),
             ),
           ),
         );
@@ -276,11 +276,11 @@ void main() {
         // Act
         await tester.pumpWidget(
           createFullScreenTestWidget(
-            Scaffold(
-              appBar: const CustomAppBar(
+            const Scaffold(
+              appBar: CustomAppBar(
                 title: 'Title',
               ),
-              body: const SizedBox(),
+              body: SizedBox(),
             ),
           ),
         );
@@ -297,11 +297,11 @@ void main() {
         // Act
         await tester.pumpWidget(
           createFullScreenTestWidget(
-            Scaffold(
-              appBar: const CustomAppBar(
+            const Scaffold(
+              appBar: CustomAppBar(
                 title: 'Accessible Title',
               ),
-              body: const SizedBox(),
+              body: SizedBox(),
             ),
           ),
         );
@@ -327,7 +327,7 @@ void main() {
               body: ListView(
                 children: [
                   Padding(
-                    padding: const EdgeInsets.all(16.0),
+                    padding: const EdgeInsets.all(16),
                     child: Column(
                       children: [
                         const LoadingIndicator(

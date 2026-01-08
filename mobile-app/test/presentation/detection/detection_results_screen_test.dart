@@ -30,7 +30,7 @@ const testEnsembleDetails = EnsembleDetails(
   },
 );
 
-final testDetection = Detection(
+const testDetection = Detection(
   id: '1',
   label: 'test',
   confidence: 0.9,

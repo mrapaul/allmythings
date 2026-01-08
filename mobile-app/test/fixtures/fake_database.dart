@@ -37,7 +37,7 @@ class FakeAppDatabase extends Mock implements AppDatabase {
     final newItem = item.copyWith(id: _nextItemId);
     _inventoryItems.add(newItem);
     _nextItemId++;
-    return newItem.id!;
+    return newItem.id;
   }
 
   /// Update an existing item
@@ -66,7 +66,7 @@ class FakeAppDatabase extends Mock implements AppDatabase {
     final newLabel = label.copyWith(id: _nextLabelId);
     _labels.add(newLabel);
     _nextLabelId++;
-    return newLabel.id!;
+    return newLabel.id;
   }
 
   /// Update label frequency

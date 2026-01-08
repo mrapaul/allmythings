@@ -358,7 +358,6 @@ void main() {
         final items = [
           MockDataFactory.createInventoryItem(
             id: 1,
-            label: 'lamp',
             location: 'bedroom',
           ),
         ];

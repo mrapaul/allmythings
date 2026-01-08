@@ -1,6 +1,7 @@
 /// Secure Storage Implementation
 /// Implements encrypted storage for sensitive data
 /// OWASP Mobile Security compliant
+library;
 
 import 'dart:convert';
 import 'dart:math';
@@ -74,7 +75,7 @@ class SecureStorageService {
     bool useAdditionalEncryption = true,
   }) async {
     try {
-      String dataToStore = value;
+      var dataToStore = value;
 
       if (useAdditionalEncryption) {
         // Add additional layer of encryption for highly sensitive data
@@ -175,7 +176,6 @@ class SecureStorageService {
     await write(
       key: 'auth_token',
       value: token,
-      useAdditionalEncryption: true,
     );
   }
 
@@ -183,7 +183,6 @@ class SecureStorageService {
   Future<String?> getAuthToken() async {
     return read(
       key: 'auth_token',
-      useAdditionalEncryption: true,
     );
   }
 
@@ -192,7 +191,6 @@ class SecureStorageService {
     await write(
       key: 'refresh_token',
       value: token,
-      useAdditionalEncryption: true,
     );
   }
 
@@ -200,7 +198,6 @@ class SecureStorageService {
   Future<String?> getRefreshToken() async {
     return read(
       key: 'refresh_token',
-      useAdditionalEncryption: true,
     );
   }
 
@@ -218,7 +215,6 @@ class SecureStorageService {
     await write(
       key: 'user_credentials',
       value: credentials,
-      useAdditionalEncryption: true,
     );
   }
 

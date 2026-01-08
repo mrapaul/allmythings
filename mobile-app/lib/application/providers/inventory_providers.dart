@@ -1,6 +1,6 @@
 import 'dart:io';
 // import '../../domain/models/detection_response.dart';
-import '../../domain/models/detection.dart';
+import 'package:all_my_things/domain/models/detection.dart';
 import 'package:all_my_things/application/providers/database_provider.dart';
 import 'package:all_my_things/data/database/app_database.dart';
 import 'package:all_my_things/data/remote/api_client.dart';

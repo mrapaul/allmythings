@@ -1,5 +1,5 @@
 import 'package:drift/drift.dart';
-import 'inventory_items.dart';
+import 'package:all_my_things/data/database/tables/inventory_items.dart';
 
 /// Table for tracking items pending sync to backend
 @DataClassName('SyncQueueItem')

@@ -143,7 +143,7 @@ class _CameraCaptureScreenState extends ConsumerState<CameraCaptureScreen> {
 
           // Quality Feedback Modal (overlay when photo is captured)
           if (_showQualityFeedback && _capturedImageFile != null)
-            Container(
+            ColoredBox(
               color: Colors.black.withValues(alpha: 0.3),
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -169,7 +169,6 @@ class _CameraCaptureScreenState extends ConsumerState<CameraCaptureScreen> {
                   QualityFeedbackWidget(
                     qualityMetrics: _qualityMetrics,
                     onRetry: _retryPhoto,
-                    isLoading: false,
                   ),
                   // Action buttons
                   Padding(

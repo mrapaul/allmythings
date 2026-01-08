@@ -116,7 +116,7 @@ final smartAlbumsProvider = FutureProvider<List<SmartAlbum>>((ref) async {
     (failure) => [],
     (items) {
       // Group items by their primary detected label
-      final Map<String, List<InventoryItem>> labelGroups = {};
+      final labelGroups = <String, List<InventoryItem>>{};
 
       for (final item in items) {
         final label = _extractPrimaryLabel(item.detectionData);

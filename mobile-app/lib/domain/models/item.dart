@@ -13,14 +13,10 @@ class Item with _$Item {
     /// Display name of the item
     required String name,
 
-    /// Optional description of the item
-    String? description,
-
     /// Path to the item's image/photo
-    required String imagePath,
-
-    /// List of labels/tags assigned to this item
-    required List<String> labels,
+    required String imagePath, /// List of labels/tags assigned to this item
+    required List<String> labels, /// Optional description of the item
+    String? description,
 
     /// Optional room type where item is located
     String? roomType,

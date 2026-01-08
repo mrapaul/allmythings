@@ -6,13 +6,6 @@ import 'package:flutter/services.dart';
 
 /// Result of a local on-device object detection
 class LocalDetection {
-  final String label;
-  final double confidence;
-  final double x;
-  final double y;
-  final double width;
-  final double height;
-  final Map<String, double>? normalizedBox;
 
   const LocalDetection({
     required this.label,
@@ -43,6 +36,13 @@ class LocalDetection {
           : null,
     );
   }
+  final String label;
+  final double confidence;
+  final double x;
+  final double y;
+  final double width;
+  final double height;
+  final Map<String, double>? normalizedBox;
 
   Map<String, dynamic> toJson() => {
         'label': label,
@@ -61,10 +61,6 @@ class LocalDetection {
 
 /// Model info returned from native
 class LocalModelInfo {
-  final String name;
-  final String type;
-  final int classes;
-  final bool isReady;
 
   const LocalModelInfo({
     required this.name,
@@ -79,6 +75,10 @@ class LocalModelInfo {
         classes: map['classes'] as int? ?? 0,
         isReady: map['isReady'] as bool? ?? false,
       );
+  final String name;
+  final String type;
+  final int classes;
+  final bool isReady;
 }
 
 /// Service for on-device object detection using platform-specific ML models
@@ -87,11 +87,11 @@ class LocalModelInfo {
 /// - CoreML (YOLO11n) on iOS
 /// - TFLite (YOLO11n) on Android
 class LocalDetectionService {
+
+  LocalDetectionService._();
   static const _channel = MethodChannel('com.allmythings/local_detector');
 
   static LocalDetectionService? _instance;
-
-  LocalDetectionService._();
 
   /// Singleton instance
   static LocalDetectionService get instance {
@@ -155,8 +155,8 @@ class LocalDetectionService {
 
       final result = await _channel.invokeMethod<List<Object?>>('detectFromPath', {
         'path': imageFile.path,
-        if (width != null) 'width': width,
-        if (height != null) 'height': height,
+        'width': ?width,
+        'height': ?height,
       });
 
       stopwatch.stop();
@@ -196,8 +196,8 @@ class LocalDetectionService {
 
       final result = await _channel.invokeMethod<List<Object?>>('detectFromData', {
         'data': imageData,
-        if (width != null) 'width': width,
-        if (height != null) 'height': height,
+        'width': ?width,
+        'height': ?height,
       });
 
       stopwatch.stop();

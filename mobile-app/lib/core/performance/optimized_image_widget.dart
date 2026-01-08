@@ -1,7 +1,6 @@
-/**
- * Optimized Image Widget
- * Memory-efficient image loading with caching and lazy loading
- */
+/// Optimized Image Widget
+/// Memory-efficient image loading with caching and lazy loading
+library;
 
 import 'dart:io';
 import 'package:cached_network_image/cached_network_image.dart';
@@ -61,8 +60,7 @@ class ImageConfig {
 /// Optimized image widget with memory management and caching
 class OptimizedImageWidget extends StatelessWidget {
   const OptimizedImageWidget({
-    super.key,
-    required this.imagePath,
+    required this.imagePath, super.key,
     this.width,
     this.height,
     this.fit = BoxFit.cover,
@@ -213,9 +211,7 @@ class OptimizedImageWidget extends StatelessWidget {
 /// Lazy loading image builder for lists
 class LazyImageBuilder extends StatefulWidget {
   const LazyImageBuilder({
-    super.key,
-    required this.imagePath,
-    required this.builder,
+    required this.imagePath, required this.builder, super.key,
     this.threshold = 200.0,
   });
 
@@ -251,9 +247,7 @@ class _LazyImageBuilderState extends State<LazyImageBuilder> {
 /// Simple visibility detector for lazy loading
 class VisibilityDetector extends StatefulWidget {
   const VisibilityDetector({
-    super.key,
-    required this.child,
-    required this.onVisibilityChanged,
+    required this.child, required this.onVisibilityChanged, super.key,
   });
 
   final Widget child;
@@ -276,7 +270,7 @@ class _VisibilityDetectorState extends State<VisibilityDetector> {
     // Simplified visibility check
     // In production, use the visibility_detector package
     widget.onVisibilityChanged(
-      VisibilityInfo(visibleFraction: 1.0),
+      const VisibilityInfo(visibleFraction: 1),
     );
   }
 

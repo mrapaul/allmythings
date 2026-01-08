@@ -1,0 +1,8 @@
+{
+  "track_id": "cleanup_repo_20260107",
+  "type": "chore",
+  "status": "new",
+  "created_at": "2026-01-07T21:40:00Z",
+  "updated_at": "2026-01-07T21:40:00Z",
+  "description": "Chore to cleanup all dead, unused, orphaned code. consolidate all .md files (minus gemini, claude, readme) and delete the rest and update those 3 files accordingly."
+}

@@ -1,8 +1,7 @@
+import 'package:all_my_things/presentation/camera/camera_capture_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:all_my_things/presentation/camera/camera_capture_screen.dart';
-import 'package:mockito/mockito.dart';
 
 void main() {
   group('CameraCaptureScreen', () {

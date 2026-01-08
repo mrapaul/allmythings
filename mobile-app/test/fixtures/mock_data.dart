@@ -161,14 +161,14 @@ class MockDataFactory {
   static Detection createDetectionAtBoundary() {
     return createDetection(
       label: 'edge_object',
-      boundingBox: createBoundingBox(x: 0.0, y: 0.0, width: 0.1, height: 0.1),
+      boundingBox: createBoundingBox(x: 0, y: 0, width: 0.1, height: 0.1),
     );
   }
 
   static Detection createDetectionFullWidth() {
     return createDetection(
       label: 'wide_object',
-      boundingBox: createBoundingBox(x: 0.0, y: 0.3, width: 1.0, height: 0.4),
+      boundingBox: createBoundingBox(x: 0, y: 0.3, width: 1),
     );
   }
 
@@ -176,7 +176,7 @@ class MockDataFactory {
   static DetectionResponse createDetectionResponseWithMultipleObjects() {
     return createDetectionResponse(
       detections: [
-        createDetection(label: 'lamp', confidence: 0.95),
+        createDetection(confidence: 0.95),
         createDetection(label: 'chair', confidence: 0.92),
         createDetection(label: 'table', confidence: 0.88),
       ],

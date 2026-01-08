@@ -11,7 +11,7 @@ void main() {
         final detection = Detection(
           object: 'couch',
           confidence: 0.95,
-          boundingBox: BoundingBox(top: 0.1, left: 0.1, bottom: 0.5, right: 0.5),
+          boundingBox: const BoundingBox(top: 0.1, left: 0.1, bottom: 0.5, right: 0.5),
         );
 
         expect(detection.object, equals('couch'));
@@ -32,8 +32,8 @@ void main() {
 
       test('creates Detection with alternative labels', () {
         final labels = [
-          AlternativeLabel(name: 'sofa', confidence: 0.92),
-          AlternativeLabel(name: 'settee', confidence: 0.88),
+          const AlternativeLabel(name: 'sofa', confidence: 0.92),
+          const AlternativeLabel(name: 'settee', confidence: 0.88),
         ];
         final detection = Detection(
           object: 'couch',
@@ -42,7 +42,7 @@ void main() {
         );
 
         expect(detection.alternativeLabels, equals(labels));
-        expect(detection.alternativeLabels!.length, equals(2));
+        expect(detection.alternativeLabels.length, equals(2));
       });
     });
 
@@ -58,7 +58,7 @@ void main() {
       test('accepts confidence of 0', () {
         final detection = Detection(
           object: 'item',
-          confidence: 0.0,
+          confidence: 0,
         );
         expect(detection.confidence, equals(0.0));
       });
@@ -66,7 +66,7 @@ void main() {
       test('accepts confidence of 1', () {
         final detection = Detection(
           object: 'item',
-          confidence: 1.0,
+          confidence: 1,
         );
         expect(detection.confidence, equals(1.0));
       });
@@ -102,7 +102,7 @@ void main() {
   group('BoundingBox Model Tests', () {
     group('BoundingBox Creation', () {
       test('creates valid BoundingBox', () {
-        final box = BoundingBox(
+        const box = BoundingBox(
           top: 0.1,
           left: 0.2,
           bottom: 0.7,
@@ -116,7 +116,7 @@ void main() {
       });
 
       test('allows edge coordinates', () {
-        final box = BoundingBox(
+        const box = BoundingBox(
           top: 0.0,
           left: 0.0,
           bottom: 1.0,
@@ -132,7 +132,7 @@ void main() {
 
     group('BoundingBox Validation', () {
       test('creates box with reasonable proportions', () {
-        final box = BoundingBox(
+        const box = BoundingBox(
           top: 0.25,
           left: 0.25,
           bottom: 0.75,
@@ -150,7 +150,7 @@ void main() {
 
   group('AlternativeLabel Model Tests', () {
     test('creates AlternativeLabel with name and confidence', () {
-      final label = AlternativeLabel(
+      const label = AlternativeLabel(
         name: 'sofa',
         confidence: 0.92,
       );
@@ -161,9 +161,9 @@ void main() {
 
     test('handles multiple alternative labels', () {
       final labels = [
-        AlternativeLabel(name: 'sofa', confidence: 0.92),
-        AlternativeLabel(name: 'couch', confidence: 0.90),
-        AlternativeLabel(name: 'settee', confidence: 0.88),
+        const AlternativeLabel(name: 'sofa', confidence: 0.92),
+        const AlternativeLabel(name: 'couch', confidence: 0.90),
+        const AlternativeLabel(name: 'settee', confidence: 0.88),
       ];
 
       expect(labels.length, equals(3));
@@ -173,9 +173,9 @@ void main() {
 
     test('sorts labels by confidence descending', () {
       final labels = [
-        AlternativeLabel(name: 'item1', confidence: 0.7),
-        AlternativeLabel(name: 'item2', confidence: 0.9),
-        AlternativeLabel(name: 'item3', confidence: 0.8),
+        const AlternativeLabel(name: 'item1', confidence: 0.7),
+        const AlternativeLabel(name: 'item2', confidence: 0.9),
+        const AlternativeLabel(name: 'item3', confidence: 0.8),
       ];
 
       labels.sort((a, b) => b.confidence.compareTo(a.confidence));
@@ -188,7 +188,7 @@ void main() {
 
   group('EnsembleDetails Model Tests', () {
     test('creates EnsembleDetails with provider results', () {
-      final ensemble = EnsembleDetails(
+      const ensemble = EnsembleDetails(
         primaryProvider: 'google',
         secondaryProvider: 'aws',
         confidenceScore: 0.88,
@@ -200,7 +200,7 @@ void main() {
     });
 
     test('handles null secondary provider', () {
-      final ensemble = EnsembleDetails(
+      const ensemble = EnsembleDetails(
         primaryProvider: 'google',
         confidenceScore: 0.85,
       );
@@ -216,7 +216,7 @@ void main() {
       final original = Detection(
         object: 'chair',
         confidence: 0.92,
-        boundingBox: BoundingBox(
+        boundingBox: const BoundingBox(
           top: 0.1,
           left: 0.1,
           bottom: 0.6,
@@ -233,11 +233,11 @@ void main() {
 
       expect(serialized.object, equals(original.object));
       expect(serialized.confidence, equals(original.confidence));
-      expect(serialized.boundingBox?.top, equals(original.boundingBox?.top));
+      expect(serialized.boundingBox.top, equals(original.boundingBox.top));
     });
 
     test('BoundingBox serialization round-trip', () {
-      final original = BoundingBox(
+      const original = BoundingBox(
         top: 0.15,
         left: 0.20,
         bottom: 0.65,
@@ -289,7 +289,7 @@ void main() {
 
   group('Null Safety Tests', () {
     test('Detection handles null alternative labels', () {
-      final detection = Detection(
+      const detection = Detection(
         object: 'lamp',
         confidence: 0.90,
         alternativeLabels: null,
@@ -299,7 +299,7 @@ void main() {
     });
 
     test('Detection handles empty alternative labels list', () {
-      final detection = Detection(
+      const detection = Detection(
         object: 'lamp',
         confidence: 0.90,
         alternativeLabels: [],
@@ -309,7 +309,7 @@ void main() {
     });
 
     test('EnsembleDetails handles null values gracefully', () {
-      final ensemble = EnsembleDetails(
+      const ensemble = EnsembleDetails(
         primaryProvider: 'google',
         confidenceScore: 0.85,
       );
@@ -330,7 +330,7 @@ void main() {
 
     test('collection types are preserved', () {
       final labels = [
-        AlternativeLabel(name: 'label1', confidence: 0.9),
+        const AlternativeLabel(name: 'label1', confidence: 0.9),
       ];
       final detection = Detection(
         object: 'item',

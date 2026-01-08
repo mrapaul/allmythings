@@ -96,7 +96,6 @@ class SmartAlbumDetailScreen extends ConsumerWidget {
                       crossAxisCount: 4,
                       crossAxisSpacing: 1,
                       mainAxisSpacing: 1,
-                      childAspectRatio: 1.0,
                     ),
                     delegate: SliverChildBuilderDelegate(
                       (context, index) {
@@ -127,14 +126,13 @@ class _SmartAlbumItemTile extends StatelessWidget {
   Widget build(BuildContext context) {
     return GestureDetector(
       onTap: () => context.push('/item/${item.id}'),
-      child: Container(
+      child: ColoredBox(
         color: Colors.grey.shade100,
         child: Stack(
           fit: StackFit.expand,
           children: [
             // Thumbnail
-            item.thumbnailPath.isNotEmpty
-                ? Image.file(
+            if (item.thumbnailPath.isNotEmpty) Image.file(
                     File(item.thumbnailPath),
                     fit: BoxFit.cover,
                     errorBuilder: (context, error, stackTrace) {
@@ -144,8 +142,7 @@ class _SmartAlbumItemTile extends StatelessWidget {
                             const Icon(Icons.broken_image, color: Colors.grey),
                       );
                     },
-                  )
-                : Container(
+                  ) else Container(
                     color: Colors.grey.shade200,
                     child: const Icon(Icons.image, color: Colors.grey),
                   ),

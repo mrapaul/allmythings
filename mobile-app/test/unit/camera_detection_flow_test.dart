@@ -24,7 +24,7 @@ void main() {
     });
 
     test('CameraControllerState initializes with correct defaults', () {
-      final state = const CameraControllerState();
+      const state = CameraControllerState();
 
       expect(state.controller, isNull);
       expect(state.isInitialized, isFalse);
@@ -32,10 +32,8 @@ void main() {
     });
 
     test('CameraControllerState.copyWith creates new instance', () {
-      final state1 = const CameraControllerState(
-        controller: null,
+      const state1 = CameraControllerState(
         isInitialized: false,
-        error: null,
       );
 
       final state2 = state1.copyWith(error: 'Test error');
@@ -46,10 +44,8 @@ void main() {
     });
 
     test('CameraControllerState.copyWith preserves unchanged fields', () {
-      final state1 = const CameraControllerState(
-        controller: null,
+      const state1 = CameraControllerState(
         isInitialized: false,
-        error: null,
       );
 
       final state2 = state1.copyWith(error: 'Error');

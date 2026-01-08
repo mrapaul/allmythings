@@ -134,7 +134,7 @@ class ItemDetailScreen extends ConsumerWidget {
       ),
     );
 
-    if (confirmed == true && context.mounted) {
+    if ((confirmed ?? false) && context.mounted) {
       final repositoryAsync = ref.read(inventoryRepositoryProvider);
       final repository = await repositoryAsync.when(
         data: (repo) async => repo,

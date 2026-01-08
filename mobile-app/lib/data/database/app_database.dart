@@ -190,7 +190,7 @@ class AppDatabase extends _$AppDatabase {
 
     final itemIds = matchingLabels.map((l) => l.itemId).toSet().toList();
 
-    return await (select(inventoryItems)
+    return (select(inventoryItems)
           ..where((t) => t.id.isIn(itemIds))
           ..orderBy([(t) => OrderingTerm.desc(t.createdAt)]))
         .get();
@@ -202,7 +202,7 @@ class AppDatabase extends _$AppDatabase {
 
   /// Get all categories
   Future<List<Category>> getAllCategories() async {
-    return await (select(categories)..orderBy([(t) => OrderingTerm.asc(t.name)]))
+    return (select(categories)..orderBy([(t) => OrderingTerm.asc(t.name)]))
         .get();
   }
 
@@ -245,14 +245,14 @@ class AppDatabase extends _$AppDatabase {
 
   /// Get pending sync items
   Future<List<SyncQueueItem>> getPendingSyncItems() async {
-    return await (select(syncQueue)
+    return (select(syncQueue)
           ..orderBy([(t) => OrderingTerm.asc(t.queuedAt)]))
         .get();
   }
 
   /// Add item to sync queue
   Future<int> addToSyncQueue(int itemId, String operation) async {
-    return await into(syncQueue).insert(
+    return into(syncQueue).insert(
       SyncQueueCompanion.insert(
         itemId: itemId,
         operation: operation,

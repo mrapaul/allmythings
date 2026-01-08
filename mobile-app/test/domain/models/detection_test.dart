@@ -12,7 +12,6 @@ void main() {
     ensembleDetails: EnsembleDetails(
       providerAgreement: [],
       labelConsensus: false,
-      confidenceByProvider: {},
     ),
     alternativeLabels: [],
   );

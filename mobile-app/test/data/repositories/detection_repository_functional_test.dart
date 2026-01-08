@@ -67,7 +67,7 @@ void main() {
         // Arrange
         final testImageFile = File('test_assets/test_image.jpg');
         when(mockApiClient.detectObjects(any))
-            .thenThrow(SocketException('Connection timeout'));
+            .thenThrow(const SocketException('Connection timeout'));
 
         // Act & Assert
         expect(
@@ -139,7 +139,7 @@ void main() {
       test('preserves confidence precision', () async {
         // Arrange
         final testImageFile = File('test_assets/test_image.jpg');
-        final preciseConfidence = 0.8734567;
+        const preciseConfidence = 0.8734567;
         final detections = [
           Detection(object: 'item', confidence: preciseConfidence),
         ];
@@ -243,7 +243,7 @@ void main() {
             .thenAnswer((_) async => detections);
 
         // Act
-        for (int i = 0; i < 5; i++) {
+        for (var i = 0; i < 5; i++) {
           final result = await repository.detectFromFile(testImageFile);
           expect(result, equals(detections));
         }

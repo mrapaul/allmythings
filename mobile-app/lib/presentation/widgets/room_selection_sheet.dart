@@ -140,7 +140,7 @@ class _RoomSelectionSheetState extends ConsumerState<RoomSelectionSheet> {
                   child: Column(
                     children: [
                       // Existing rooms
-                      ...rooms.map((room) => _buildRoomTile(room)),
+                      ...rooms.map(_buildRoomTile),
 
                       // New room input
                       if (_showNewRoomInput)
