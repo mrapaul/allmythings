@@ -7,12 +7,12 @@
 - [x] Task: Delete all `.md` files except for the core three (`README.md`, `GEMINI.md`, `CLAUDE.md`).
 - [x] Task: Conductor - User Manual Verification 'Documentation Consolidation' (Protocol in workflow.md) [0871827]
 
-## Phase 2: Code and Script Cleanup [checkpoint: pending]
+## Phase 2: Code and Script Cleanup [checkpoint: c1a9608]
 - [x] Task: Delete `guardian-service/` directory and any other orphaned service folders.
 - [x] Task: Identify and remove unused root scripts (e.g., old orchestration logs, one-off python scripts not used in the main pipeline).
 - [x] Task: Perform a recursive scan of `api-service/src` and `mobile-app/lib` to remove orphaned files or commented-out code blocks.
 - [x] Task: Delete experimental or legacy test files (keeping only Unit and E2E tests applicable to current functionality).
-- [ ] Task: Conductor - User Manual Verification 'Code and Script Cleanup' (Protocol in workflow.md)
+- [x] Task: Conductor - User Manual Verification 'Code and Script Cleanup' (Protocol in workflow.md) [c1a9608]
 
 ## Phase 3: Final Verification [checkpoint: pending]
 - [ ] Task: Run `make build` or equivalent to ensure the application still builds correctly.
