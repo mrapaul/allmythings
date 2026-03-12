@@ -8,13 +8,11 @@ export class OllamaClassifier implements ObjectClassifier {
   private readonly baseUrl: string;
   private readonly ollamaModel: string;
   private readonly timeoutMs: number;
-  private readonly minConfidence: number;
 
   constructor(config: EnvConfig) {
     this.baseUrl = config.ollamaBaseUrl;
     this.ollamaModel = config.ollamaModel;
     this.timeoutMs = config.classificationTimeoutMs;
-    this.minConfidence = config.classificationMinConfidence;
   }
 
   async classify(image: Buffer, detections: BoundingBoxResult[]): Promise<ClassifiedObject[]> {
@@ -38,7 +36,7 @@ export class OllamaClassifier implements ObjectClassifier {
       throw new Error(`Ollama returned ${response.status}`);
     }
 
-    const data = await response.json();
+    const data: any = await response.json();
     const text = data.response || '';
     const json = this.extractJson(text);
     const parsed = JSON.parse(json);

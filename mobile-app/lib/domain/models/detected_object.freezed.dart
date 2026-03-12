@@ -15,10 +15,6 @@ T _$identity<T>(T value) => value;
 /// @nodoc
 mixin _$DetectedObject {
 
-// Note: The TypeScript API maps snake_case VLM output to camelCase
-// before sending to mobile. These @JsonKey annotations match what
-// the API actually sends (camelCase). If the API sends snake_case
-// in the future, update these annotations accordingly.
  int get boxIndex; String get label; String get category; double get confidence; BoundingBox get boundingBox; String? get brand; String? get model; List<String> get colors; List<String> get materials; String? get condition; ValueRange? get estimatedValue; String? get description;
 /// Create a copy of DetectedObject
 /// with the given fields replaced by the non-null parameter values.
@@ -248,10 +244,6 @@ class _DetectedObject implements DetectedObject {
   const _DetectedObject({required this.boxIndex, required this.label, required this.category, required this.confidence, required this.boundingBox, this.brand, this.model, final  List<String> colors = const [], final  List<String> materials = const [], this.condition, this.estimatedValue, this.description}): _colors = colors,_materials = materials;
   factory _DetectedObject.fromJson(Map<String, dynamic> json) => _$DetectedObjectFromJson(json);
 
-// Note: The TypeScript API maps snake_case VLM output to camelCase
-// before sending to mobile. These @JsonKey annotations match what
-// the API actually sends (camelCase). If the API sends snake_case
-// in the future, update these annotations accordingly.
 @override final  int boxIndex;
 @override final  String label;
 @override final  String category;

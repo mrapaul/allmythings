@@ -175,7 +175,7 @@ class ProfileScreen extends ConsumerWidget {
   }
 
   void _showHelpDialog(BuildContext context) {
-    showDialog(
+    showDialog<void>(
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('How to Use'),

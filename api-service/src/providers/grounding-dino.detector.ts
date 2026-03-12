@@ -39,7 +39,7 @@ export class GroundingDinoDetector implements ObjectDetector {
         throw new Error(`Detection service returned ${response.status}: ${response.statusText}`);
       }
 
-      const data = await response.json();
+      const data: any = await response.json();
       logger.debug({ count: data.detections?.length }, 'GroundingDinoDetector: received detections');
 
       return (data.detections || []).map((d: any) => ({

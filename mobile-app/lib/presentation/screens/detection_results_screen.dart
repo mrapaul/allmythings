@@ -2,6 +2,7 @@ import 'dart:io';
 
 import 'package:all_my_things/application/providers/detection_providers.dart';
 import 'package:all_my_things/application/providers/inventory_providers.dart';
+import 'package:all_my_things/application/providers/service_providers.dart';
 import 'package:all_my_things/application/state/detection_state.dart';
 import 'package:all_my_things/domain/models/detected_object.dart';
 import 'package:all_my_things/presentation/widgets/detection_box.dart';
@@ -63,13 +64,22 @@ class _DetectionResultsScreenState
     setState(() => _isSaving = true);
 
     try {
-      final notifier = ref.read(inventoryItemsProvider.notifier);
+      final inventoryNotifier = ref.read(inventoryItemsProvider.notifier);
+      final imageService = ref.read(imageProcessingServiceProvider);
 
       for (final index in _selectedIndices) {
-        await notifier.saveDetection(
+        final detection = detections[index];
+        
+        // Generate a cropped thumbnail for the specific detection
+        final thumbnailFile = await imageService.generateThumbnail(
+          widget.imageFile,
+          detection.boundingBox,
+        );
+
+        await inventoryNotifier.saveDetection(
           photoPath: widget.imageFile.path,
-          thumbnailPath: widget.imageFile.path,
-          detection: detections[index],
+          thumbnailPath: thumbnailFile.path,
+          detection: detection,
         );
       }
 
@@ -169,7 +179,6 @@ class _DetectionResultsScreenState
               ],
             ),
           ),
-        _ => const Center(child: CircularProgressIndicator()),
       },
     );
   }

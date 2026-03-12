@@ -5,12 +5,8 @@ part 'detected_object.freezed.dart';
 part 'detected_object.g.dart';
 
 @freezed
-class DetectedObject with _$DetectedObject {
+abstract class DetectedObject with _$DetectedObject {
   const factory DetectedObject({
-    // Note: The TypeScript API maps snake_case VLM output to camelCase
-    // before sending to mobile. These @JsonKey annotations match what
-    // the API actually sends (camelCase). If the API sends snake_case
-    // in the future, update these annotations accordingly.
     required int boxIndex,
     required String label,
     required String category,
@@ -30,7 +26,7 @@ class DetectedObject with _$DetectedObject {
 }
 
 @freezed
-class BoundingBox with _$BoundingBox {
+abstract class BoundingBox with _$BoundingBox {
   const factory BoundingBox({
     required double x,
     required double y,
@@ -43,7 +39,7 @@ class BoundingBox with _$BoundingBox {
 }
 
 @freezed
-class ValueRange with _$ValueRange {
+abstract class ValueRange with _$ValueRange {
   const factory ValueRange({
     required double low,
     required double high,

@@ -7,12 +7,10 @@ import { logger } from '../utils/logger';
 export class GeminiClassifier implements ObjectClassifier {
   readonly name = 'gemini';
   private model: any;
-  private minConfidence: number;
 
   constructor(config: EnvConfig) {
     const genAI = new GoogleGenerativeAI(config.geminiApiKey);
     this.model = genAI.getGenerativeModel({ model: config.geminiModel });
-    this.minConfidence = config.classificationMinConfidence;
   }
 
   async classify(image: Buffer, detections: BoundingBoxResult[]): Promise<ClassifiedObject[]> {

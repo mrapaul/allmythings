@@ -5,7 +5,7 @@ part 'inventory_item.freezed.dart';
 part 'inventory_item.g.dart';
 
 @freezed
-class InventoryItem with _$InventoryItem {
+abstract class InventoryItem with _$InventoryItem {
   const factory InventoryItem({
     required int id,
     required String photoPath,
@@ -20,7 +20,7 @@ class InventoryItem with _$InventoryItem {
 }
 
 @freezed
-class ItemLabel with _$ItemLabel {
+abstract class ItemLabel with _$ItemLabel {
   const factory ItemLabel({
     required int id,
     required int itemId,

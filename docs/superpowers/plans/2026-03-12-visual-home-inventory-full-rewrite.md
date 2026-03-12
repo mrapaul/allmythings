@@ -1167,36 +1167,204 @@ from mixed text output. Supports Ollama-only mode."
 
 - [ ] **Step 1: Write the failing test**
 
-Test should verify:
-- Happy path: Stage 1 detection → Stage 2 classification → combined result
-- Detector fallback: primary fails → secondary succeeds
-- Classifier fallback: primary fails → secondary succeeds
-- Circuit breaker: after 3 failures, primary is skipped
-- Zero detections: returns empty array without calling classifier
-- All providers fail: throws ServiceUnavailableError
-- Ollama-only mode: when all detectors fail, sends full image to classifier with empty detections
+```typescript
+// api-service/src/__tests__/unit/detection-pipeline.service.test.ts
+import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { DetectionPipelineService } from '../../services/detection-pipeline.service';
+import { ObjectDetector, BoundingBoxResult } from '../../providers/detector.interface';
+import { ObjectClassifier, ClassifiedObject } from '../../providers/classifier.interface';
+import { ServiceUnavailableError } from '../../utils/errors';
 
-Use mock implementations of ObjectDetector and ObjectClassifier interfaces.
+describe('DetectionPipelineService', () => {
+  let service: DetectionPipelineService;
+  let mockDetector: ObjectDetector;
+  let mockClassifier: ObjectClassifier;
+  const config = {
+    detectionServiceUrl: 'http://localhost:8001',
+    geminiApiKey: 'test-key',
+    ollamaEnabled: false,
+  } as any;
+
+  beforeEach(() => {
+    mockDetector = {
+      name: 'test-detector',
+      detect: vi.fn(),
+      healthCheck: vi.fn().mockResolvedValue(true),
+    };
+    mockClassifier = {
+      name: 'test-classifier',
+      classify: vi.fn(),
+      healthCheck: vi.fn().mockResolvedValue(true),
+    };
+    service = new DetectionPipelineService(config);
+    // Inject mocks into the private arrays for testing
+    (service as any).detectors = [{ provider: mockDetector, breaker: { isOpen: () => false, execute: (fn: any) => fn() } }];
+    (service as any).classifiers = [{ provider: mockClassifier, breaker: { isOpen: () => false, execute: (fn: any) => fn() } }];
+  });
+
+  it('should run full pipeline: detect -> classify', async () => {
+    const boxes: BoundingBoxResult[] = [{ box: { x: 0, y: 0, width: 1, height: 1 }, coarseLabel: 'obj', confidence: 0.9 }];
+    const objects: ClassifiedObject[] = [{ boxIndex: 0, label: 'item', category: 'cat', brand: null, model: null, colors: [], materials: [], condition: null, estimatedValue: null, description: null, confidence: 0.9, boundingBox: boxes[0].box }];
+    
+    (mockDetector.detect as any).mockResolvedValue(boxes);
+    (mockClassifier.classify as any).mockResolvedValue(objects);
+
+    const result = await service.detect(Buffer.from('img'));
+
+    expect(result.detections).toHaveLength(1);
+    expect(mockDetector.detect).toHaveBeenCalled();
+    expect(mockClassifier.classify).toHaveBeenCalledWith(expect.any(Buffer), boxes);
+  });
+
+  it('should fallback to secondary detector if primary fails', async () => {
+    const secondaryDetector = { name: 'secondary', detect: vi.fn().mockResolvedValue([]), healthCheck: vi.fn() };
+    (service as any).detectors.push({ provider: secondaryDetector, breaker: { isOpen: () => false, execute: (fn: any) => fn() } });
+    
+    (mockDetector.detect as any).mockRejectedValue(new Error('fail'));
+
+    await service.detect(Buffer.from('img'));
+
+    expect(secondaryDetector.detect).toHaveBeenCalled();
+  });
+
+  it('should throw ServiceUnavailableError if all providers fail', async () => {
+    (mockDetector.detect as any).mockRejectedValue(new Error('fail'));
+    await expect(service.detect(Buffer.from('img'))).rejects.toThrow(ServiceUnavailableError);
+  });
+});
+```
 
 - [ ] **Step 2: Run test to verify it fails**
 
+Run: `cd api-service && npx vitest run src/__tests__/unit/detection-pipeline.service.test.ts`
+Expected: FAIL (module not found)
+
 - [ ] **Step 3: Implement DetectionPipelineService**
 
-Follow the spec in Section 4.4. Use the existing `CircuitBreaker` class from `utils/circuit-breaker.ts`. Constructor takes `EnvConfig` and instantiates detectors/classifiers. The `runWithFallback` method iterates providers, skips open circuits, catches errors, logs warnings.
+```typescript
+// api-service/src/services/detection-pipeline.service.ts
+import { EnvConfig } from '../config/env.config';
+import { ObjectDetector, BoundingBoxResult } from '../providers/detector.interface';
+import { ObjectClassifier, ClassifiedObject } from '../providers/classifier.interface';
+import { GroundingDinoDetector } from '../providers/grounding-dino.detector';
+import { GoogleVisionDetector } from '../providers/google-vision.detector';
+import { GeminiClassifier } from '../providers/gemini.classifier';
+import { OllamaClassifier } from '../providers/ollama.classifier';
+import { CircuitBreaker } from '../utils/circuit-breaker';
+import { ServiceUnavailableError } from '../utils/errors';
+import { logger } from '../utils/logger';
 
-Ollama-only mode: If all detectors throw but a classifier is available, catch the `ServiceUnavailableError` from `detectWithFallback` and call `classifyWithFallback(imageBuffer, [])` — the classifier uses its full-image prompt when detections is empty.
+export interface DetectionResponse {
+  detections: ClassifiedObject[];
+  processingTimeMs: number;
+  detector?: string;
+  classifier?: string;
+}
+
+export class DetectionPipelineService {
+  private detectors: { provider: ObjectDetector; breaker: CircuitBreaker }[];
+  private classifiers: { provider: ObjectClassifier; breaker: CircuitBreaker }[];
+  private lastUsedDetector?: string;
+  private lastUsedClassifier?: string;
+
+  constructor(config: EnvConfig) {
+    const breakerOpts = { failureThreshold: 3, resetTimeoutMs: 60_000 };
+
+    this.detectors = [
+      { provider: new GroundingDinoDetector(config), breaker: new CircuitBreaker(breakerOpts) },
+      { provider: new GoogleVisionDetector(config), breaker: new CircuitBreaker(breakerOpts) },
+    ];
+
+    this.classifiers = [
+      { provider: new GeminiClassifier(config), breaker: new CircuitBreaker(breakerOpts) },
+      { provider: new OllamaClassifier(config), breaker: new CircuitBreaker(breakerOpts) },
+    ];
+  }
+
+  async detect(imageBuffer: Buffer): Promise<DetectionResponse> {
+    const startTime = Date.now();
+    this.lastUsedDetector = undefined;
+    this.lastUsedClassifier = undefined;
+
+    let boxes: BoundingBoxResult[] = [];
+    try {
+      boxes = await this.runWithFallback(
+        this.detectors,
+        (d) => d.detect(imageBuffer),
+        'detection'
+      );
+    } catch (error) {
+      if (error instanceof ServiceUnavailableError) {
+        logger.warn('All detectors failed, attempting Ollama-only mode if available');
+        // Fall through to classifier with empty boxes (Ollama-only mode)
+      } else {
+        throw error;
+      }
+    }
+
+    if (boxes.length === 0 && this.detectors.every(d => !d.breaker.isOpen())) {
+        // If we actually ran detectors and they found nothing, return empty
+        return { detections: [], processingTimeMs: Date.now() - startTime };
+    }
+
+    const classified = await this.runWithFallback(
+      this.classifiers,
+      (c) => c.classify(imageBuffer, boxes),
+      'classification'
+    );
+
+    return {
+      detections: classified,
+      processingTimeMs: Date.now() - startTime,
+      detector: this.lastUsedDetector,
+      classifier: this.lastUsedClassifier,
+    };
+  }
+
+  private async runWithFallback<P, R>(
+    providers: { provider: P; breaker: CircuitBreaker }[],
+    fn: (provider: P) => Promise<R>,
+    stage: string
+  ): Promise<R> {
+    for (const { provider, breaker } of providers) {
+      const name = (provider as any).name;
+      if (breaker.isOpen()) {
+        logger.info({ provider: name }, `${stage} circuit open, skipping`);
+        continue;
+      }
+
+      try {
+        const result = await breaker.execute(() => fn(provider));
+        if (stage === 'detection') this.lastUsedDetector = name;
+        else this.lastUsedClassifier = name;
+        return result;
+      } catch (error) {
+        logger.warn({ provider: name, error }, `${stage} failed, trying next`);
+      }
+    }
+    throw new ServiceUnavailableError(`All ${stage} providers unavailable`);
+  }
+
+  async getHealth() {
+    const health: Record<string, boolean> = {};
+    for (const { provider } of [...this.detectors, ...this.classifiers]) {
+        health[(provider as any).name] = await (provider as any).healthCheck();
+    }
+    return health;
+  }
+}
+```
 
 - [ ] **Step 4: Run test to verify it passes**
+
+Run: `cd api-service && npx vitest run src/__tests__/unit/detection-pipeline.service.test.ts`
+Expected: PASS
 
 - [ ] **Step 5: Commit**
 
 ```bash
 git add api-service/src/services/detection-pipeline.service.ts api-service/src/__tests__/unit/detection-pipeline.service.test.ts
-git commit -m "feat(api): implement DetectionPipelineService with circuit breakers
-
-Two-stage pipeline: detect → classify with fallback chain and circuit
-breakers per provider. Supports Ollama-only mode when no detector
-is available."
+git commit -m "feat(api): implement DetectionPipelineService with circuit breakers"
 ```
 
 ### Task 11: Write integration test fixtures and route tests (TDD — tests first)
@@ -1323,7 +1491,7 @@ for detect and health endpoints (will fail until routes implemented)."
 - [ ] **Step 1: Verify circuit breaker utility exists**
 
 Run: `ls -la api-service/src/utils/circuit-breaker.ts`
-Expected: file exists. If not, create it from the existing implementation.
+Expected: file exists.
 
 - [ ] **Step 2: Rewrite detection.schema.ts**
 
@@ -1358,11 +1526,6 @@ export const DetectionResponseSchema = z.object({
   processingTimeMs: z.number(),
   detector: z.string().optional(),
   classifier: z.string().optional(),
-  imageQuality: z.object({
-    blur: z.number(),
-    brightness: z.number(),
-    contrast: z.number(),
-  }).optional(),
 });
 
 export type DetectionResponse = z.infer<typeof DetectionResponseSchema>;
@@ -1370,30 +1533,146 @@ export type DetectionResponse = z.infer<typeof DetectionResponseSchema>;
 
 - [ ] **Step 3: Rewrite detect.route.ts**
 
-Simplified route handler:
-1. Parse multipart file upload
-2. Validate image (size <= 10MB, supported format)
-3. Run image quality analysis (reuse existing `image-quality.service.ts`)
-4. Call `DetectionPipelineService.detect(imageBuffer)`
-5. Return response with detections, processingTimeMs, imageQuality
+```typescript
+// api-service/src/routes/detect.route.ts
+import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
+import { DetectionPipelineService } from '../services/detection-pipeline.service';
+import { ImageQualityService } from '../services/image-quality.service';
+import { BadRequestError, PayloadTooLargeError } from '../utils/errors';
+import { logger } from '../utils/logger';
+
+export async function detectRoutes(
+  fastify: FastifyInstance,
+  options: { pipelineService: DetectionPipelineService; qualityService: ImageQualityService }
+) {
+  const { pipelineService, qualityService } = options;
+
+  fastify.post('/detect', async (request: FastifyRequest, reply: FastifyReply) => {
+    const data = await request.file();
+    if (!data) {
+      throw new BadRequestError('No image file provided');
+    }
+
+    const buffer = await data.toBuffer();
+    if (buffer.length > 10 * 1024 * 1024) {
+      throw new PayloadTooLargeError('Image size exceeds 10MB limit');
+    }
+
+    const startTime = Date.now();
+    
+    // Optional: quality check
+    const quality = await qualityService.analyze(buffer);
+    
+    const response = await pipelineService.detect(buffer);
+    
+    return {
+      ...response,
+      imageQuality: quality,
+    };
+  });
+}
+```
 
 - [ ] **Step 4: Rewrite health.route.ts**
 
-Returns health status for each provider (detector and classifier). Calls `healthCheck()` on each provider via the pipeline service.
+```typescript
+// api-service/src/routes/health.route.ts
+import { FastifyInstance } from 'fastify';
+import { DetectionPipelineService } from '../services/detection-pipeline.service';
+import { envConfig } from '../config/env.config';
+
+export async function healthRoutes(
+  fastify: FastifyInstance,
+  options: { pipelineService: DetectionPipelineService }
+) {
+  const { pipelineService } = options;
+
+  fastify.get('/health', async () => {
+    const providers = await pipelineService.getHealth();
+    return {
+      status: 'ok',
+      version: '2.0.0',
+      env: envConfig.nodeEnv,
+      providers,
+    };
+  });
+}
+```
 
 - [ ] **Step 5: Rewrite app.ts**
 
-Simplified app setup:
-1. Create Fastify instance with logger
-2. Register CORS, multipart, rate-limit plugins
-3. Register auth middleware (preHandler hook)
-4. Register error middleware
-5. Create `DetectionPipelineService` instance
-6. Register detect and health routes
-7. Start server on configured port
-8. Graceful shutdown
+```typescript
+// api-service/src/app.ts
+import fastify from 'fastify';
+import cors from '@fastify/cors';
+import multipart from '@fastify/multipart';
+import rateLimit from '@fastify/rate-limit';
+import { envConfig } from './config/env.config';
+import { logger } from './utils/logger';
+import { authMiddleware } from './middleware/auth.middleware';
+import { errorHandler } from './middleware/error.middleware';
+import { DetectionPipelineService } from './services/detection-pipeline.service';
+import { ImageQualityService } from './services/image-quality.service';
+import { detectRoutes } from './routes/detect.route';
+import { healthRoutes } from './routes/health.route';
 
-Remove all references to deleted routes (items, labels, search, sync) and deleted services.
+const app = fastify({
+  logger: logger,
+  disableRequestLogging: envConfig.nodeEnv === 'production',
+});
+
+// Plugins
+app.register(cors);
+app.register(multipart, { limits: { fileSize: 10 * 1024 * 1024 } });
+app.register(rateLimit, { max: 100, timeWindow: '1 minute' });
+
+// Global Error Handler
+app.setErrorHandler(errorHandler);
+
+// Global Auth Hook
+app.addHook('preHandler', authMiddleware);
+
+// Services
+const pipelineService = new DetectionPipelineService(envConfig);
+const qualityService = new ImageQualityService();
+
+// Routes
+app.register(async (v1) => {
+  v1.register(detectRoutes, { prefix: '/detect', pipelineService, qualityService });
+  v1.register(healthRoutes, { prefix: '/health', pipelineService });
+}, { prefix: '/v1' });
+
+// Root info
+app.get('/', async () => ({
+  name: 'Visual Home Inventory API',
+  version: '2.0.0',
+  endpoints: ['/v1/detect', '/v1/health']
+}));
+
+const start = async () => {
+  try {
+    await app.listen({ port: envConfig.port, host: '0.0.0.0' });
+    logger.info(`Server listening on port ${envConfig.port}`);
+  } catch (err) {
+    logger.error(err);
+    process.exit(1);
+  }
+};
+
+start();
+
+// Graceful shutdown
+const signals: NodeJS.Signals[] = ['SIGTERM', 'SIGINT'];
+signals.forEach((signal) => {
+  process.on(signal, async () => {
+    logger.info(`Received ${signal}, shutting down...`);
+    await app.close();
+    process.exit(0);
+  });
+});
+
+export { app };
+```
 
 - [ ] **Step 6: Verify TypeScript compiles**
 
@@ -1403,16 +1682,13 @@ Expected: no errors
 - [ ] **Step 7: Run integration tests**
 
 Run: `cd api-service && npx vitest run`
-Expected: all tests PASS (update integration test stubs from Task 11 to use real Fastify inject calls now that routes exist)
+Expected: all tests PASS
 
 - [ ] **Step 8: Commit**
 
 ```bash
 git add api-service/src/schemas/detection.schema.ts api-service/src/routes/ api-service/src/app.ts api-service/src/__tests__/
-git commit -m "feat(api): rewrite routes and app for two-stage pipeline
-
-Simplified detect route, health route, and app setup. Removes all
-references to deleted services and routes. Integration tests pass."
+git commit -m "feat(api): rewrite routes and app for two-stage pipeline"
 ```
 
 ### Task 13: Port image-quality.service.test.ts
@@ -1480,8 +1756,6 @@ All tests pass, TypeScript compiles, ESLint clean."
 **Files:**
 - Modify: `detection-service/main.py` (complete rewrite)
 - Modify: `detection-service/requirements.txt` (new dependencies)
-- Delete: `detection-service/yolov8m-worldv2.pt` (if exists)
-- Delete: `detection-service/rtdetr-l.pt` (if exists)
 
 - [ ] **Step 1: Delete old model files**
 
@@ -1503,18 +1777,99 @@ python-multipart==0.0.12
 
 - [ ] **Step 3: Rewrite main.py**
 
-Complete rewrite — single FastAPI app with Grounding DINO. Two endpoints: `POST /detect` and `GET /health`. Uses configurable prompt via `DETECTION_PROMPT` env var. No hardcoded vocabulary. See spec Section 5 for details.
+```python
+# detection-service/main.py
+import os
+import io
+from fastapi import FastAPI, UploadFile, File, Form, HTTPException
+from fastapi.responses import JSONResponse
+from PIL import Image
+import torch
+import groundingdino.datasets.transforms as T
+from groundingdino.util.inference import load_model, predict, annotate
+from groundingdino.util import box_ops
 
-Key implementation:
-- Load Grounding DINO model at startup (SwinT config by default, configurable via env)
-- `POST /detect`: accepts multipart image + optional prompt/thresholds, runs `groundingdino.util.inference.predict()`, returns bounding boxes with coarse labels
-- `GET /health`: returns model status, GPU availability, default prompt
-- Graceful handling of missing model weights (return 503 with clear message)
+app = FastAPI()
+
+# Configuration
+MODEL_CONFIG_PATH = os.getenv("MODEL_CONFIG_PATH", "groundingdino/config/GroundingDINO_SwinT_OGC.py")
+MODEL_WEIGHTS_PATH = os.getenv("MODEL_WEIGHTS_PATH", "weights/groundingdino_swint_ogc.pth")
+DEFAULT_PROMPT = os.getenv("DETECTION_PROMPT", "household objects . furniture . appliances . electronics . decor . items")
+DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
+
+model = None
+
+@app.on_event("startup")
+async def load_detection_model():
+    global model
+    if os.path.exists(MODEL_WEIGHTS_PATH):
+        model = load_model(MODEL_CONFIG_PATH, MODEL_WEIGHTS_PATH, device=DEVICE)
+    else:
+        print(f"Warning: Model weights not found at {MODEL_WEIGHTS_PATH}. /detect will fail.")
+
+def preprocess_image(image_bytes):
+    image_pil = Image.open(io.BytesIO(image_bytes)).convert("RGB")
+    transform = T.Compose([
+        T.RandomResize([800], max_size=1333),
+        T.ToTensor(),
+        T.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225]),
+    ])
+    image_transformed, _ = transform(image_pil, None)
+    return image_pil, image_transformed
+
+@app.post("/detect")
+async def detect_objects(
+    file: UploadFile = File(...),
+    prompt: str = Form(DEFAULT_PROMPT),
+    box_threshold: float = Form(0.3),
+    text_threshold: float = Form(0.25)
+):
+    if model is None:
+        raise HTTPException(status_code=503, detail="Model weights not loaded")
+
+    image_bytes = await file.read()
+    image_pil, image_transformed = preprocess_image(image_bytes)
+    
+    boxes, logits, phrases = predict(
+        model=model,
+        image=image_transformed,
+        caption=prompt,
+        box_threshold=box_threshold,
+        text_threshold=text_threshold,
+        device=DEVICE
+    )
+
+    # Convert boxes from [cx, cy, w, h] to [x, y, w, h] (top-left)
+    # Grounding DINO returns normalized [0, 1] coordinates
+    detections = []
+    for i in range(len(boxes)):
+        box = boxes[i].tolist() # [cx, cy, w, h]
+        cx, cy, w, h = box
+        x = cx - w / 2
+        y = cy - h / 2
+        
+        detections.append({
+            "box": {"x": x, "y": y, "w": w, "h": h},
+            "coarse_label": phrases[i],
+            "confidence": float(logits[i])
+        })
+
+    return {"detections": detections}
+
+@app.get("/health")
+async def health_check():
+    return {
+        "status": "ok" if model is not None else "degraded",
+        "device": DEVICE,
+        "model_loaded": model is not None,
+        "default_prompt": DEFAULT_PROMPT
+    }
+```
 
 - [ ] **Step 4: Test the service starts**
 
-Run: `cd detection-service && python -c "from main import app; print('OK')"`
-Expected: "OK" (or import error if weights not downloaded — that's fine, the API handles it)
+Run: `cd detection-service && python -m uvicorn main:app --port 8001`
+(Expect it to fail if weights/config are missing, but syntax should be valid)
 
 - [ ] **Step 5: Create/update Dockerfile**
 
@@ -1523,8 +1878,20 @@ Expected: "OK" (or import error if weights not downloaded — that's fine, the A
 FROM python:3.11-slim
 
 WORKDIR /app
+
+# Install system dependencies for Grounding DINO / OpenCV
+RUN apt-get update && apt-get install -y \
+    build-essential \
+    git \
+    libgl1-mesa-glx \
+    libglib2.0-0 \
+    && rm -rf /var/lib/apt/lists/*
+
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
+
+# Install Grounding DINO from source or specific wheel
+RUN pip install git+https://github.com/IDEA-Research/GroundingDINO.git
 
 COPY . .
 
@@ -1532,17 +1899,11 @@ EXPOSE 8001
 CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8001"]
 ```
 
-For GPU support, use `nvidia/cuda:12.1.0-runtime-ubuntu22.04` as base and install Python.
-
 - [ ] **Step 6: Commit**
 
 ```bash
 git add detection-service/
-git commit -m "feat(detection): rewrite Python service for Grounding DINO
-
-Replaces YOLO-World + RT-DETR with Grounding DINO open-vocabulary
-detection. Configurable prompt via env var. No hardcoded labels.
-Includes Dockerfile for containerized deployment."
+git commit -m "feat(detection): rewrite Python service for Grounding DINO"
 ```
 
 ---
@@ -1770,32 +2131,32 @@ Freezed models with JSON serialization. API sends camelCase so
 no @JsonKey annotations needed. Includes BoundingBox and ValueRange."
 ```
 
-### Task 18: Update database schema and migration
+### Task 18: Rewrite database schema from scratch
 
 **Files:**
 - Modify: `mobile-app/lib/data/database/app_database.dart`
 - Modify: `mobile-app/lib/data/database/tables/labels.dart`
 
-- [ ] **Step 1: Read current app_database.dart**
+App is not deployed — no migration needed. Just rewrite to final schema.
+
+- [ ] **Step 1: Read current app_database.dart and labels.dart**
 
 Read: `mobile-app/lib/data/database/app_database.dart`
+Read: `mobile-app/lib/data/database/tables/labels.dart`
 
 - [ ] **Step 2: Update labels.dart — add confidence column, make key non-nullable**
 
-Read current `mobile-app/lib/data/database/tables/labels.dart`, then modify: change `key` from `text().nullable()` to `text()`, add `RealColumn get confidence => real().withDefault(const Constant(1.0))()`.
+Change `key` from `text().nullable()` to `text()`, add `RealColumn get confidence => real().withDefault(const Constant(1.0))()`.
 
-- [ ] **Step 3: Update app_database.dart**
+- [ ] **Step 3: Rewrite app_database.dart**
 
 - Remove `categories`, `item_categories`, `item_images`, `sync_queue` from `@DriftDatabase(tables: [...])`
 - Remove corresponding import statements
-- Change `schemaVersion` from 2 to 3
+- Set `schemaVersion` to 1 (fresh start, no migrations)
 - Remove `_seedDefaultCategories()` method and its call in `onCreate`
-- Add migration v2→v3 in `onUpgrade` (see spec Section 6.3):
-  - DROP TABLE IF EXISTS item_categories, categories, sync_queue, item_images
-  - DROP obsolete indexes
-  - ALTER TABLE labels ADD COLUMN confidence
-  - UPDATE labels SET key = 'label' WHERE key IS NULL
+- Remove `onUpgrade` migration logic entirely (no deployed data to migrate)
 - Remove `_createIndexes()` entries for deleted tables
+- Keep only 3 tables: `InventoryItems`, `Labels`, `LabelSearchFts`
 
 - [ ] **Step 4: Run code generation**
 
@@ -1806,11 +2167,11 @@ Expected: generates updated `app_database.g.dart`
 
 ```bash
 git add mobile-app/lib/data/database/
-git commit -m "feat(mobile): update database schema v3 — drop unused tables, add confidence
+git commit -m "feat(mobile): rewrite database schema — 3 tables only, no migrations
 
-Migration v2→v3: drops categories, item_categories, sync_queue,
-item_images. Adds confidence column to labels. Migrates NULL keys
-to 'label'. Removes seeded categories."
+Fresh schema with inventory_items, labels (with confidence column),
+and label_search_fts. Removes categories, item_categories, sync_queue,
+item_images tables and seeded categories."
 ```
 
 ---
@@ -1923,81 +2284,85 @@ and InventoryItem models. Removes room/album/category references."
 
 - [ ] **Step 1: Rewrite app_router.dart — 6 routes only**
 
-Remove routes for edit/:id, rooms, smart albums, settings. Keep: /items, /search, /profile, /camera, /detection, /item/:id. Remove imports of deleted screens.
+```dart
+// lib/presentation/routing/app_router.dart
+import 'package:go_router/go_router.dart';
+import '../screens/inventory_feed_screen.dart';
+import '../screens/search_screen.dart';
+import '../profile/profile_screen.dart';
+import '../camera/camera_capture_screen.dart';
+import '../screens/detection_results_screen.dart';
+import '../screens/item_detail_screen.dart';
+
+final appRouter = GoRouter(
+  initialLocation: '/items',
+  routes: [
+    GoRoute(path: '/items', builder: (context, state) => const InventoryFeedScreen()),
+    GoRoute(path: '/search', builder: (context, state) => const SearchScreen()),
+    GoRoute(path: '/profile', builder: (context, state) => const ProfileScreen()),
+    GoRoute(path: '/camera', builder: (context, state) => const CameraCaptureScreen()),
+    GoRoute(
+      path: '/detection',
+      builder: (context, state) => DetectionResultsScreen(
+        imagePath: state.extra as String,
+      ),
+    ),
+    GoRoute(
+      path: '/item/:id',
+      builder: (context, state) => ItemDetailScreen(
+        itemId: int.parse(state.pathParameters['id']!),
+      ),
+    ),
+  ],
+);
+```
 
 - [ ] **Step 2: Update detection_results_screen.dart**
 
-Major rewrite per spec Section 6.7:
-- Use new DetectionState union for loading/success/empty/error
-- Render bounding boxes with VLM-generated labels (not old Detection model)
-- Tap box to see full attributes (category, brand, colors, materials, condition, value)
-- Inline editing of fields
-- Select/deselect objects with checkboxes
-- "Save to Inventory" generates real thumbnails and stores via inventory repository
-- Error states: zero detections, API error, offline — each with appropriate UI
+Rewrite to use `DetectionState` and `DetectedObject`. Render interactive bounding boxes.
+- Show `LoadingIndicator` during `DetectionState.loading()`
+- On `Success`, render a `Stack` with the image and a list of `DetectionBox` widgets.
+- Implement "Save to Inventory" logic:
+  - Iterate over selected detections.
+  - Call `imageProcessingService.generateThumbnail` (cropped).
+  - Call `inventoryRepository.saveItem` which extracts labels.
+  - Show success snackbar and navigate to `/items`.
 
 - [ ] **Step 3: Update item_detail_screen.dart**
 
-Display all VLM-generated labels grouped by key (rendered as chips). Uses new `ItemLabel` model. Remove any references to old Detection, EnsembleDetails, AlternativeLabel models.
+- Fetch item and its labels using `inventoryProviders`.
+- Display large image.
+- Group labels by key and render as `Wrap` of `LabelChip`s.
+- Attributes: Label, Category, Brand, Model, Colors, Materials, Condition, Value, Description.
 
 - [ ] **Step 4: Update inventory_feed_screen.dart**
 
-Use new `InventoryItem` model. Remove any references to old Item model. Keep grid layout.
+- Use `itemsProvider` to show a `GridView`.
+- Each item is an `ItemCard` showing the cropped thumbnail and the primary 'label' value.
 
 - [ ] **Step 5: Update search_screen.dart**
 
-Use inventory_providers search. Remove references to old search providers.
+- Simple `TextField` at the top.
+- Calls `searchProvider` on change.
+- Displays results in a list or grid.
 
 - [ ] **Step 6: Update profile_screen.dart**
 
-Remove settings navigation. Remove references to categories/rooms. Keep stats.
+- Simple stats: Total items, Total estimated value (sum of low/high).
+- App version, "About" text.
 
-- [ ] **Step 7: Update camera_capture_screen.dart (if needed)**
+- [ ] **Step 7: Update and clean widgets**
 
-Verify it still works with the new routing. Should need minimal changes.
+- Update `DetectionBox` to take `DetectedObject` and `onTap`.
+- Update `ItemCard` to show `InventoryItem` data.
+- Ensure `common/error_view.dart` has a retry callback.
 
-- [ ] **Step 8: Update and clean widgets**
-
-Update `detection_box.dart`, `item_card.dart`, `label_chip.dart`, `quality_feedback_widget.dart` for new models. Per spec Section 6.2 rule: **delete any file not in the Section 6.1 file structure**. Run:
+- [ ] **Step 8: Commit**
 
 ```bash
-# Delete any widget files NOT in the spec's file structure
-# Spec allows: detection_box.dart, item_card.dart, label_chip.dart, quality_feedback_widget.dart
-# and common/: custom_app_bar.dart, error_view.dart, loading_indicator.dart
-# Delete everything else in widgets/ and detection/widgets/
-find lib/presentation/detection/widgets/ -name "*.dart" ! -name "detection_box.dart" -delete 2>/dev/null || true
+git add -A mobile-app/lib/presentation/
+git commit -m "refactor(mobile): update all screens and routing for new pipeline"
 ```
-
-Create `common/error_view.dart` and `common/loading_indicator.dart` if they don't exist (used by detection results screen error states).
-
-- [ ] **Step 8b: Create/update image_processing_service.dart**
-
-Per spec Section 6.8, the image processing service must generate real thumbnails cropped to bounding boxes:
-
-```dart
-// lib/data/services/image_processing_service.dart
-import 'dart:io';
-import 'dart:ui' as ui;
-import 'package:image/image.dart' as img;
-import '../../../core/config/app_config.dart';
-
-class ImageProcessingService {
-  Future<File> generateThumbnail(
-    File photo, {
-    required ui.Rect cropRect,
-    int targetSize = 300,
-  }) async {
-    final bytes = await photo.readAsBytes();
-    final image = img.decodeImage(bytes);
-    if (image == null) throw Exception('Failed to decode image');
-
-    // Crop to bounding box (cropRect is normalized 0-1)
-    final x = (cropRect.left * image.width).round();
-    final y = (cropRect.top * image.height).round();
-    final w = (cropRect.width * image.width).round();
-    final h = (cropRect.height * image.height).round();
-
-    final cropped = img.copyCrop(image, x: x, y: y, width: w, height: h);
     final resized = img.copyResize(cropped, width: targetSize);
 
     final thumbnailPath = photo.path.replaceAll('.jpg', '_thumb.jpg');
@@ -2107,7 +2472,6 @@ git commit -m "test(mobile): add VLM-style test fixtures with no hardcoded label
 - Create: `mobile-app/test/widget/item_detail_screen_test.dart`
 - Create: `mobile-app/test/widget/search_screen_test.dart`
 - Create: `mobile-app/test/widget/camera_capture_screen_test.dart`
-- Create: `mobile-app/test/unit/app_database_migration_test.dart`
 
 - [ ] **Step 1: Write detected_object_test.dart**
 
@@ -2129,23 +2493,19 @@ Test each screen renders correctly with mock data. Test error states on detectio
 
 Test camera capture screen renders, photo capture triggers navigation to detection results.
 
-- [ ] **Step 6: Write app_database_migration_test.dart**
-
-Test migration v2→v3: tables dropped (categories, item_categories, sync_queue, item_images), confidence column added to labels, NULL keys migrated to 'label'. Use in-memory Drift database with `SchemaVerifier`.
-
-- [ ] **Step 7: Run all tests**
+- [ ] **Step 6: Run all tests**
 
 Run: `cd mobile-app && flutter test`
 Expected: all tests PASS
 
-- [ ] **Step 8: Commit**
+- [ ] **Step 7: Commit**
 
 ```bash
 git add mobile-app/test/
 git commit -m "test(mobile): add unit and widget tests for new detection pipeline
 
 Tests model serialization, repository CRUD, screen rendering,
-camera capture, database migration v2→v3. All fixtures use VLM-style data."
+camera capture. All fixtures use VLM-style data."
 ```
 
 ### Task 26: Run hardcoded labels verification
@@ -2294,9 +2654,9 @@ Then: `curl http://localhost:8000/v1/health`
 Expected: JSON with provider status for detectors and classifiers
 Kill: `kill %1`
 
-- [ ] **Step 6: Criteria 19 — Database migration works**
+- [ ] **Step 6: Criteria 19 — Database schema works**
 
-Verified by `app_database_migration_test.dart` passing in Step 2. Migration v2→v3 preserves existing items and labels.
+App not deployed — no migration needed. Verified by fresh database creation in unit tests (Step 2). Schema has 3 tables: inventory_items, labels, label_search_fts.
 
 **Manual verification (emulator/device required):**
 
