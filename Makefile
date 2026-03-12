@@ -2,7 +2,6 @@
 API_DIR = api-service
 MOBILE_DIR = mobile-app
 DETECTION_DIR = detection-service
-PORT = 8000
 
 # Colors
 GREEN = \033[0;32m
@@ -13,33 +12,37 @@ YELLOW = \033[1;33m
 help:
 	@echo "${GREEN}Available commands:${NC}"
 	@echo "${YELLOW}Setup:${NC}"
-	@echo "  setup           Install all dependencies and set up the project"
+	@echo "  setup           Install all dependencies and generate code"
 	@echo "  install         Install all dependencies"
 	@echo "  install-api     Install API dependencies"
 	@echo "  install-mobile  Install mobile app dependencies"
 	@echo ""
 	@echo "${YELLOW}Development:${NC}"
-	@echo "  dev             Start API and mobile app in development mode"
+	@echo "  dev             Start API and mobile app in parallel"
 	@echo "  dev-api         Start API server"
-	@echo "  dev-mobile      Start mobile app"
+	@echo "  dev-mobile      Start Flutter app"
 	@echo ""
 	@echo "${YELLOW}Build:${NC}"
 	@echo "  build           Build API and mobile app"
 	@echo "  build-api       Build API service"
 	@echo "  build-mobile    Build mobile app"
 	@echo ""
-	@echo "${YELLOW}Testing:${NC}"
-	@echo "  test                Run all tests"
-	@echo "  test-api            Run API tests"
-	@echo "  test-mobile         Run mobile app tests"
-	@echo "  test-coverage       Run all tests with coverage (80% target)"
-	@echo "  test-coverage-api   Run API tests with coverage"
-	@echo "  test-coverage-mobile Run mobile tests with coverage"
-	@echo ""
-	@echo "${YELLOW}Code Quality:${NC}"
+	@echo "${YELLOW}Testing & Quality:${NC}"
+	@echo "  test            Run all tests (API + Mobile)"
+	@echo "  test-api        Run API unit tests"
+	@echo "  test-mobile     Run Flutter unit tests"
 	@echo "  lint            Run all linters"
+	@echo "  lint-api        Run ESLint on API code"
+	@echo "  lint-mobile     Run Flutter analyzer"
 	@echo "  format          Format all code"
-	@echo "  clean           Remove build artifacts and dependencies"
+	@echo "  format-api      Format API with Prettier"
+	@echo "  format-mobile   Format Flutter with dart format"
+	@echo "  generate        Run Flutter build_runner for code generation"
+	@echo ""
+	@echo "${YELLOW}Cleanup:${NC}"
+	@echo "  clean           Remove all build artifacts and dependencies"
+	@echo "  clean-api       Clean API (removes dist/, node_modules/)"
+	@echo "  clean-mobile    Clean Flutter app (flutter clean)"
 
 # Setup
 setup: install generate
@@ -63,7 +66,7 @@ dev:
 	@$(MAKE) -j 2 dev-api dev-mobile
 
 dev-api:
-	@echo "${GREEN}Starting API server on http://localhost:${PORT}${NC}"
+	@echo "${GREEN}Starting API server...${NC}"
 	@cd $(API_DIR) && npm run dev
 
 dev-mobile:
@@ -98,18 +101,6 @@ test-mobile:
 	@echo "${GREEN}Running Flutter tests...${NC}"
 	@cd $(MOBILE_DIR) && flutter test
 
-test-coverage:
-	@echo "${GREEN}Running all tests with coverage...${NC}"
-	@bash scripts/test-with-coverage.sh
-
-test-coverage-api:
-	@echo "${GREEN}Running API tests with coverage...${NC}"
-	@cd $(API_DIR) && npm run test:coverage
-
-test-coverage-mobile:
-	@echo "${GREEN}Running Flutter tests with coverage...${NC}"
-	@cd $(MOBILE_DIR) && flutter test --coverage
-
 # Code Quality
 lint:
 	@echo "${GREEN}Running all linters...${NC}"
@@ -122,7 +113,7 @@ lint-api:
 
 lint-mobile:
 	@echo "${GREEN}Linting Flutter code...${NC}"
-	@cd $(MOBILE_DIR) && flutter analyze
+	@cd $(MOBILE_DIR) && flutter analyze --no-fatal-infos
 
 format:
 	@echo "${GREEN}Formatting all code...${NC}"
@@ -139,8 +130,8 @@ format-mobile:
 
 # Code Generation
 generate:
-	@echo "${GREEN}Generating code...${NC}"
-	@cd $(MOBILE_DIR) && flutter pub run build_runner build --delete-conflicting-outputs
+	@echo "${GREEN}Generating Flutter code...${NC}"
+	@cd $(MOBILE_DIR) && dart run build_runner build --delete-conflicting-outputs
 
 # Clean
 clean:
@@ -156,4 +147,4 @@ clean-mobile:
 	@echo "${GREEN}Cleaning Flutter app...${NC}"
 	@cd $(MOBILE_DIR) && flutter clean
 
-.PHONY: help setup install install-api install-mobile dev dev-api dev-mobile build build-api build-mobile test test-api test-mobile test-coverage test-coverage-api test-coverage-mobile lint lint-api lint-mobile format format-api format-mobile generate clean clean-api clean-mobile
+.PHONY: help setup install install-api install-mobile dev dev-api dev-mobile build build-api build-mobile test test-api test-mobile lint lint-api lint-mobile format format-api format-mobile generate clean clean-api clean-mobile

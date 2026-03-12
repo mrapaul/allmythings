@@ -1,6 +1,5 @@
 import 'package:all_my_things/data/database/app_database.dart';
 import 'package:all_my_things/data/repositories/inventory_repository.dart';
-import 'package:all_my_things/domain/models/detected_object.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import '../fixtures/fake_database.dart';
@@ -48,7 +47,7 @@ void main() {
         thumbnailPath: '1',
         detection: sampleDetectedObject,
       );
-      await Future.delayed(const Duration(milliseconds: 1100));
+      await Future<void>.delayed(const Duration(milliseconds: 1100));
       await repository.saveDetection(
         photoPath: '2',
         thumbnailPath: '2',
