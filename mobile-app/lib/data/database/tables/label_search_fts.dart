@@ -15,7 +15,6 @@ class LabelSearchFts extends Table {
   @override
   bool get withoutRowId => true;
 
-  @override
   String? get tableConstraints =>
       'USING fts5(value, label_id UNINDEXED, tokenize="porter unicode61 remove_diacritics 1")';
 }
