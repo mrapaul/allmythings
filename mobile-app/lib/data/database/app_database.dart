@@ -31,6 +31,9 @@ class AppDatabase extends _$AppDatabase {
 
   AppDatabase._fromDb(super.e);
 
+  /// Creates a database from an arbitrary [QueryExecutor]. Used for testing.
+  AppDatabase.fromExecutor(QueryExecutor e) : super(e);
+
   @override
   int get schemaVersion => 1;
 
