@@ -5,7 +5,7 @@ part 'detection_state.freezed.dart';
 
 /// State for detection process
 @freezed
-class DetectionState with _$DetectionState {
+sealed class DetectionState with _$DetectionState {
   const factory DetectionState.initial() = DetectionInitial;
   const factory DetectionState.loading() = DetectionLoading;
   const factory DetectionState.success({

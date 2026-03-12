@@ -4,7 +4,7 @@ part 'detected_object.freezed.dart';
 part 'detected_object.g.dart';
 
 @freezed
-class DetectedObject with _$DetectedObject {
+sealed class DetectedObject with _$DetectedObject {
   const factory DetectedObject({
     required int boxIndex,
     required String label,
@@ -25,7 +25,7 @@ class DetectedObject with _$DetectedObject {
 }
 
 @freezed
-class BoundingBox with _$BoundingBox {
+sealed class BoundingBox with _$BoundingBox {
   const factory BoundingBox({
     required double x,
     required double y,
@@ -38,7 +38,7 @@ class BoundingBox with _$BoundingBox {
 }
 
 @freezed
-class ValueRange with _$ValueRange {
+sealed class ValueRange with _$ValueRange {
   const factory ValueRange({
     required double low,
     required double high,

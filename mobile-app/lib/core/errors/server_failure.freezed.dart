@@ -89,10 +89,7 @@ return serverError(_that);case Unauthorized():
 return unauthorized(_that);case NotFound():
 return notFound(_that);case PermissionDenied():
 return permissionDenied(_that);case ValidationError():
-return validationError(_that);case _:
-  throw StateError('Unexpected subclass');
-
-}
+return validationError(_that);}
 }
 /// A variant of `map` that fallback to returning `null`.
 ///
@@ -169,10 +166,7 @@ return serverError(_that.message);case Unauthorized():
 return unauthorized();case NotFound():
 return notFound();case PermissionDenied():
 return permissionDenied();case ValidationError():
-return validationError(_that.message);case _:
-  throw StateError('Unexpected subclass');
-
-}
+return validationError(_that.message);}
 }
 /// A variant of `when` that fallback to returning `null`
 ///

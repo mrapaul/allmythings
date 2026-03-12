@@ -147,10 +147,7 @@ return $default(_that);case _:
 final _that = this;
 switch (_that) {
 case _DetectedObject():
-return $default(_that);case _:
-  throw StateError('Unexpected subclass');
-
-}
+return $default(_that);}
 }
 /// A variant of `map` that fallback to returning `null`.
 ///
@@ -209,10 +206,7 @@ return $default(_that.boxIndex,_that.label,_that.category,_that.confidence,_that
 @optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( int boxIndex,  String label,  String category,  double confidence,  BoundingBox boundingBox,  String? brand,  String? model,  List<String> colors,  List<String> materials,  String? condition,  ValueRange? estimatedValue,  String? description)  $default,) {final _that = this;
 switch (_that) {
 case _DetectedObject():
-return $default(_that.boxIndex,_that.label,_that.category,_that.confidence,_that.boundingBox,_that.brand,_that.model,_that.colors,_that.materials,_that.condition,_that.estimatedValue,_that.description);case _:
-  throw StateError('Unexpected subclass');
-
-}
+return $default(_that.boxIndex,_that.label,_that.category,_that.confidence,_that.boundingBox,_that.brand,_that.model,_that.colors,_that.materials,_that.condition,_that.estimatedValue,_that.description);}
 }
 /// A variant of `when` that fallback to returning `null`
 ///
@@ -468,10 +462,7 @@ return $default(_that);case _:
 final _that = this;
 switch (_that) {
 case _BoundingBox():
-return $default(_that);case _:
-  throw StateError('Unexpected subclass');
-
-}
+return $default(_that);}
 }
 /// A variant of `map` that fallback to returning `null`.
 ///
@@ -530,10 +521,7 @@ return $default(_that.x,_that.y,_that.width,_that.height);case _:
 @optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( double x,  double y,  double width,  double height)  $default,) {final _that = this;
 switch (_that) {
 case _BoundingBox():
-return $default(_that.x,_that.y,_that.width,_that.height);case _:
-  throw StateError('Unexpected subclass');
-
-}
+return $default(_that.x,_that.y,_that.width,_that.height);}
 }
 /// A variant of `when` that fallback to returning `null`
 ///
@@ -738,10 +726,7 @@ return $default(_that);case _:
 final _that = this;
 switch (_that) {
 case _ValueRange():
-return $default(_that);case _:
-  throw StateError('Unexpected subclass');
-
-}
+return $default(_that);}
 }
 /// A variant of `map` that fallback to returning `null`.
 ///
@@ -800,10 +785,7 @@ return $default(_that.low,_that.high);case _:
 @optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( double low,  double high)  $default,) {final _that = this;
 switch (_that) {
 case _ValueRange():
-return $default(_that.low,_that.high);case _:
-  throw StateError('Unexpected subclass');
-
-}
+return $default(_that.low,_that.high);}
 }
 /// A variant of `when` that fallback to returning `null`
 ///
