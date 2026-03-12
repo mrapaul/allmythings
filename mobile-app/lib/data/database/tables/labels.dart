@@ -11,11 +11,14 @@ class Labels extends Table {
   IntColumn get itemId =>
       integer().references(InventoryItems, #id, onDelete: KeyAction.cascade)();
 
-  /// Optional category (type, color, brand, room)
-  TextColumn get key => text().nullable()();
+  /// Category key (type, color, brand, material, etc.)
+  TextColumn get key => text()();
 
   /// Label value (laptop, black, Apple, bedroom)
   TextColumn get value => text()();
+
+  /// Confidence score from AI detection (0.0–1.0)
+  RealColumn get confidence => real().withDefault(const Constant(1.0))();
 
   /// Timestamp when label was added
   DateTimeColumn get createdAt => dateTime()();
