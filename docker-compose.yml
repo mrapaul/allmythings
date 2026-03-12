@@ -1,169 +1,82 @@
-version: '3.9'
-
 services:
-  # PostgreSQL Database
-  postgres:
-    image: postgres:16-alpine
-    container_name: visual-inventory-postgres
-    environment:
-      POSTGRES_DB: ${DB_NAME:-visual_inventory}
-      POSTGRES_USER: ${DB_USER:-postgres}
-      POSTGRES_PASSWORD: ${DB_PASSWORD:-postgres}
-      POSTGRES_INITDB_ARGS: >
-        --locale=en_US.UTF-8
-        --encoding=UTF8
-    ports:
-      - "${DB_PORT:-5432}:5432"
-    volumes:
-      - postgres_data:/var/lib/postgresql/data
-      - ./scripts/init-db.sql:/docker-entrypoint-initdb.d/01-init.sql
-      - ./scripts/migrations:/migrations
-    healthcheck:
-      test:
-        - CMD-SHELL
-        - pg_isready -U ${DB_USER:-postgres} -d ${DB_NAME:-visual_inventory}
-      interval: 10s
-      timeout: 5s
-      retries: 5
-    networks:
-      - visual-inventory-network
-    restart: unless-stopped
-    security_opt:
-      - no-new-privileges:true
-
-  # Redis Cache
-  redis:
-    image: redis:7-alpine
-    container_name: visual-inventory-redis
-    command: redis-server --appendonly yes --requirepass ${REDIS_PASSWORD:-redis_password}
-    ports:
-      - "${REDIS_PORT:-6379}:6379"
-    volumes:
-      - redis_data:/data
-    healthcheck:
-      test:
-        - CMD
-        - redis-cli
-        - ping
-      interval: 10s
-      timeout: 5s
-      retries: 5
-    networks:
-      - visual-inventory-network
-    restart: unless-stopped
-    security_opt:
-      - no-new-privileges:true
-
-  # API Service
+  # API Service (Node.js/Fastify)
   api:
     build:
       context: ./api-service
       dockerfile: Dockerfile
-      target: runtime
-    container_name: visual-inventory-api
+    container_name: inventory-api
     environment:
       NODE_ENV: ${NODE_ENV:-development}
-      PORT: 3000
-      DB_HOST: postgres
-      DB_PORT: 5432
-      DB_NAME: ${DB_NAME:-visual_inventory}
-      DB_USER: ${DB_USER:-postgres}
-      DB_PASSWORD: ${DB_PASSWORD:-postgres}
-      DB_SSL: ${DB_SSL:-false}
-      DB_POOL_SIZE: ${DB_POOL_SIZE:-20}
+      PORT: 8000
+      API_KEY: ${API_KEY:-}
 
-      # Redis Configuration
-      REDIS_HOST: redis
-      REDIS_PORT: 6379
-      REDIS_PASSWORD: ${REDIS_PASSWORD:-redis_password}
+      # Detection Service
+      DETECTION_SERVICE_URL: http://detection:8001
 
-      # S3 / Storage
-      S3_BASE_URL: ${S3_BASE_URL:-http://localhost:9000}
-      S3_BUCKET: ${S3_BUCKET:-inventory-photos}
-      S3_REGION: ${S3_REGION:-us-east-1}
+      # Gemini (primary classifier)
+      GEMINI_API_KEY: ${GEMINI_API_KEY:-}
+      GEMINI_MODEL: ${GEMINI_MODEL:-gemini-2.5-pro-preview-06-05}
 
-      # Google Cloud Vision
-      GOOGLE_CLOUD_PROJECT_ID: ${GOOGLE_CLOUD_PROJECT_ID:-}
-      GOOGLE_APPLICATION_CREDENTIALS: ${GOOGLE_APPLICATION_CREDENTIALS:-}
+      # Ollama (fallback classifier)
+      OLLAMA_BASE_URL: ${OLLAMA_BASE_URL:-http://ollama:11434}
+      OLLAMA_MODEL: ${OLLAMA_MODEL:-llava:13b}
 
-      # AWS Rekognition
-      AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID:-}
-      AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY:-}
-      AWS_REGION: ${AWS_REGION:-us-east-1}
-
-      # Ensemble Configuration
-      ENSEMBLE_CONFIDENCE_THRESHOLD: ${ENSEMBLE_CONFIDENCE_THRESHOLD:-0.7}
-      PROVIDER_TIMEOUT_MS: ${PROVIDER_TIMEOUT_MS:-4000}
-      NMS_IOU_THRESHOLD: ${NMS_IOU_THRESHOLD:-0.5}
-
-      # Provider Weights
-      META_WEIGHT: ${META_WEIGHT:-0.30}
-      GOOGLE_WEIGHT: ${GOOGLE_WEIGHT:-0.30}
-      AWS_WEIGHT: ${AWS_WEIGHT:-0.25}
-      TENSORFLOW_WEIGHT: ${TENSORFLOW_WEIGHT:-0.15}
-
+      # Google Vision (fallback detector)
+      GOOGLE_PROJECT_ID: ${GOOGLE_PROJECT_ID:-}
+      GOOGLE_CREDENTIALS: ${GOOGLE_CREDENTIALS:-}
     ports:
-      - "${API_PORT:-3000}:3000"
-    volumes:
-      - ./api-service/src:/app/src:cached
-      - /app/node_modules
+      - "${API_PORT:-8000}:8000"
     depends_on:
-      postgres:
-        condition: service_healthy
-      redis:
-        condition: service_healthy
+      detection:
+        condition: service_started
     networks:
-      - visual-inventory-network
+      - inventory-network
     restart: unless-stopped
     healthcheck:
-      test:
-        - CMD
-        - curl
-        - -f
-        - http://localhost:3000/v1/health
+      test: ["CMD", "curl", "-f", "http://localhost:8000/v1/health"]
       interval: 15s
       timeout: 5s
       retries: 3
       start_period: 10s
-    security_opt:
-      - no-new-privileges:true
 
-  # MinIO S3-compatible Storage (Optional for development)
-  minio:
-    image: minio/minio:latest
-    container_name: visual-inventory-minio
+  # Detection Service (Python/FastAPI - Grounding DINO)
+  detection:
+    build:
+      context: ./detection-service
+      dockerfile: Dockerfile
+    container_name: inventory-detection
     environment:
-      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-minioadmin}
-      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-minioadmin}
+      MODEL_ID: ${DETECTION_MODEL_ID:-IDEA-Research/grounding-dino-tiny}
+      DEVICE: ${DETECTION_DEVICE:-cpu}
     ports:
-      - "${MINIO_PORT:-9000}:9000"
-      - "${MINIO_CONSOLE_PORT:-9001}:9001"
-    volumes:
-      - minio_data:/minio_root/data
-    command: server /minio_root/data --console-address ":9001"
+      - "${DETECTION_PORT:-8001}:8001"
     networks:
-      - visual-inventory-network
+      - inventory-network
     restart: unless-stopped
     healthcheck:
-      test:
-        - CMD
-        - curl
-        - -f
-        - http://localhost:9000/minio/health/live
-      interval: 10s
+      test: ["CMD", "curl", "-f", "http://localhost:8001/health"]
+      interval: 15s
       timeout: 5s
-      retries: 5
-    security_opt:
-      - no-new-privileges:true
+      retries: 3
+      start_period: 30s
+
+  # Ollama (optional - for local LLM classification)
+  ollama:
+    image: ollama/ollama:latest
+    container_name: inventory-ollama
+    ports:
+      - "${OLLAMA_PORT:-11434}:11434"
+    volumes:
+      - ollama_data:/root/.ollama
+    networks:
+      - inventory-network
+    profiles:
+      - local-llm
 
 volumes:
-  postgres_data:
-    driver: local
-  redis_data:
-    driver: local
-  minio_data:
+  ollama_data:
     driver: local
 
 networks:
-  visual-inventory-network:
+  inventory-network:
     driver: bridge

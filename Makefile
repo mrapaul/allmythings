@@ -1,6 +1,7 @@
 # Project configuration
 API_DIR = api-service
 MOBILE_DIR = mobile-app
+DETECTION_DIR = detection-service
 PORT = 8000
 
 # Colors
