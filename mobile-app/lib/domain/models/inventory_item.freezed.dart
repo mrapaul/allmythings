@@ -120,7 +120,10 @@ return $default(_that);case _:
 final _that = this;
 switch (_that) {
 case _InventoryItem():
-return $default(_that);}
+return $default(_that);case _:
+  throw StateError('Unexpected subclass');
+
+}
 }
 /// A variant of `map` that fallback to returning `null`.
 ///
@@ -179,7 +182,10 @@ return $default(_that.id,_that.photoPath,_that.thumbnailPath,_that.detectionData
 @optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( int id,  String photoPath,  String thumbnailPath,  String detectionData,  DateTime createdAt,  DateTime updatedAt)  $default,) {final _that = this;
 switch (_that) {
 case _InventoryItem():
-return $default(_that.id,_that.photoPath,_that.thumbnailPath,_that.detectionData,_that.createdAt,_that.updatedAt);}
+return $default(_that.id,_that.photoPath,_that.thumbnailPath,_that.detectionData,_that.createdAt,_that.updatedAt);case _:
+  throw StateError('Unexpected subclass');
+
+}
 }
 /// A variant of `when` that fallback to returning `null`
 ///
@@ -392,7 +398,10 @@ return $default(_that);case _:
 final _that = this;
 switch (_that) {
 case _ItemLabel():
-return $default(_that);}
+return $default(_that);case _:
+  throw StateError('Unexpected subclass');
+
+}
 }
 /// A variant of `map` that fallback to returning `null`.
 ///
@@ -451,7 +460,10 @@ return $default(_that.id,_that.itemId,_that.key,_that.value,_that.confidence,_th
 @optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( int id,  int itemId,  String key,  String value,  double confidence,  DateTime createdAt)  $default,) {final _that = this;
 switch (_that) {
 case _ItemLabel():
-return $default(_that.id,_that.itemId,_that.key,_that.value,_that.confidence,_that.createdAt);}
+return $default(_that.id,_that.itemId,_that.key,_that.value,_that.confidence,_that.createdAt);case _:
+  throw StateError('Unexpected subclass');
+
+}
 }
 /// A variant of `when` that fallback to returning `null`
 ///

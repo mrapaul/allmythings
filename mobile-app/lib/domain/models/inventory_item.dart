@@ -1,10 +1,11 @@
+// lib/domain/models/inventory_item.dart
 import 'package:freezed_annotation/freezed_annotation.dart';
 
 part 'inventory_item.freezed.dart';
 part 'inventory_item.g.dart';
 
 @freezed
-sealed class InventoryItem with _$InventoryItem {
+class InventoryItem with _$InventoryItem {
   const factory InventoryItem({
     required int id,
     required String photoPath,
@@ -19,7 +20,7 @@ sealed class InventoryItem with _$InventoryItem {
 }
 
 @freezed
-sealed class ItemLabel with _$ItemLabel {
+class ItemLabel with _$ItemLabel {
   const factory ItemLabel({
     required int id,
     required int itemId,

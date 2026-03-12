@@ -15,6 +15,10 @@ T _$identity<T>(T value) => value;
 /// @nodoc
 mixin _$DetectedObject {
 
+// Note: The TypeScript API maps snake_case VLM output to camelCase
+// before sending to mobile. These @JsonKey annotations match what
+// the API actually sends (camelCase). If the API sends snake_case
+// in the future, update these annotations accordingly.
  int get boxIndex; String get label; String get category; double get confidence; BoundingBox get boundingBox; String? get brand; String? get model; List<String> get colors; List<String> get materials; String? get condition; ValueRange? get estimatedValue; String? get description;
 /// Create a copy of DetectedObject
 /// with the given fields replaced by the non-null parameter values.
@@ -147,7 +151,10 @@ return $default(_that);case _:
 final _that = this;
 switch (_that) {
 case _DetectedObject():
-return $default(_that);}
+return $default(_that);case _:
+  throw StateError('Unexpected subclass');
+
+}
 }
 /// A variant of `map` that fallback to returning `null`.
 ///
@@ -206,7 +213,10 @@ return $default(_that.boxIndex,_that.label,_that.category,_that.confidence,_that
 @optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( int boxIndex,  String label,  String category,  double confidence,  BoundingBox boundingBox,  String? brand,  String? model,  List<String> colors,  List<String> materials,  String? condition,  ValueRange? estimatedValue,  String? description)  $default,) {final _that = this;
 switch (_that) {
 case _DetectedObject():
-return $default(_that.boxIndex,_that.label,_that.category,_that.confidence,_that.boundingBox,_that.brand,_that.model,_that.colors,_that.materials,_that.condition,_that.estimatedValue,_that.description);}
+return $default(_that.boxIndex,_that.label,_that.category,_that.confidence,_that.boundingBox,_that.brand,_that.model,_that.colors,_that.materials,_that.condition,_that.estimatedValue,_that.description);case _:
+  throw StateError('Unexpected subclass');
+
+}
 }
 /// A variant of `when` that fallback to returning `null`
 ///
@@ -238,6 +248,10 @@ class _DetectedObject implements DetectedObject {
   const _DetectedObject({required this.boxIndex, required this.label, required this.category, required this.confidence, required this.boundingBox, this.brand, this.model, final  List<String> colors = const [], final  List<String> materials = const [], this.condition, this.estimatedValue, this.description}): _colors = colors,_materials = materials;
   factory _DetectedObject.fromJson(Map<String, dynamic> json) => _$DetectedObjectFromJson(json);
 
+// Note: The TypeScript API maps snake_case VLM output to camelCase
+// before sending to mobile. These @JsonKey annotations match what
+// the API actually sends (camelCase). If the API sends snake_case
+// in the future, update these annotations accordingly.
 @override final  int boxIndex;
 @override final  String label;
 @override final  String category;
@@ -462,7 +476,10 @@ return $default(_that);case _:
 final _that = this;
 switch (_that) {
 case _BoundingBox():
-return $default(_that);}
+return $default(_that);case _:
+  throw StateError('Unexpected subclass');
+
+}
 }
 /// A variant of `map` that fallback to returning `null`.
 ///
@@ -521,7 +538,10 @@ return $default(_that.x,_that.y,_that.width,_that.height);case _:
 @optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( double x,  double y,  double width,  double height)  $default,) {final _that = this;
 switch (_that) {
 case _BoundingBox():
-return $default(_that.x,_that.y,_that.width,_that.height);}
+return $default(_that.x,_that.y,_that.width,_that.height);case _:
+  throw StateError('Unexpected subclass');
+
+}
 }
 /// A variant of `when` that fallback to returning `null`
 ///
@@ -726,7 +746,10 @@ return $default(_that);case _:
 final _that = this;
 switch (_that) {
 case _ValueRange():
-return $default(_that);}
+return $default(_that);case _:
+  throw StateError('Unexpected subclass');
+
+}
 }
 /// A variant of `map` that fallback to returning `null`.
 ///
@@ -785,7 +808,10 @@ return $default(_that.low,_that.high);case _:
 @optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( double low,  double high)  $default,) {final _that = this;
 switch (_that) {
 case _ValueRange():
-return $default(_that.low,_that.high);}
+return $default(_that.low,_that.high);case _:
+  throw StateError('Unexpected subclass');
+
+}
 }
 /// A variant of `when` that fallback to returning `null`
 ///
