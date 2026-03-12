@@ -4,8 +4,8 @@ import 'package:all_my_things/presentation/camera/camera_capture_screen.dart';
 import 'package:all_my_things/presentation/screens/detection_results_screen.dart';
 import 'package:all_my_things/presentation/screens/inventory_feed_screen.dart';
 import 'package:all_my_things/presentation/screens/item_detail_screen.dart';
+import 'package:all_my_things/presentation/screens/search_screen.dart';
 import 'package:all_my_things/presentation/profile/profile_screen.dart';
-import 'package:all_my_things/presentation/search/search_screen.dart';
 import 'package:all_my_things/presentation/theme/app_theme.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -78,29 +78,6 @@ final routerProvider = Provider<GoRouter>((ref) {
           return CustomTransitionPage(
             child: DetectionResultsScreen(imageFile: imageFile),
             transitionsBuilder: _fadeTransition,
-          );
-        },
-      ),
-
-      // Edit labels
-      GoRoute(
-        path: '/edit/:id',
-        name: 'edit',
-        pageBuilder: (context, state) {
-          final itemId = int.tryParse(state.pathParameters['id'] ?? '');
-          if (itemId == null) {
-            return const MaterialPage(
-              child: Scaffold(
-                body: Center(child: Text('Invalid item ID')),
-              ),
-            );
-          }
-
-          return const CustomTransitionPage(
-            child: Scaffold(
-              body: Center(child: Text('Edit Labels - To be implemented')),
-            ),
-            transitionsBuilder: _slideLeftTransition,
           );
         },
       ),
@@ -230,26 +207,6 @@ Widget _slideUpTransition(
   Widget child,
 ) {
   const begin = Offset(0, 1);
-  const end = Offset.zero;
-  const curve = Curves.easeInOutCubic;
-
-  final tween = Tween(begin: begin, end: end).chain(
-    CurveTween(curve: curve),
-  );
-
-  return SlideTransition(
-    position: animation.drive(tween),
-    child: child,
-  );
-}
-
-Widget _slideLeftTransition(
-  BuildContext context,
-  Animation<double> animation,
-  Animation<double> secondaryAnimation,
-  Widget child,
-) {
-  const begin = Offset(1, 0);
   const end = Offset.zero;
   const curve = Curves.easeInOutCubic;
 

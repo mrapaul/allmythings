@@ -1,7 +1,6 @@
 import 'package:all_my_things/application/providers/inventory_providers.dart';
-import 'package:all_my_things/presentation/common/custom_app_bar.dart'; // Added import
+import 'package:all_my_things/presentation/common/custom_app_bar.dart';
 import 'package:all_my_things/presentation/common/loading_indicator.dart';
-import 'package:all_my_things/presentation/profile/settings_screen.dart'; // Added import
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -14,7 +13,7 @@ class ProfileScreen extends ConsumerWidget {
     final statsAsync = ref.watch(inventoryStatsProvider);
 
     return Scaffold(
-      appBar: const CustomAppBar(title: 'Profile'), // Replaced AppBar
+      appBar: const CustomAppBar(title: 'Profile'),
       body: statsAsync.when(
         data: (stats) => SingleChildScrollView(
           child: Column(
@@ -63,7 +62,7 @@ class ProfileScreen extends ConsumerWidget {
                     icon: Icons.label_outline,
                   ),
                   _StatCard(
-                    label: 'Categories',
+                    label: 'Unique Labels',
                     value: stats.totalCategories.toString(),
                     icon: Icons.category_outlined,
                   ),
@@ -110,7 +109,7 @@ class ProfileScreen extends ConsumerWidget {
 
               const SizedBox(height: 24),
 
-              // Settings
+              // Menu items
               const Divider(),
               ListTile(
                 leading: const Icon(Icons.info_outline),
@@ -132,19 +131,6 @@ class ProfileScreen extends ConsumerWidget {
                 trailing: const Icon(Icons.chevron_right),
                 onTap: () {
                   _showHelpDialog(context);
-                },
-              ),
-              ListTile(
-                leading: const Icon(Icons.settings_outlined),
-                title: const Text('Settings'),
-                trailing: const Icon(Icons.chevron_right),
-                onTap: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => const SettingsScreen(),
-                    ),
-                  );
                 },
               ),
               const Divider(),
@@ -199,7 +185,7 @@ class ProfileScreen extends ConsumerWidget {
             mainAxisSize: MainAxisSize.min,
             children: [
               Text(
-                '📸 Capture',
+                'Capture',
                 style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
               ),
               SizedBox(height: 8),
@@ -208,7 +194,7 @@ class ProfileScreen extends ConsumerWidget {
               ),
               SizedBox(height: 16),
               Text(
-                '🏷️ Labels',
+                'Labels',
                 style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
               ),
               SizedBox(height: 8),
@@ -217,7 +203,7 @@ class ProfileScreen extends ConsumerWidget {
               ),
               SizedBox(height: 16),
               Text(
-                '🔍 Search',
+                'Search',
                 style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
               ),
               SizedBox(height: 8),
@@ -226,7 +212,7 @@ class ProfileScreen extends ConsumerWidget {
               ),
               SizedBox(height: 16),
               Text(
-                '📊 Grid View',
+                'Grid View',
                 style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
               ),
               SizedBox(height: 8),

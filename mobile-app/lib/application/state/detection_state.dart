@@ -1,14 +1,19 @@
+import 'package:all_my_things/domain/models/detected_object.dart';
 import 'package:freezed_annotation/freezed_annotation.dart';
-// import '../../domain/models/detection_response.dart';
-// import '../../core/errors/failures.dart';
 
 part 'detection_state.freezed.dart';
 
 /// State for detection process
 @freezed
 class DetectionState with _$DetectionState {
-  const factory DetectionState.initial() = _Initial;
-  const factory DetectionState.loading() = _Loading;
-  // const factory DetectionState.success(DetectionResponse response) = _Success;
-  // const factory DetectionState.error(Failure failure) = _Error;
+  const factory DetectionState.initial() = DetectionInitial;
+  const factory DetectionState.loading() = DetectionLoading;
+  const factory DetectionState.success({
+    required List<DetectedObject> detections,
+    required int processingTimeMs,
+    required String detector,
+    required String classifier,
+  }) = DetectionSuccess;
+  const factory DetectionState.empty() = DetectionEmpty;
+  const factory DetectionState.error(String message) = DetectionError;
 }

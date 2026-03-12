@@ -55,12 +55,15 @@ extension DetectionStatePatterns on DetectionState {
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeMap<TResult extends Object?>({TResult Function( _Initial value)?  initial,TResult Function( _Loading value)?  loading,required TResult orElse(),}){
+@optionalTypeArgs TResult maybeMap<TResult extends Object?>({TResult Function( DetectionInitial value)?  initial,TResult Function( DetectionLoading value)?  loading,TResult Function( DetectionSuccess value)?  success,TResult Function( DetectionEmpty value)?  empty,TResult Function( DetectionError value)?  error,required TResult orElse(),}){
 final _that = this;
 switch (_that) {
-case _Initial() when initial != null:
-return initial(_that);case _Loading() when loading != null:
-return loading(_that);case _:
+case DetectionInitial() when initial != null:
+return initial(_that);case DetectionLoading() when loading != null:
+return loading(_that);case DetectionSuccess() when success != null:
+return success(_that);case DetectionEmpty() when empty != null:
+return empty(_that);case DetectionError() when error != null:
+return error(_that);case _:
   return orElse();
 
 }
@@ -78,12 +81,15 @@ return loading(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult map<TResult extends Object?>({required TResult Function( _Initial value)  initial,required TResult Function( _Loading value)  loading,}){
+@optionalTypeArgs TResult map<TResult extends Object?>({required TResult Function( DetectionInitial value)  initial,required TResult Function( DetectionLoading value)  loading,required TResult Function( DetectionSuccess value)  success,required TResult Function( DetectionEmpty value)  empty,required TResult Function( DetectionError value)  error,}){
 final _that = this;
 switch (_that) {
-case _Initial():
-return initial(_that);case _Loading():
-return loading(_that);case _:
+case DetectionInitial():
+return initial(_that);case DetectionLoading():
+return loading(_that);case DetectionSuccess():
+return success(_that);case DetectionEmpty():
+return empty(_that);case DetectionError():
+return error(_that);case _:
   throw StateError('Unexpected subclass');
 
 }
@@ -100,12 +106,15 @@ return loading(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult? mapOrNull<TResult extends Object?>({TResult? Function( _Initial value)?  initial,TResult? Function( _Loading value)?  loading,}){
+@optionalTypeArgs TResult? mapOrNull<TResult extends Object?>({TResult? Function( DetectionInitial value)?  initial,TResult? Function( DetectionLoading value)?  loading,TResult? Function( DetectionSuccess value)?  success,TResult? Function( DetectionEmpty value)?  empty,TResult? Function( DetectionError value)?  error,}){
 final _that = this;
 switch (_that) {
-case _Initial() when initial != null:
-return initial(_that);case _Loading() when loading != null:
-return loading(_that);case _:
+case DetectionInitial() when initial != null:
+return initial(_that);case DetectionLoading() when loading != null:
+return loading(_that);case DetectionSuccess() when success != null:
+return success(_that);case DetectionEmpty() when empty != null:
+return empty(_that);case DetectionError() when error != null:
+return error(_that);case _:
   return null;
 
 }
@@ -122,11 +131,14 @@ return loading(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>({TResult Function()?  initial,TResult Function()?  loading,required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>({TResult Function()?  initial,TResult Function()?  loading,TResult Function( List<DetectedObject> detections,  int processingTimeMs,  String detector,  String classifier)?  success,TResult Function()?  empty,TResult Function( String message)?  error,required TResult orElse(),}) {final _that = this;
 switch (_that) {
-case _Initial() when initial != null:
-return initial();case _Loading() when loading != null:
-return loading();case _:
+case DetectionInitial() when initial != null:
+return initial();case DetectionLoading() when loading != null:
+return loading();case DetectionSuccess() when success != null:
+return success(_that.detections,_that.processingTimeMs,_that.detector,_that.classifier);case DetectionEmpty() when empty != null:
+return empty();case DetectionError() when error != null:
+return error(_that.message);case _:
   return orElse();
 
 }
@@ -144,11 +156,14 @@ return loading();case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>({required TResult Function()  initial,required TResult Function()  loading,}) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>({required TResult Function()  initial,required TResult Function()  loading,required TResult Function( List<DetectedObject> detections,  int processingTimeMs,  String detector,  String classifier)  success,required TResult Function()  empty,required TResult Function( String message)  error,}) {final _that = this;
 switch (_that) {
-case _Initial():
-return initial();case _Loading():
-return loading();case _:
+case DetectionInitial():
+return initial();case DetectionLoading():
+return loading();case DetectionSuccess():
+return success(_that.detections,_that.processingTimeMs,_that.detector,_that.classifier);case DetectionEmpty():
+return empty();case DetectionError():
+return error(_that.message);case _:
   throw StateError('Unexpected subclass');
 
 }
@@ -165,11 +180,14 @@ return loading();case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>({TResult? Function()?  initial,TResult? Function()?  loading,}) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>({TResult? Function()?  initial,TResult? Function()?  loading,TResult? Function( List<DetectedObject> detections,  int processingTimeMs,  String detector,  String classifier)?  success,TResult? Function()?  empty,TResult? Function( String message)?  error,}) {final _that = this;
 switch (_that) {
-case _Initial() when initial != null:
-return initial();case _Loading() when loading != null:
-return loading();case _:
+case DetectionInitial() when initial != null:
+return initial();case DetectionLoading() when loading != null:
+return loading();case DetectionSuccess() when success != null:
+return success(_that.detections,_that.processingTimeMs,_that.detector,_that.classifier);case DetectionEmpty() when empty != null:
+return empty();case DetectionError() when error != null:
+return error(_that.message);case _:
   return null;
 
 }
@@ -180,8 +198,8 @@ return loading();case _:
 /// @nodoc
 
 
-class _Initial implements DetectionState {
-  const _Initial();
+class DetectionInitial implements DetectionState {
+  const DetectionInitial();
   
 
 
@@ -191,7 +209,7 @@ class _Initial implements DetectionState {
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is _Initial);
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is DetectionInitial);
 }
 
 
@@ -212,8 +230,8 @@ String toString() {
 /// @nodoc
 
 
-class _Loading implements DetectionState {
-  const _Loading();
+class DetectionLoading implements DetectionState {
+  const DetectionLoading();
   
 
 
@@ -223,7 +241,7 @@ class _Loading implements DetectionState {
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is _Loading);
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is DetectionLoading);
 }
 
 
@@ -240,5 +258,181 @@ String toString() {
 
 
 
+
+/// @nodoc
+
+
+class DetectionSuccess implements DetectionState {
+  const DetectionSuccess({required final  List<DetectedObject> detections, required this.processingTimeMs, required this.detector, required this.classifier}): _detections = detections;
+  
+
+ final  List<DetectedObject> _detections;
+ List<DetectedObject> get detections {
+  if (_detections is EqualUnmodifiableListView) return _detections;
+  // ignore: implicit_dynamic_type
+  return EqualUnmodifiableListView(_detections);
+}
+
+ final  int processingTimeMs;
+ final  String detector;
+ final  String classifier;
+
+/// Create a copy of DetectionState
+/// with the given fields replaced by the non-null parameter values.
+@JsonKey(includeFromJson: false, includeToJson: false)
+@pragma('vm:prefer-inline')
+$DetectionSuccessCopyWith<DetectionSuccess> get copyWith => _$DetectionSuccessCopyWithImpl<DetectionSuccess>(this, _$identity);
+
+
+
+@override
+bool operator ==(Object other) {
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is DetectionSuccess&&const DeepCollectionEquality().equals(other._detections, _detections)&&(identical(other.processingTimeMs, processingTimeMs) || other.processingTimeMs == processingTimeMs)&&(identical(other.detector, detector) || other.detector == detector)&&(identical(other.classifier, classifier) || other.classifier == classifier));
+}
+
+
+@override
+int get hashCode => Object.hash(runtimeType,const DeepCollectionEquality().hash(_detections),processingTimeMs,detector,classifier);
+
+@override
+String toString() {
+  return 'DetectionState.success(detections: $detections, processingTimeMs: $processingTimeMs, detector: $detector, classifier: $classifier)';
+}
+
+
+}
+
+/// @nodoc
+abstract mixin class $DetectionSuccessCopyWith<$Res> implements $DetectionStateCopyWith<$Res> {
+  factory $DetectionSuccessCopyWith(DetectionSuccess value, $Res Function(DetectionSuccess) _then) = _$DetectionSuccessCopyWithImpl;
+@useResult
+$Res call({
+ List<DetectedObject> detections, int processingTimeMs, String detector, String classifier
+});
+
+
+
+
+}
+/// @nodoc
+class _$DetectionSuccessCopyWithImpl<$Res>
+    implements $DetectionSuccessCopyWith<$Res> {
+  _$DetectionSuccessCopyWithImpl(this._self, this._then);
+
+  final DetectionSuccess _self;
+  final $Res Function(DetectionSuccess) _then;
+
+/// Create a copy of DetectionState
+/// with the given fields replaced by the non-null parameter values.
+@pragma('vm:prefer-inline') $Res call({Object? detections = null,Object? processingTimeMs = null,Object? detector = null,Object? classifier = null,}) {
+  return _then(DetectionSuccess(
+detections: null == detections ? _self._detections : detections // ignore: cast_nullable_to_non_nullable
+as List<DetectedObject>,processingTimeMs: null == processingTimeMs ? _self.processingTimeMs : processingTimeMs // ignore: cast_nullable_to_non_nullable
+as int,detector: null == detector ? _self.detector : detector // ignore: cast_nullable_to_non_nullable
+as String,classifier: null == classifier ? _self.classifier : classifier // ignore: cast_nullable_to_non_nullable
+as String,
+  ));
+}
+
+
+}
+
+/// @nodoc
+
+
+class DetectionEmpty implements DetectionState {
+  const DetectionEmpty();
+  
+
+
+
+
+
+
+@override
+bool operator ==(Object other) {
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is DetectionEmpty);
+}
+
+
+@override
+int get hashCode => runtimeType.hashCode;
+
+@override
+String toString() {
+  return 'DetectionState.empty()';
+}
+
+
+}
+
+
+
+
+/// @nodoc
+
+
+class DetectionError implements DetectionState {
+  const DetectionError(this.message);
+  
+
+ final  String message;
+
+/// Create a copy of DetectionState
+/// with the given fields replaced by the non-null parameter values.
+@JsonKey(includeFromJson: false, includeToJson: false)
+@pragma('vm:prefer-inline')
+$DetectionErrorCopyWith<DetectionError> get copyWith => _$DetectionErrorCopyWithImpl<DetectionError>(this, _$identity);
+
+
+
+@override
+bool operator ==(Object other) {
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is DetectionError&&(identical(other.message, message) || other.message == message));
+}
+
+
+@override
+int get hashCode => Object.hash(runtimeType,message);
+
+@override
+String toString() {
+  return 'DetectionState.error(message: $message)';
+}
+
+
+}
+
+/// @nodoc
+abstract mixin class $DetectionErrorCopyWith<$Res> implements $DetectionStateCopyWith<$Res> {
+  factory $DetectionErrorCopyWith(DetectionError value, $Res Function(DetectionError) _then) = _$DetectionErrorCopyWithImpl;
+@useResult
+$Res call({
+ String message
+});
+
+
+
+
+}
+/// @nodoc
+class _$DetectionErrorCopyWithImpl<$Res>
+    implements $DetectionErrorCopyWith<$Res> {
+  _$DetectionErrorCopyWithImpl(this._self, this._then);
+
+  final DetectionError _self;
+  final $Res Function(DetectionError) _then;
+
+/// Create a copy of DetectionState
+/// with the given fields replaced by the non-null parameter values.
+@pragma('vm:prefer-inline') $Res call({Object? message = null,}) {
+  return _then(DetectionError(
+null == message ? _self.message : message // ignore: cast_nullable_to_non_nullable
+as String,
+  ));
+}
+
+
+}
 
 // dart format on

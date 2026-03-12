@@ -1,9 +1,7 @@
 import 'dart:io';
 
 import 'package:all_my_things/application/providers/camera_providers.dart';
-import 'package:all_my_things/domain/models/quality_metrics.dart';
 import 'package:all_my_things/presentation/theme/app_theme.dart';
-import 'package:all_my_things/presentation/widgets/quality_feedback_widget.dart';
 import 'package:camera/camera.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -15,14 +13,14 @@ class CameraCaptureScreen extends ConsumerStatefulWidget {
   const CameraCaptureScreen({super.key});
 
   @override
-  ConsumerState<CameraCaptureScreen> createState() => _CameraCaptureScreenState();
+  ConsumerState<CameraCaptureScreen> createState() =>
+      _CameraCaptureScreenState();
 }
 
 class _CameraCaptureScreenState extends ConsumerState<CameraCaptureScreen> {
   bool _isCapturing = false;
-  QualityMetrics? _qualityMetrics;
   File? _capturedImageFile;
-  bool _showQualityFeedback = false;
+  bool _showPreview = false;
 
   @override
   void initState() {
@@ -56,16 +54,14 @@ class _CameraCaptureScreenState extends ConsumerState<CameraCaptureScreen> {
     try {
       final image = await controller.takePicture();
       final directory = await getTemporaryDirectory();
-      final filePath = '${directory.path}/${DateTime.now().millisecondsSinceEpoch}.jpg';
+      final filePath =
+          '${directory.path}/${DateTime.now().millisecondsSinceEpoch}.jpg';
       final imageFile = await File(image.path).copy(filePath);
-
-      // Analyze image quality - quality metrics will be fetched from API during detection
-      // Store the image and show quality feedback widget
 
       if (mounted) {
         setState(() {
           _capturedImageFile = imageFile;
-          _showQualityFeedback = true;
+          _showPreview = true;
         });
       }
     } catch (e) {
@@ -91,8 +87,7 @@ class _CameraCaptureScreenState extends ConsumerState<CameraCaptureScreen> {
       // Reset state
       setState(() {
         _capturedImageFile = null;
-        _qualityMetrics = null;
-        _showQualityFeedback = false;
+        _showPreview = false;
       });
     }
   }
@@ -100,8 +95,7 @@ class _CameraCaptureScreenState extends ConsumerState<CameraCaptureScreen> {
   Future<void> _retryPhoto() async {
     setState(() {
       _capturedImageFile = null;
-      _qualityMetrics = null;
-      _showQualityFeedback = false;
+      _showPreview = false;
     });
   }
 
@@ -141,8 +135,8 @@ class _CameraCaptureScreenState extends ConsumerState<CameraCaptureScreen> {
               child: CircularProgressIndicator(color: Colors.white),
             ),
 
-          // Quality Feedback Modal (overlay when photo is captured)
-          if (_showQualityFeedback && _capturedImageFile != null)
+          // Preview overlay with Retake/Continue buttons
+          if (_showPreview && _capturedImageFile != null)
             ColoredBox(
               color: Colors.black.withValues(alpha: 0.3),
               child: Column(
@@ -164,11 +158,6 @@ class _CameraCaptureScreenState extends ConsumerState<CameraCaptureScreen> {
                         ),
                       ],
                     ),
-                  ),
-                  // Quality feedback widget
-                  QualityFeedbackWidget(
-                    qualityMetrics: _qualityMetrics,
-                    onRetry: _retryPhoto,
                   ),
                   // Action buttons
                   Padding(
@@ -210,7 +199,7 @@ class _CameraCaptureScreenState extends ConsumerState<CameraCaptureScreen> {
             ),
 
           // Top controls
-          if (!_showQualityFeedback)
+          if (!_showPreview)
             SafeArea(
               child: Padding(
                 padding: const EdgeInsets.all(20),
@@ -236,7 +225,7 @@ class _CameraCaptureScreenState extends ConsumerState<CameraCaptureScreen> {
             ),
 
           // Bottom capture button
-          if (!_showQualityFeedback)
+          if (!_showPreview)
             Align(
               alignment: Alignment.bottomCenter,
               child: SafeArea(
@@ -251,7 +240,7 @@ class _CameraCaptureScreenState extends ConsumerState<CameraCaptureScreen> {
             ),
 
           // Close button
-          if (!_showQualityFeedback)
+          if (!_showPreview)
             SafeArea(
               child: Align(
                 alignment: Alignment.topLeft,

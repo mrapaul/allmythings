@@ -2,6 +2,20 @@ import 'package:all_my_things/application/providers/inventory_providers.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+/// Notifier for search query state
+class SearchQueryNotifier extends Notifier<String> {
+  @override
+  String build() => '';
+
+  void update(String query) {
+    state = query;
+  }
+}
+
+/// Provider for search query
+final searchQueryProvider =
+    NotifierProvider<SearchQueryNotifier, String>(SearchQueryNotifier.new);
+
 class SearchScreen extends ConsumerStatefulWidget {
   const SearchScreen({super.key});
 
@@ -29,8 +43,8 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
             hintText: 'Search...',
             border: InputBorder.none,
           ),
-          onChanged: (value) {
-            ref.read(searchQueryProvider.notifier).state = value;
+          onChanged: (String value) {
+            ref.read(searchQueryProvider.notifier).update(value);
           },
         ),
       ),
@@ -65,5 +79,3 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
     );
   }
 }
-
-final searchQueryProvider = StateProvider<String>((ref) => '');

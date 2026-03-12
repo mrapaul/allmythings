@@ -1,4 +1,4 @@
-import 'package:all_my_things/domain/models/detection.dart';
+import 'package:all_my_things/domain/models/detected_object.dart';
 import 'package:flutter/material.dart';
 
 class DetectionBox extends StatelessWidget {
@@ -8,7 +8,7 @@ class DetectionBox extends StatelessWidget {
     super.key,
     this.color = Colors.red,
   });
-  final Detection detection;
+  final DetectedObject detection;
   final Size imageSize;
   final Color color;
 

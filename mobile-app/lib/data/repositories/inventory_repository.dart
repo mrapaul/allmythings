@@ -1,291 +1,190 @@
 import 'dart:convert';
 
 import 'package:all_my_things/data/database/app_database.dart';
-import 'package:all_my_things/domain/models/detection.dart';
+import 'package:all_my_things/domain/models/detected_object.dart';
 import 'package:drift/drift.dart';
-import 'package:fpdart/fpdart.dart';
 
 /// Repository for inventory items in local database
 class InventoryRepository {
   InventoryRepository(this._database);
   final AppDatabase _database;
 
-  /// Create a single inventory item with its associated labels
-  Future<Either<String, int>> createItem({
-    required String name,
+  /// Save a detected object as an inventory item with extracted labels
+  Future<int> saveDetection({
     required String photoPath,
     required String thumbnailPath,
-    required List<Detection> detections,
+    required DetectedObject detection,
   }) async {
-    try {
-      final detectionJson = jsonEncode(detections.map((d) => d.toJson()).toList());
+    final detectionJson = jsonEncode(detection.toJson());
 
-      final itemId = await _database.into(_database.inventoryItems).insert(
-            InventoryItemsCompanion.insert(
-              photoPath: photoPath,
-              thumbnailPath: thumbnailPath,
-              detectionData: detectionJson,
-              createdAt: DateTime.now(),
-              updatedAt: DateTime.now(),
-            ),
-          );
+    final itemId = await _database.into(_database.inventoryItems).insert(
+          InventoryItemsCompanion.insert(
+            photoPath: photoPath,
+            thumbnailPath: thumbnailPath,
+            detectionData: detectionJson,
+            createdAt: DateTime.now(),
+            updatedAt: DateTime.now(),
+          ),
+        );
 
-      // Add the primary item name as a label
+    // Extract and save all VLM attributes as key-value labels
+    final labels = _extractLabels(detection);
+    for (final entry in labels) {
       await _database.into(_database.labels).insert(
             LabelsCompanion.insert(
               itemId: itemId,
-              value: name,
+              key: entry.key,
+              value: entry.value,
+              confidence: Value(detection.confidence),
               createdAt: DateTime.now(),
             ),
           );
-
-      // Add each detection as a label
-      for (final detection in detections) {
-        await _database.into(_database.labels).insert(
-              LabelsCompanion.insert(
-                itemId: itemId,
-                value: detection.label,
-                createdAt: DateTime.now(),
-              ),
-            );
-      }
-
-      return right(itemId);
-    } catch (e) {
-      return left('Failed to create inventory item: $e');
     }
+
+    return itemId;
   }
 
-  /// Add multiple inventory items
-  Future<Either<String, List<int>>> addItems(List<InventoryItem> items) async {
-    try {
-      final itemIds = <int>[];
-      for (final item in items) {
-        final itemId = await _database
-            .into(_database.inventoryItems)
-            .insert(
-              InventoryItemsCompanion.insert(
-                photoPath: item.photoPath,
-                thumbnailPath: item.thumbnailPath,
-                detectionData: item.detectionData,
-                createdAt: item.createdAt,
-                updatedAt: item.updatedAt,
-              ),
-            );
-        itemIds.add(itemId);
+  /// Extract all VLM fields as key-value label pairs
+  List<_LabelEntry> _extractLabels(DetectedObject detection) {
+    final labels = <_LabelEntry>[];
 
-        // Create initial label from detection data
-        // Assuming detectionData is a JSON string of a Detection object
-        // final detection = Detection.fromJson(jsonDecode(item.detectionData) as Map<String, dynamic>);
-        await _database
-            .into(_database.labels)
-            .insert(
-              LabelsCompanion.insert(
-                itemId: itemId,
-                value: 'placeholder', // detection.label,
-                createdAt: DateTime.now(),
-              ),
-            );
-      }
-      return right(itemIds);
-    } catch (e) {
-      return left(
-        'Failed to add inventory items: $e',
-      );
+    labels.add(_LabelEntry('label', detection.label));
+    labels.add(_LabelEntry('category', detection.category));
+
+    if (detection.brand != null) {
+      labels.add(_LabelEntry('brand', detection.brand!));
     }
+    if (detection.model != null) {
+      labels.add(_LabelEntry('model', detection.model!));
+    }
+    for (final color in detection.colors) {
+      labels.add(_LabelEntry('color', color));
+    }
+    for (final material in detection.materials) {
+      labels.add(_LabelEntry('material', material));
+    }
+    if (detection.condition != null) {
+      labels.add(_LabelEntry('condition', detection.condition!));
+    }
+    if (detection.description != null) {
+      labels.add(_LabelEntry('description', detection.description!));
+    }
+
+    return labels;
   }
 
   /// Get all inventory items
-  Future<Either<String, List<InventoryItem>>> getAllItems() async {
-    try {
-      final items = await (_database.select(
-        _database.inventoryItems,
-      )..orderBy([(t) => OrderingTerm.desc(t.createdAt)])).get();
-
-      return right(items);
-    } catch (e) {
-      return left(
-        'Failed to get inventory items: $e',
-      );
-    }
+  Future<List<InventoryItem>> getAllItems() async {
+    return (_database.select(_database.inventoryItems)
+          ..orderBy([(t) => OrderingTerm.desc(t.createdAt)]))
+        .get();
   }
 
   /// Get item by ID
-  Future<Either<String, InventoryItem?>> getItemById(int id) async {
-    try {
-      final item = await (_database.select(
-        _database.inventoryItems,
-      )..where((t) => t.id.equals(id))).getSingleOrNull();
-
-      return right(item);
-    } catch (e) {
-      return left(
-        'Failed to get inventory item: $e',
-      );
-    }
+  Future<InventoryItem?> getItemById(int id) async {
+    return (_database.select(_database.inventoryItems)
+          ..where((t) => t.id.equals(id)))
+        .getSingleOrNull();
   }
 
   /// Delete item
-  Future<Either<String, void>> deleteItem(int id) async {
-    try {
-      await (_database.delete(
-        _database.inventoryItems,
-      )..where((t) => t.id.equals(id))).go();
-
-      return right(null);
-    } catch (e) {
-      return left(
-        'Failed to delete inventory item: $e',
-      );
-    }
+  Future<void> deleteItem(int id) async {
+    await (_database.delete(_database.inventoryItems)
+          ..where((t) => t.id.equals(id)))
+        .go();
   }
 
   /// Get labels for item
-  Future<Either<String, List<Label>>> getLabelsForItem(int itemId) async {
-    try {
-      final labels =
-          await (_database.select(_database.labels)
-                ..where((t) => t.itemId.equals(itemId))
-                ..orderBy([(t) => OrderingTerm.desc(t.createdAt)]))
-              .get();
-
-      return right(labels);
-    } catch (e) {
-      return left(
-        'Failed to get labels: $e',
-      );
-    }
+  Future<List<Label>> getLabelsForItem(int itemId) async {
+    return (_database.select(_database.labels)
+          ..where((t) => t.itemId.equals(itemId))
+          ..orderBy([(t) => OrderingTerm.desc(t.createdAt)]))
+        .get();
   }
 
-  /// Simple LIKE-based search on labels, returns matching items
-  Future<Either<String, List<InventoryItem>>> searchItems(String query) async {
-    try {
-      final like = '%${query.replaceAll('%', r'\%').replaceAll('_', r'\_')}%';
-      final matchedLabels = await (_database.select(
-        _database.labels,
-      )..where((t) => t.value.like(like))).get();
-
-      if (matchedLabels.isEmpty) return right([]);
-
-      final itemIds = matchedLabels.map((l) => l.itemId).toSet().toList();
-      final items =
-          await (_database.select(_database.inventoryItems)
-                ..where((t) => t.id.isIn(itemIds))
-                ..orderBy([(t) => OrderingTerm.desc(t.createdAt)]))
-              .get();
-
-      return right(items);
-    } catch (e) {
-      return left('Failed to search items: $e');
-    }
+  /// Search items using FTS
+  Future<List<InventoryItem>> searchItems(String query) async {
+    if (query.trim().isEmpty) return [];
+    return _database.searchItems(query);
   }
 
   /// Add label to item
-  Future<Either<String, int>> addLabel({
+  Future<int> addLabel({
     required int itemId,
+    required String key,
     required String value,
-    String? key,
   }) async {
-    try {
-      final labelId = await _database
-          .into(_database.labels)
-          .insert(
-            LabelsCompanion.insert(
-              itemId: itemId,
-              key: key != null ? Value(key) : const Value.absent(),
-              value: value,
-              createdAt: DateTime.now(),
-            ),
-          );
-
-      return right(labelId);
-    } catch (e) {
-      return left(
-        'Failed to add label: $e',
-      );
-    }
+    return _database.into(_database.labels).insert(
+          LabelsCompanion.insert(
+            itemId: itemId,
+            key: key,
+            value: value,
+            createdAt: DateTime.now(),
+          ),
+        );
   }
 
   /// Update label
-  Future<Either<String, void>> updateLabel({
+  Future<void> updateLabel({
     required int labelId,
-    required String? value,
     String? key,
+    String? value,
   }) async {
-    try {
-      await (_database.update(
-        _database.labels,
-      )..where((t) => t.id.equals(labelId))).write(
-        LabelsCompanion(
-          key: key != null ? Value(key) : const Value.absent(),
-          value: value != null ? Value(value) : const Value.absent(),
-        ),
-      );
-
-      return right(null);
-    } catch (e) {
-      return left(
-        'Failed to update label: $e',
-      );
-    }
+    await (_database.update(_database.labels)
+          ..where((t) => t.id.equals(labelId)))
+        .write(
+      LabelsCompanion(
+        key: key != null ? Value(key) : const Value.absent(),
+        value: value != null ? Value(value) : const Value.absent(),
+      ),
+    );
   }
 
   /// Delete label
-  Future<Either<String, void>> deleteLabel(int labelId) async {
-    try {
-      await (_database.delete(
-        _database.labels,
-      )..where((t) => t.id.equals(labelId))).go();
-
-      return right(null);
-    } catch (e) {
-      return left(
-        'Failed to delete label: $e',
-      );
-    }
+  Future<void> deleteLabel(int labelId) async {
+    await (_database.delete(_database.labels)
+          ..where((t) => t.id.equals(labelId)))
+        .go();
   }
 
   /// Get inventory statistics
-  Future<Either<String, InventoryStats>> getStats() async {
-    try {
-      final itemCount =
-          await (_database.selectOnly(_database.inventoryItems)
-                ..addColumns([_database.inventoryItems.id.count()]))
-              .map((row) => row.read(_database.inventoryItems.id.count()) ?? 0)
-              .getSingle();
+  Future<InventoryStats> getStats() async {
+    final itemCount =
+        await (_database.selectOnly(_database.inventoryItems)
+              ..addColumns([_database.inventoryItems.id.count()]))
+            .map((row) => row.read(_database.inventoryItems.id.count()) ?? 0)
+            .getSingle();
 
-      final labelCount =
-          await (_database.selectOnly(_database.labels)
-                ..addColumns([_database.labels.id.count()]))
-              .map((row) => row.read(_database.labels.id.count()) ?? 0)
-              .getSingle();
+    final labelCount =
+        await (_database.selectOnly(_database.labels)
+              ..addColumns([_database.labels.id.count()]))
+            .map((row) => row.read(_database.labels.id.count()) ?? 0)
+            .getSingle();
 
-      final lastItem =
-          await (_database.select(_database.inventoryItems)
-                ..orderBy([(t) => OrderingTerm.desc(t.createdAt)])
-                ..limit(1))
-              .getSingleOrNull();
+    final lastItem =
+        await (_database.select(_database.inventoryItems)
+              ..orderBy([(t) => OrderingTerm.desc(t.createdAt)])
+              ..limit(1))
+            .getSingleOrNull();
 
-      // Calculate estimated categories: count unique labels where key is null or 'Category'
-      final categoryLabels = await (_database.select(
-        _database.labels,
-      )..where((t) => t.key.isNull() | t.key.equals('Category'))).get();
-      final totalCategories = categoryLabels.map((l) => l.value).toSet().length;
+    // Count unique label values for categories
+    final allLabels = await _database.select(_database.labels).get();
+    final uniqueLabels = allLabels.map((l) => l.value).toSet().length;
 
-      return right(
-        InventoryStats(
-          totalItems: itemCount,
-          totalLabels: labelCount,
-          totalCategories: totalCategories,
-          lastCaptured: lastItem?.createdAt,
-        ),
-      );
-    } catch (e) {
-      return left(
-        'Failed to get stats: $e',
-      );
-    }
+    return InventoryStats(
+      totalItems: itemCount,
+      totalLabels: labelCount,
+      totalCategories: uniqueLabels,
+      lastCaptured: lastItem?.createdAt,
+    );
   }
+}
+
+/// Simple key-value pair for label extraction
+class _LabelEntry {
+  _LabelEntry(this.key, this.value);
+  final String key;
+  final String value;
 }
 
 /// Inventory statistics

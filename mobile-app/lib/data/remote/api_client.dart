@@ -12,6 +12,8 @@ class ApiClient {
       headers: {
         'Content-Type': 'application/json',
         'Accept': 'application/json',
+        if (AppConfig.apiKey.isNotEmpty)
+          'Authorization': 'Bearer ${AppConfig.apiKey}',
       },
     );
 

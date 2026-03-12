@@ -1,36 +1,20 @@
-import 'package:all_my_things/core/errors/failures.dart';
-import 'package:fpdart/fpdart.dart';
 import 'package:permission_handler/permission_handler.dart';
 
 /// Camera permission handler
 class CameraPermissionHandler {
   /// Request camera permission
-  Future<Either<Failure, bool>> requestPermission() async {
-    try {
-      final status = await Permission.camera.request();
+  /// Returns true if granted, throws on denial
+  Future<bool> requestPermission() async {
+    final status = await Permission.camera.request();
 
-      if (status.isGranted) {
-        return right(true);
-      } else if (status.isPermanentlyDenied) {
-        return left(
-          const Failure.permission(
-            message:
-                'Camera permission permanently denied. Please enable in settings.',
-          ),
-        );
-      } else {
-        return left(
-          const Failure.permission(
-            message: 'Camera permission denied.',
-          ),
-        );
-      }
-    } catch (e) {
-      return left(
-        Failure.unexpected(
-          message: 'Failed to request camera permission: $e',
-        ),
+    if (status.isGranted) {
+      return true;
+    } else if (status.isPermanentlyDenied) {
+      throw Exception(
+        'Camera permission permanently denied. Please enable in settings.',
       );
+    } else {
+      throw Exception('Camera permission denied.');
     }
   }
 

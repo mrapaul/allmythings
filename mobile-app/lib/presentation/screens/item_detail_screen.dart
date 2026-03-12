@@ -21,10 +21,6 @@ class ItemDetailScreen extends ConsumerWidget {
       appBar: AppBar(
         actions: [
           IconButton(
-            icon: const Icon(Icons.edit),
-            onPressed: () => context.push('/edit/$itemId'),
-          ),
-          IconButton(
             icon: const Icon(Icons.delete),
             onPressed: () => _showDeleteDialog(context, ref),
           ),
@@ -53,7 +49,9 @@ class ItemDetailScreen extends ConsumerWidget {
                               File(item.photoPath),
                               fit: BoxFit.contain,
                             )
-                          : const Center(child: Icon(Icons.image_not_supported)),
+                          : const Center(
+                              child: Icon(Icons.image_not_supported),
+                            ),
                     ),
                   ),
                 ),
@@ -75,19 +73,54 @@ class ItemDetailScreen extends ConsumerWidget {
                             return const Text('No labels');
                           }
 
-                          return Wrap(
-                            spacing: 8,
-                            runSpacing: 8,
-                            children: labels.map((label) {
-                              return Chip(
-                                label: Text(label.value),
-                                backgroundColor: AppTheme.surfaceLight,
+                          // Group labels by key
+                          final grouped = <String, List<String>>{};
+                          for (final label in labels) {
+                            grouped
+                                .putIfAbsent(label.key, () => [])
+                                .add(label.value);
+                          }
+
+                          return Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: grouped.entries.map((entry) {
+                              return Padding(
+                                padding: const EdgeInsets.only(bottom: 12),
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      entry.key.toUpperCase(),
+                                      style: Theme.of(context)
+                                          .textTheme
+                                          .labelSmall
+                                          ?.copyWith(
+                                            color: Colors.grey,
+                                            fontWeight: FontWeight.w600,
+                                          ),
+                                    ),
+                                    const SizedBox(height: 4),
+                                    Wrap(
+                                      spacing: 8,
+                                      runSpacing: 4,
+                                      children: entry.value.map((value) {
+                                        return Chip(
+                                          label: Text(value),
+                                          backgroundColor:
+                                              AppTheme.surfaceLight,
+                                        );
+                                      }).toList(),
+                                    ),
+                                  ],
+                                ),
                               );
                             }).toList(),
                           );
                         },
-                        loading: () => const CircularProgressIndicator(),
-                        error: (e, _) => Text('Error loading labels: $e'),
+                        loading: () =>
+                            const CircularProgressIndicator(),
+                        error: (e, _) =>
+                            Text('Error loading labels: $e'),
                       ),
 
                       const SizedBox(height: 24),
@@ -135,12 +168,8 @@ class ItemDetailScreen extends ConsumerWidget {
     );
 
     if ((confirmed ?? false) && context.mounted) {
-      final repositoryAsync = ref.read(inventoryRepositoryProvider);
-      final repository = await repositoryAsync.when(
-        data: (repo) async => repo,
-        loading: () async => throw Exception('Repository still loading'),
-        error: (error, _) async => throw error,
-      );
+      final repository =
+          await ref.read(inventoryRepositoryProvider.future);
       await repository.deleteItem(itemId);
       ref.invalidate(inventoryItemsProvider);
       if (context.mounted) {
@@ -150,7 +179,9 @@ class ItemDetailScreen extends ConsumerWidget {
   }
 
   String _formatDate(DateTime date) {
-    return '${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')} '
-        '${date.hour.toString().padLeft(2, '0')}:${date.minute.toString().padLeft(2, '0')}';
+    return '${date.year}-${date.month.toString().padLeft(2, '0')}-'
+        '${date.day.toString().padLeft(2, '0')} '
+        '${date.hour.toString().padLeft(2, '0')}:'
+        '${date.minute.toString().padLeft(2, '0')}';
   }
 }

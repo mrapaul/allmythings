@@ -1,8 +1,22 @@
 import 'dart:io';
 
 import 'package:all_my_things/data/remote/api_client.dart';
-import 'package:all_my_things/domain/models/detection.dart';
+import 'package:all_my_things/domain/models/detected_object.dart';
 import 'package:dio/dio.dart';
+
+/// Result of a detection API call
+class DetectionResult {
+  DetectionResult({
+    required this.detections,
+    required this.detector,
+    required this.classifier,
+    required this.processingTimeMs,
+  });
+  final List<DetectedObject> detections;
+  final String detector;
+  final String classifier;
+  final int processingTimeMs;
+}
 
 /// Repository for object detection via API
 class DetectionRepository {
@@ -10,8 +24,8 @@ class DetectionRepository {
   final ApiClient _apiClient;
 
   /// Detect objects in image file
-  /// Returns a list of detected objects with confidence scores and bounding boxes
-  Future<List<Detection>> detectObjects(File imageFile) async {
+  /// Returns a DetectionResult with detected objects and metadata
+  Future<DetectionResult> detectObjects(File imageFile) async {
     try {
       // Prepare multipart form data with image file
       final formData = FormData.fromMap({
@@ -31,26 +45,42 @@ class DetectionRepository {
       );
 
       if (response.statusCode != 200) {
-        throw Exception('Detection API returned status code: ${response.statusCode}');
+        throw Exception(
+          'Detection API returned status code: ${response.statusCode}',
+        );
       }
 
       final data = response.data;
       if (data == null) {
-        return [];
+        return DetectionResult(
+          detections: [],
+          detector: 'unknown',
+          classifier: 'unknown',
+          processingTimeMs: 0,
+        );
       }
 
       // Parse detections from response
-      final detections = data['detections'] as List<dynamic>?;
-      if (detections == null || detections.isEmpty) {
-        return [];
-      }
+      final detectionsJson = data['detections'] as List<dynamic>?;
+      final detections = detectionsJson
+              ?.map(
+                (d) => DetectedObject.fromJson(d as Map<String, dynamic>),
+              )
+              .toList() ??
+          [];
 
-      // Convert JSON to Detection objects
-      return detections
-          .map((detection) => Detection.fromJson(detection as Map<String, dynamic>))
-          .toList();
+      // Parse metadata
+      final detector = data['detector'] as String? ?? 'unknown';
+      final classifier = data['classifier'] as String? ?? 'unknown';
+      final processingTimeMs = data['processingTimeMs'] as int? ?? 0;
+
+      return DetectionResult(
+        detections: detections,
+        detector: detector,
+        classifier: classifier,
+        processingTimeMs: processingTimeMs,
+      );
     } catch (e) {
-      print('Detection API error: $e');
       rethrow;
     }
   }
