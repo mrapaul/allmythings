@@ -1,30 +1,18 @@
 import { FastifyInstance } from 'fastify';
-import { VisionOrchestratorService } from '../services/vision-orchestrator.service';
+import { DetectionPipelineService } from '../services/detection-pipeline.service';
 
-/**
- * GET /v1/health - Service health check
- */
-// eslint-disable-next-line @typescript-eslint/require-await
-export async function healthRoute(fastify: FastifyInstance) {
-  const orchestrator = new VisionOrchestratorService();
+export async function healthRoute(app: FastifyInstance): Promise<void> {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const pipeline = (app as any).pipeline as DetectionPipelineService;
 
-  fastify.get('/v1/health', async (_request, reply) => {
-    try {
-      const providerHealth = await orchestrator.healthCheck();
+  app.get('/v1/health', async (_request, reply) => {
+    const providers = await pipeline.healthCheck();
+    const allHealthy = Object.values(providers).every(Boolean);
 
-      const allHealthy = Object.values(providerHealth).every((h) => h);
-
-      return reply.code(allHealthy ? 200 : 503).send({
-        status: allHealthy ? 'healthy' : 'degraded',
-        providers: providerHealth,
-        timestamp: new Date().toISOString(),
-      });
-    } catch (error) {
-      return reply.code(503).send({
-        status: 'unhealthy',
-        error: error instanceof Error ? error.message : 'Health check failed',
-        timestamp: new Date().toISOString(),
-      });
-    }
+    return reply.code(allHealthy ? 200 : 503).send({
+      status: allHealthy ? 'healthy' : 'degraded',
+      providers,
+      timestamp: new Date().toISOString(),
+    });
   });
 }

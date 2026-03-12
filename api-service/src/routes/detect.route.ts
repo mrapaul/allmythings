@@ -1,69 +1,42 @@
-/**
- * Detection route - handles object detection endpoint
- */
-
 import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
-import { DetectionService } from '../services/detection.service';
-import { VisionOrchestratorService } from '../services/vision-orchestrator.service';
-import { DetectionRequestSchema } from '../schemas/detection.schema';
+import { DetectionPipelineService } from '../services/detection-pipeline.service';
+import { ImageQualityService } from '../services/image-quality.service';
 import { authMiddleware } from '../middleware/auth.middleware';
-import { BadRequestError } from '../utils/errors';
+import { BadRequestError, PayloadTooLargeError } from '../utils/errors';
 import { logger } from '../utils/logger';
 
-/**
- * Detection route plugin
- */
+const MAX_IMAGE_SIZE = 10 * 1024 * 1024; // 10MB
+const SUPPORTED_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
+
 export async function detectRoute(app: FastifyInstance): Promise<void> {
-  const orchestrator = new VisionOrchestratorService();
-  const detectionService = new DetectionService(orchestrator);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const pipeline = (app as any).pipeline as DetectionPipelineService;
+  const qualityService = new ImageQualityService();
 
-  /**
-   * POST /v1/detect
-   * Upload image and detect objects
-   */
-  app.post(
-    '/v1/detect',
-    {
-      preHandler: authMiddleware,
-    },
-    async (request: FastifyRequest, reply: FastifyReply) => {
-      try {
-        // Parse multipart form data
-        const data = await request.file();
+  app.post('/v1/detect', { preHandler: authMiddleware }, async (request: FastifyRequest, reply: FastifyReply) => {
+    const data = await request.file();
+    if (!data) throw new BadRequestError('No image file uploaded');
 
-        if (!data) {
-          throw new BadRequestError('No file uploaded');
-        }
-
-        // Get image buffer
-        const imageBuffer = await data.toBuffer();
-
-        // Parse query parameters
-        const query = DetectionRequestSchema.parse({
-          minConfidence: (request.query as Record<string, any>)?.minConfidence,
-        });
-
-        logger.info(
-          {
-            userId: request.user?.userId,
-            filename: data.filename,
-            mimetype: data.mimetype,
-            size: imageBuffer.length,
-          },
-          'Processing detection request'
-        );
-
-        // Run detection
-        const response = await detectionService.detectObjects(imageBuffer, {
-          minConfidence: query.minConfidence,
-          userId: request.user?.userId,
-        });
-
-        return reply.code(200).send(response);
-      } catch (error) {
-        logger.error({ error }, 'Detection request failed');
-        throw error;
-      }
+    const imageBuffer = await data.toBuffer();
+    if (imageBuffer.length > MAX_IMAGE_SIZE) {
+      throw new PayloadTooLargeError(`Image exceeds ${MAX_IMAGE_SIZE / 1024 / 1024}MB limit`);
     }
-  );
+    if (data.mimetype && !SUPPORTED_TYPES.includes(data.mimetype)) {
+      throw new BadRequestError(`Unsupported image type: ${data.mimetype}`);
+    }
+
+    logger.info({ filename: data.filename, size: imageBuffer.length }, 'Processing detection request');
+
+    const quality = await qualityService.analyzeQuality(imageBuffer);
+    const result = await pipeline.detect(imageBuffer);
+
+    return reply.code(200).send({
+      ...result,
+      imageQuality: {
+        blur: quality.blurScore,
+        brightness: quality.brightness,
+        contrast: quality.contrast,
+      },
+    });
+  });
 }

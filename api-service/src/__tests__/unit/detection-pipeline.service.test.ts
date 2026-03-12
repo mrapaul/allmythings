@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import { DetectionPipelineService } from '../../services/detection-pipeline.service';
 import { ObjectDetector, BoundingBoxResult } from '../../providers/detector.interface';
 import { ObjectClassifier, ClassifiedObject } from '../../providers/classifier.interface';

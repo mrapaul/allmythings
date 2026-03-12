@@ -4,146 +4,92 @@ import cors from '@fastify/cors';
 import rateLimit from '@fastify/rate-limit';
 import { envConfig } from './config/env.config';
 import { logger } from './utils/logger';
-import { initDatabase, closeDatabase } from './db/database';
 import { errorHandler, notFoundHandler } from './middleware/error.middleware';
-
-// Routes
 import { detectRoute } from './routes/detect.route';
 import { healthRoute } from './routes/health.route';
-import { itemsRoute } from './routes/items.route';
-import { labelsRoute } from './routes/labels.route';
-import { searchRoute } from './routes/search.route';
-import { syncRoute } from './routes/sync.route';
+import { DetectionPipelineService } from './services/detection-pipeline.service';
+import { GroundingDinoDetector } from './providers/grounding-dino.detector';
+import { GoogleVisionDetector } from './providers/google-vision.detector';
+import { GeminiClassifier } from './providers/gemini.classifier';
+import { OllamaClassifier } from './providers/ollama.classifier';
 
-/**
- * Main Fastify application
- */
-
-async function buildApp(options?: { disableRateLimit?: boolean }): Promise<FastifyInstance> {
+export async function buildApp(options?: { disableRateLimit?: boolean; pipeline?: DetectionPipelineService }): Promise<FastifyInstance> {
   const app = Fastify({
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     logger: logger as any,
-    bodyLimit: 10 * 1024 * 1024, // 10MB for images
+    bodyLimit: 10 * 1024 * 1024,
     requestIdLogLabel: 'requestId',
-    disableRequestLogging: false,
     trustProxy: true,
   });
 
-  // Register error handlers
   app.setErrorHandler(errorHandler);
   app.setNotFoundHandler(notFoundHandler);
 
-  // Register plugins
-  await app.register(cors, {
-    origin: true, // Allow all origins in development
-    credentials: true,
-  });
+  await app.register(cors, { origin: true, credentials: true });
+  await app.register(multipart, { limits: { fileSize: 10 * 1024 * 1024, files: 1 } });
 
-  await app.register(multipart, {
-    limits: {
-      fileSize: 10 * 1024 * 1024, // 10MB
-      files: 1,
-    },
-  });
-
-  // Skip rate limiting in test mode
   if (!options?.disableRateLimit) {
-    await app.register(rateLimit, {
-      max: 100, // 100 requests
-      timeWindow: '1 minute',
-      ban: 10, // Ban after 10 violations
-    });
+    await app.register(rateLimit, { max: 100, timeWindow: '1 minute' });
   }
 
-  // Initialize database (optional for testing detection endpoint)
-  try {
-    await initDatabase();
-    logger.info('Database initialized');
-  } catch (error) {
-    logger.warn('Database initialization failed, continuing without database');
-  }
+  // Create detection pipeline
+  const pipeline = options?.pipeline ?? createDefaultPipeline();
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  (app as any).pipeline = pipeline;
 
-  // Register routes
   await app.register(detectRoute);
   await app.register(healthRoute);
-  await app.register(itemsRoute);
-  await app.register(labelsRoute);
-  await app.register(searchRoute);
-  await app.register(syncRoute);
 
-  // Root endpoint
-  app.get('/', () => {
-    return {
-      service: 'Visual Home Inventory - API Service',
-      version: '1.0.0',
-      status: 'running',
-      endpoints: {
-        detection: 'POST /v1/detect',
-        health: 'GET /v1/health',
-        items: {
-          list: 'GET /v1/items',
-          get: 'GET /v1/items/:id',
-          create: 'POST /v1/items',
-          update: 'PATCH /v1/items/:id',
-          delete: 'DELETE /v1/items/:id',
-        },
-        labels: {
-          create: 'POST /v1/labels',
-          update: 'PATCH /v1/labels/:id',
-          delete: 'DELETE /v1/labels/:id',
-        },
-        search: 'GET /v1/search',
-        sync: {
-          pull: 'GET /v1/sync',
-          push: 'POST /v1/sync',
-        },
-      },
-    };
-  });
-
-  // Graceful shutdown
-  app.addHook('onClose', async () => {
-    logger.info('Closing database connection');
-    await closeDatabase();
-  });
+  app.get('/', () => ({
+    service: 'Visual Home Inventory - API Service',
+    version: '2.0.0',
+    endpoints: { detection: 'POST /v1/detect', health: 'GET /v1/health' },
+  }));
 
   return app;
+}
+
+function createDefaultPipeline(): DetectionPipelineService {
+  const detectors = [];
+  const classifiers = [];
+
+  detectors.push(new GroundingDinoDetector(envConfig));
+  if (envConfig.googleProjectId) {
+    detectors.push(new GoogleVisionDetector(envConfig));
+  }
+
+  if (envConfig.geminiApiKey) {
+    classifiers.push(new GeminiClassifier(envConfig));
+  }
+  if (envConfig.ollamaEnabled) {
+    classifiers.push(new OllamaClassifier(envConfig));
+  }
+
+  return new DetectionPipelineService(detectors, classifiers);
 }
 
 async function start(): Promise<void> {
   try {
     const app = await buildApp();
+    await app.listen({ port: envConfig.port, host: '0.0.0.0' });
+    logger.info({ port: envConfig.port, nodeEnv: envConfig.nodeEnv }, 'Server started');
 
-    await app.listen({
-      port: envConfig.port,
-      host: '0.0.0.0',
-    });
-
-    logger.info(
-      { port: envConfig.port, nodeEnv: envConfig.nodeEnv },
-      'Server started successfully'
-    );
-
-    // Handle graceful shutdown
     const shutdown = async (signal: string) => {
-      logger.info({ signal }, 'Received shutdown signal');
+      logger.info({ signal }, 'Shutting down');
       await app.close();
       process.exit(0);
     };
-
     process.on('SIGTERM', () => shutdown('SIGTERM'));
     process.on('SIGINT', () => shutdown('SIGINT'));
   } catch (error) {
     logger.error(error, 'Failed to start server');
-    await closeDatabase();
     process.exit(1);
   }
 }
 
-// Start server if run directly
 if (require.main === module) {
   // eslint-disable-next-line @typescript-eslint/no-floating-promises
   start();
 }
 
-export { buildApp, start };
+export { start };
