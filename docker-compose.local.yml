@@ -1,0 +1,25 @@
+services:
+  api:
+    extends:
+      file: docker-compose.yml
+      service: api
+    volumes:
+      - ./api-service/src:/app/src
+      - ./api-service/package.json:/app/package.json
+      - detection_data:/app/data
+    environment:
+      - NODE_ENV=development
+
+  detection:
+    extends:
+      file: docker-compose.yml
+      service: detection
+    volumes:
+      - ./detection-service:/app
+      - detection_data:/app/data
+    environment:
+      - NODE_ENV=development
+
+volumes:
+  detection_data:
+    driver: local
