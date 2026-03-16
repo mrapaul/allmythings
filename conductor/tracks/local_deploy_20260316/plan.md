@@ -1,6 +1,6 @@
 # Implementation Plan: Local Deployment and Continuous Improvement
 
-## Phase 1: Local Backend Orchestration (Docker Compose)
+## Phase 1: Local Backend Orchestration (Docker Compose) [checkpoint: efe3ee3]
 - [x] Task: Configure Docker Compose for Local Services (29d6ce2)
     - [x] Create/Update `docker-compose.yml` for API and Detection services.
     - [x] Define local-specific volumes and networks.
@@ -10,16 +10,16 @@
 - [x] Task: Verify Local Service Integration (Implemented test, confirmed 503 when services down)
     - [x] Write integration test to verify API can reach Detection service in Docker.
     - [x] Implement health check aggregation in API service.
-- [ ] Task: Conductor - User Manual Verification 'Phase 1: Local Backend Orchestration' (Protocol in workflow.md)
+- [x] Task: Conductor - User Manual Verification 'Phase 1: Local Backend Orchestration' (Protocol in workflow.md)
 
 ## Phase 2: Mobile Deployment Configuration (Android & iOS)
-- [ ] Task: Android Build and Deployment Scripts
-    - [ ] Create `scripts/build-android.sh` for APK generation.
-    - [ ] Create `scripts/deploy-android.sh` for ADB installation.
-- [ ] Task: iOS Build and Deployment Instructions
-    - [ ] Document manual Xcode build process for physical devices.
-    - [ ] Create `scripts/check-ios-env.sh` to verify development certificates/provisioning.
-- [ ] Task: Dynamic Local API Connection Logic
+- [x] Task: Android Build and Deployment Scripts (be8ae7e)
+    - [x] Create `scripts/build-android.sh` for APK generation.
+    - [x] Create `scripts/deploy-android.sh` for ADB installation.
+- [x] Task: iOS Build and Deployment Instructions (f0b1db3)
+    - [x] Document manual Xcode build process for physical devices.
+    - [x] Create `scripts/check-ios-env.sh` to verify development certificates/provisioning.
+- [~] Task: Dynamic Local API Connection Logic
     - [ ] Write unit tests for IP discovery/connection logic in Flutter.
     - [ ] Implement logic to switch between localhost (emulator) and host IP (physical device).
 - [ ] Task: Conductor - User Manual Verification 'Phase 2: Mobile Deployment Configuration' (Protocol in workflow.md)
