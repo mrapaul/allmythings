@@ -24,7 +24,14 @@
     - [ ] Implement logic to switch between localhost (emulator) and host IP (physical device).
 - [ ] Task: Conductor - User Manual Verification 'Phase 2: Mobile Deployment Configuration' (Protocol in workflow.md)
 
-## Phase 3: Continuous Integration (GitHub Actions)
+## Phase 3: Full Local Automation (Unified Script)
+- [~] Task: Create Unified Auto-Deploy Script
+    - [ ] Create `scripts/auto-deploy.sh` that starts Docker, detects device, and runs app.
+    - [ ] Add logic to automatically fetch Mac IP for physical device connection.
+    - [ ] Implement smart device detection (iPhone vs Android).
+- [ ] Task: Conductor - User Manual Verification 'Phase 3: Full Local Automation' (Protocol in workflow.md)
+
+## Phase 4: Continuous Integration (GitHub Actions)
 - [ ] Task: Core CI Workflow Implementation
     - [ ] Create `.github/workflows/ci.yml`.
     - [ ] Add jobs for API linting, type-checking, and unit tests.
@@ -32,13 +39,13 @@
 - [ ] Task: Flutter Build Verification in CI
     - [ ] Add job to run `flutter analyze` and `flutter test`.
     - [ ] Add job for basic `flutter build apk` verification (dry run).
-- [ ] Task: Conductor - User Manual Verification 'Phase 3: Continuous Integration' (Protocol in workflow.md)
+- [ ] Task: Conductor - User Manual Verification 'Phase 4: Continuous Integration' (Protocol in workflow.md)
 
-## Phase 4: Automated E2E Testing
+## Phase 5: Automated E2E Testing
 - [ ] Task: E2E Framework Setup
     - [ ] Configure `integration_test` package in the Flutter app.
     - [ ] Setup a mock environment for E2E tests (or use local Docker).
 - [ ] Task: Core Flow E2E Test Implementation
     - [ ] Write E2E test for the "Capture -> Detect -> Inventory" user journey.
     - [ ] Implement automated verification of result counts and categories.
-- [ ] Task: Conductor - User Manual Verification 'Phase 4: Automated E2E Testing' (Protocol in workflow.md)
+- [ ] Task: Conductor - User Manual Verification 'Phase 5: Automated E2E Testing' (Protocol in workflow.md)
