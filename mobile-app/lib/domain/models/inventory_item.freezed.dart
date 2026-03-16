@@ -293,7 +293,7 @@ as DateTime,
 /// @nodoc
 mixin _$ItemLabel {
 
- int get id; int get itemId; String get key; String get value; double get confidence; DateTime get createdAt;
+ int get id; int get itemId; String get key; String get value; DateTime get createdAt; double get confidence;
 /// Create a copy of ItemLabel
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
@@ -306,16 +306,16 @@ $ItemLabelCopyWith<ItemLabel> get copyWith => _$ItemLabelCopyWithImpl<ItemLabel>
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is ItemLabel&&(identical(other.id, id) || other.id == id)&&(identical(other.itemId, itemId) || other.itemId == itemId)&&(identical(other.key, key) || other.key == key)&&(identical(other.value, value) || other.value == value)&&(identical(other.confidence, confidence) || other.confidence == confidence)&&(identical(other.createdAt, createdAt) || other.createdAt == createdAt));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is ItemLabel&&(identical(other.id, id) || other.id == id)&&(identical(other.itemId, itemId) || other.itemId == itemId)&&(identical(other.key, key) || other.key == key)&&(identical(other.value, value) || other.value == value)&&(identical(other.createdAt, createdAt) || other.createdAt == createdAt)&&(identical(other.confidence, confidence) || other.confidence == confidence));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
-int get hashCode => Object.hash(runtimeType,id,itemId,key,value,confidence,createdAt);
+int get hashCode => Object.hash(runtimeType,id,itemId,key,value,createdAt,confidence);
 
 @override
 String toString() {
-  return 'ItemLabel(id: $id, itemId: $itemId, key: $key, value: $value, confidence: $confidence, createdAt: $createdAt)';
+  return 'ItemLabel(id: $id, itemId: $itemId, key: $key, value: $value, createdAt: $createdAt, confidence: $confidence)';
 }
 
 
@@ -326,7 +326,7 @@ abstract mixin class $ItemLabelCopyWith<$Res>  {
   factory $ItemLabelCopyWith(ItemLabel value, $Res Function(ItemLabel) _then) = _$ItemLabelCopyWithImpl;
 @useResult
 $Res call({
- int id, int itemId, String key, String value, double confidence, DateTime createdAt
+ int id, int itemId, String key, String value, DateTime createdAt, double confidence
 });
 
 
@@ -343,15 +343,15 @@ class _$ItemLabelCopyWithImpl<$Res>
 
 /// Create a copy of ItemLabel
 /// with the given fields replaced by the non-null parameter values.
-@pragma('vm:prefer-inline') @override $Res call({Object? id = null,Object? itemId = null,Object? key = null,Object? value = null,Object? confidence = null,Object? createdAt = null,}) {
+@pragma('vm:prefer-inline') @override $Res call({Object? id = null,Object? itemId = null,Object? key = null,Object? value = null,Object? createdAt = null,Object? confidence = null,}) {
   return _then(_self.copyWith(
 id: null == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
 as int,itemId: null == itemId ? _self.itemId : itemId // ignore: cast_nullable_to_non_nullable
 as int,key: null == key ? _self.key : key // ignore: cast_nullable_to_non_nullable
 as String,value: null == value ? _self.value : value // ignore: cast_nullable_to_non_nullable
-as String,confidence: null == confidence ? _self.confidence : confidence // ignore: cast_nullable_to_non_nullable
-as double,createdAt: null == createdAt ? _self.createdAt : createdAt // ignore: cast_nullable_to_non_nullable
-as DateTime,
+as String,createdAt: null == createdAt ? _self.createdAt : createdAt // ignore: cast_nullable_to_non_nullable
+as DateTime,confidence: null == confidence ? _self.confidence : confidence // ignore: cast_nullable_to_non_nullable
+as double,
   ));
 }
 
@@ -436,10 +436,10 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( int id,  int itemId,  String key,  String value,  double confidence,  DateTime createdAt)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( int id,  int itemId,  String key,  String value,  DateTime createdAt,  double confidence)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _ItemLabel() when $default != null:
-return $default(_that.id,_that.itemId,_that.key,_that.value,_that.confidence,_that.createdAt);case _:
+return $default(_that.id,_that.itemId,_that.key,_that.value,_that.createdAt,_that.confidence);case _:
   return orElse();
 
 }
@@ -457,10 +457,10 @@ return $default(_that.id,_that.itemId,_that.key,_that.value,_that.confidence,_th
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( int id,  int itemId,  String key,  String value,  double confidence,  DateTime createdAt)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( int id,  int itemId,  String key,  String value,  DateTime createdAt,  double confidence)  $default,) {final _that = this;
 switch (_that) {
 case _ItemLabel():
-return $default(_that.id,_that.itemId,_that.key,_that.value,_that.confidence,_that.createdAt);case _:
+return $default(_that.id,_that.itemId,_that.key,_that.value,_that.createdAt,_that.confidence);case _:
   throw StateError('Unexpected subclass');
 
 }
@@ -477,10 +477,10 @@ return $default(_that.id,_that.itemId,_that.key,_that.value,_that.confidence,_th
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( int id,  int itemId,  String key,  String value,  double confidence,  DateTime createdAt)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( int id,  int itemId,  String key,  String value,  DateTime createdAt,  double confidence)?  $default,) {final _that = this;
 switch (_that) {
 case _ItemLabel() when $default != null:
-return $default(_that.id,_that.itemId,_that.key,_that.value,_that.confidence,_that.createdAt);case _:
+return $default(_that.id,_that.itemId,_that.key,_that.value,_that.createdAt,_that.confidence);case _:
   return null;
 
 }
@@ -492,15 +492,15 @@ return $default(_that.id,_that.itemId,_that.key,_that.value,_that.confidence,_th
 @JsonSerializable()
 
 class _ItemLabel implements ItemLabel {
-  const _ItemLabel({required this.id, required this.itemId, required this.key, required this.value, this.confidence = 1.0, required this.createdAt});
+  const _ItemLabel({required this.id, required this.itemId, required this.key, required this.value, required this.createdAt, this.confidence = 1.0});
   factory _ItemLabel.fromJson(Map<String, dynamic> json) => _$ItemLabelFromJson(json);
 
 @override final  int id;
 @override final  int itemId;
 @override final  String key;
 @override final  String value;
-@override@JsonKey() final  double confidence;
 @override final  DateTime createdAt;
+@override@JsonKey() final  double confidence;
 
 /// Create a copy of ItemLabel
 /// with the given fields replaced by the non-null parameter values.
@@ -515,16 +515,16 @@ Map<String, dynamic> toJson() {
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is _ItemLabel&&(identical(other.id, id) || other.id == id)&&(identical(other.itemId, itemId) || other.itemId == itemId)&&(identical(other.key, key) || other.key == key)&&(identical(other.value, value) || other.value == value)&&(identical(other.confidence, confidence) || other.confidence == confidence)&&(identical(other.createdAt, createdAt) || other.createdAt == createdAt));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is _ItemLabel&&(identical(other.id, id) || other.id == id)&&(identical(other.itemId, itemId) || other.itemId == itemId)&&(identical(other.key, key) || other.key == key)&&(identical(other.value, value) || other.value == value)&&(identical(other.createdAt, createdAt) || other.createdAt == createdAt)&&(identical(other.confidence, confidence) || other.confidence == confidence));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
-int get hashCode => Object.hash(runtimeType,id,itemId,key,value,confidence,createdAt);
+int get hashCode => Object.hash(runtimeType,id,itemId,key,value,createdAt,confidence);
 
 @override
 String toString() {
-  return 'ItemLabel(id: $id, itemId: $itemId, key: $key, value: $value, confidence: $confidence, createdAt: $createdAt)';
+  return 'ItemLabel(id: $id, itemId: $itemId, key: $key, value: $value, createdAt: $createdAt, confidence: $confidence)';
 }
 
 
@@ -535,7 +535,7 @@ abstract mixin class _$ItemLabelCopyWith<$Res> implements $ItemLabelCopyWith<$Re
   factory _$ItemLabelCopyWith(_ItemLabel value, $Res Function(_ItemLabel) _then) = __$ItemLabelCopyWithImpl;
 @override @useResult
 $Res call({
- int id, int itemId, String key, String value, double confidence, DateTime createdAt
+ int id, int itemId, String key, String value, DateTime createdAt, double confidence
 });
 
 
@@ -552,15 +552,15 @@ class __$ItemLabelCopyWithImpl<$Res>
 
 /// Create a copy of ItemLabel
 /// with the given fields replaced by the non-null parameter values.
-@override @pragma('vm:prefer-inline') $Res call({Object? id = null,Object? itemId = null,Object? key = null,Object? value = null,Object? confidence = null,Object? createdAt = null,}) {
+@override @pragma('vm:prefer-inline') $Res call({Object? id = null,Object? itemId = null,Object? key = null,Object? value = null,Object? createdAt = null,Object? confidence = null,}) {
   return _then(_ItemLabel(
 id: null == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
 as int,itemId: null == itemId ? _self.itemId : itemId // ignore: cast_nullable_to_non_nullable
 as int,key: null == key ? _self.key : key // ignore: cast_nullable_to_non_nullable
 as String,value: null == value ? _self.value : value // ignore: cast_nullable_to_non_nullable
-as String,confidence: null == confidence ? _self.confidence : confidence // ignore: cast_nullable_to_non_nullable
-as double,createdAt: null == createdAt ? _self.createdAt : createdAt // ignore: cast_nullable_to_non_nullable
-as DateTime,
+as String,createdAt: null == createdAt ? _self.createdAt : createdAt // ignore: cast_nullable_to_non_nullable
+as DateTime,confidence: null == confidence ? _self.confidence : confidence // ignore: cast_nullable_to_non_nullable
+as double,
   ));
 }
 

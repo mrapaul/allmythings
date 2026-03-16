@@ -18,7 +18,7 @@ class Labels extends Table {
   TextColumn get value => text()();
 
   /// Confidence score from AI detection (0.0–1.0)
-  RealColumn get confidence => real().withDefault(const Constant(1.0))();
+  RealColumn get confidence => real().withDefault(const Constant(1))();
 
   /// Timestamp when label was added
   DateTimeColumn get createdAt => dateTime()();

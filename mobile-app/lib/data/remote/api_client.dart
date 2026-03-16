@@ -1,10 +1,12 @@
 import 'package:all_my_things/core/config/app_config.dart';
 import 'package:dio/dio.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 /// Dio HTTP client for API communication
 class ApiClient {
   ApiClient() : _dio = Dio() {
+    debugPrint('ApiClient initialized with baseUrl: ${AppConfig.apiBaseUrl}');
     _dio.options = BaseOptions(
       baseUrl: AppConfig.apiBaseUrl,
       connectTimeout: const Duration(milliseconds: AppConfig.apiTimeout),

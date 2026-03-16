@@ -6,6 +6,6 @@ export interface BoundingBoxResult {
 
 export interface ObjectDetector {
   readonly name: string;
-  detect(image: Buffer): Promise<BoundingBoxResult[]>;
+  detect(image: Buffer, prompt?: string): Promise<BoundingBoxResult[]>;
   healthCheck(): Promise<boolean>;
 }

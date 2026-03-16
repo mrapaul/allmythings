@@ -1,6 +1,6 @@
 # Detection Flow Test - Complete detection and save workflow
 # Tags: detection, regression
-appId: com.homeinventory.home_inventory
+appId: allmythings
 
 ---
 # Launch the app

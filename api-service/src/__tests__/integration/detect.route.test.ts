@@ -14,10 +14,11 @@ function makeMockDetector(boxes: BoundingBoxResult[]): ObjectDetector {
   };
 }
 
-function makeMockClassifier(): ObjectClassifier {
+function makeTestClassifier(): ObjectClassifier {
   return {
-    name: 'mock-classifier',
+    name: 'test-classifier',
     classify: vi.fn().mockResolvedValue(sampleClassifiedObjects),
+    generateDetectionPrompt: vi.fn().mockResolvedValue('sofa . lamp . book'),
     healthCheck: vi.fn().mockResolvedValue(true),
   };
 }
@@ -40,7 +41,7 @@ describe('POST /v1/detect', () => {
   it('returns 200 with detection result shape', async () => {
     const mockPipeline = new DetectionPipelineService(
       [makeMockDetector([])],
-      [makeMockClassifier()]
+      [makeTestClassifier()]
     );
     const app = await buildApp({ disableRateLimit: true, pipeline: mockPipeline });
 
@@ -67,7 +68,7 @@ describe('POST /v1/detect', () => {
   it('returns 400 when no file is uploaded', async () => {
     const mockPipeline = new DetectionPipelineService(
       [makeMockDetector([])],
-      [makeMockClassifier()]
+      [makeTestClassifier()]
     );
     const app = await buildApp({ disableRateLimit: true, pipeline: mockPipeline });
 
@@ -92,7 +93,7 @@ describe('POST /v1/detect', () => {
     ];
     const mockPipeline = new DetectionPipelineService(
       [makeMockDetector(sampleBoxes)],
-      [makeMockClassifier()]
+      [makeTestClassifier()]
     );
     const app = await buildApp({ disableRateLimit: true, pipeline: mockPipeline });
 

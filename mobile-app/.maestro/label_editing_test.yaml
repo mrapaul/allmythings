@@ -1,6 +1,6 @@
 # Label Editing Test - Edit labels on inventory items
 # Tags: inventory, labels, regression
-appId: com.homeinventory.home_inventory
+appId: allmythings
 
 ---
 # Launch the app

@@ -1,0 +1,57 @@
+[12:25:47 UTC] [32mINFO[39m: [36mServer listening at http://0.0.0.0:14000[39m
+[12:25:47 UTC] [32mINFO[39m: [36mServer started[39m
+    address: "http://0.0.0.0:14000"
+    port: 14000
+    nodeEnv: "development"
+[12:25:58 UTC] [32mINFO[39m: [36mincoming request[39m
+    requestId: "req-1"
+    req: {
+      "method": "POST",
+      "url": "/v1/detect",
+      "hostname": "127.0.0.1:14000",
+      "remoteAddress": "127.0.0.1",
+      "remotePort": 54381
+    }
+[12:25:58 UTC] [34mDEBUG[39m: [36mstarting multipart parsing[39m
+    requestId: "req-1"
+[12:25:58 UTC] [32mINFO[39m: [36mProcessing detection request[39m
+    filename: "ai_interior.png"
+    size: 1717720
+[12:25:58 UTC] [34mDEBUG[39m: [36mAnalyzing image quality[39m
+    format: "png"
+    bufferSize: 1717720
+[12:25:58 UTC] [32mINFO[39m: [36mImage quality analysis complete[39m
+    metrics: {
+      "isBlurry": false,
+      "blurScore": 0.05980139184718547,
+      "brightness": 0.5003271238565355,
+      "contrast": 0.5925475148865063,
+      "resolution": {
+        "width": 1456,
+        "height": 816,
+        "megapixels": 1.188096
+      },
+      "qualityLevel": "excellent",
+      "feedback": [
+        "Resolution is acceptable (1.2MP)"
+      ],
+      "recommendedAction": "process"
+    }
+[12:25:58 UTC] [32mINFO[39m: [36mStarting Parallel Multi-Layered Corroboration[39m
+    providers: [
+      "gemini",
+      "ollama"
+    ]
+[12:25:58 UTC] [33mWARN[39m: [36mParallel provider failed[39m
+    provider: "ollama"
+    error: "fetch failed"
+[12:27:06 UTC] [34mDEBUG[39m: [36mGemini classification finished[39m
+    provider: "gemini"
+    count: 49
+    onePass: true
+[12:27:06 UTC] [32mINFO[39m: [36mrequest completed[39m
+    requestId: "req-1"
+    res: {
+      "statusCode": 200
+    }
+    responseTime: 68277.34637499973

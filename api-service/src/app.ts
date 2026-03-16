@@ -12,6 +12,16 @@ import { GroundingDinoDetector } from './providers/grounding-dino.detector';
 import { GoogleVisionDetector } from './providers/google-vision.detector';
 import { GeminiClassifier } from './providers/gemini.classifier';
 import { OllamaClassifier } from './providers/ollama.classifier';
+import { MockClassifier } from './providers/mock.classifier';
+
+process.on('uncaughtException', (err) => {
+  logger.fatal({ err: err.message, stack: err.stack }, 'Uncaught Exception');
+  process.exit(1);
+});
+
+process.on('unhandledRejection', (reason, promise) => {
+  logger.error({ reason, promise }, 'Unhandled Rejection');
+});
 
 export async function buildApp(options?: { disableRateLimit?: boolean; pipeline?: DetectionPipelineService }): Promise<FastifyInstance> {
   const app = Fastify({
@@ -53,6 +63,12 @@ function createDefaultPipeline(): DetectionPipelineService {
   const detectors = [];
   const classifiers = [];
 
+  if (envConfig.useMockAi) {
+    logger.info('Using Mock AI for detection pipeline');
+    classifiers.push(new MockClassifier());
+    return new DetectionPipelineService([], classifiers);
+  }
+
   detectors.push(new GroundingDinoDetector(envConfig));
   if (envConfig.googleProjectId) {
     detectors.push(new GoogleVisionDetector(envConfig));
@@ -71,8 +87,8 @@ function createDefaultPipeline(): DetectionPipelineService {
 async function start(): Promise<void> {
   try {
     const app = await buildApp();
-    await app.listen({ port: envConfig.port, host: '0.0.0.0' });
-    logger.info({ port: envConfig.port, nodeEnv: envConfig.nodeEnv }, 'Server started');
+    const address = await app.listen({ port: envConfig.port, host: '0.0.0.0' });
+    logger.info({ address, port: envConfig.port, nodeEnv: envConfig.nodeEnv }, 'Server started');
 
     const shutdown = async (signal: string) => {
       logger.info({ signal }, 'Shutting down');

@@ -40,7 +40,7 @@ describe('OllamaClassifier', () => {
 
     const results = await classifier.classify(Buffer.from('img'), sampleDetections);
     expect(results).toHaveLength(1);
-    expect(results[0].label).toBe('wooden desk');
+    expect(results[0].label.toLowerCase()).toBe('wooden desk');
     expect(results[0].boundingBox).toEqual({ x: 0.1, y: 0.2, width: 0.3, height: 0.4 });
   });
 

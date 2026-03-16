@@ -13,8 +13,8 @@ import * as fs from 'fs';
 import * as path from 'path';
 import axios from 'axios';
 
-const API_BASE_URL = process.env.API_URL || 'http://localhost:8000';
-const TEST_IMAGE_PATH = path.expandUser('~/Downloads/Images/ai_interior.jpg');
+const API_BASE_URL = process.env.API_URL || 'http://localhost:14000';
+const TEST_IMAGE_PATH = path.join(__dirname, '../test_images/ai_interior.jpg');
 
 interface DetectionResult {
   imageWidth: number;

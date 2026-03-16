@@ -55,6 +55,16 @@ class $InventoryItemsTable extends InventoryItems
     type: DriftSqlType.string,
     requiredDuringInsert: true,
   );
+  static const VerificationMeta _statusMeta = const VerificationMeta('status');
+  @override
+  late final GeneratedColumn<String> status = GeneratedColumn<String>(
+    'status',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultValue: const Constant('completed'),
+  );
   static const VerificationMeta _createdAtMeta = const VerificationMeta(
     'createdAt',
   );
@@ -83,6 +93,7 @@ class $InventoryItemsTable extends InventoryItems
     photoPath,
     thumbnailPath,
     detectionData,
+    status,
     createdAt,
     updatedAt,
   ];
@@ -131,6 +142,12 @@ class $InventoryItemsTable extends InventoryItems
     } else if (isInserting) {
       context.missing(_detectionDataMeta);
     }
+    if (data.containsKey('status')) {
+      context.handle(
+        _statusMeta,
+        status.isAcceptableOrUnknown(data['status']!, _statusMeta),
+      );
+    }
     if (data.containsKey('created_at')) {
       context.handle(
         _createdAtMeta,
@@ -172,6 +189,10 @@ class $InventoryItemsTable extends InventoryItems
         DriftSqlType.string,
         data['${effectivePrefix}detection_data'],
       )!,
+      status: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}status'],
+      )!,
       createdAt: attachedDatabase.typeMapping.read(
         DriftSqlType.dateTime,
         data['${effectivePrefix}created_at'],
@@ -202,6 +223,9 @@ class InventoryItem extends DataClass implements Insertable<InventoryItem> {
   /// JSON: detection metadata (bounding boxes, confidence, etc.)
   final String detectionData;
 
+  /// Processing status (pending, completed, failed)
+  final String status;
+
   /// Timestamp when item was created
   final DateTime createdAt;
 
@@ -212,6 +236,7 @@ class InventoryItem extends DataClass implements Insertable<InventoryItem> {
     required this.photoPath,
     required this.thumbnailPath,
     required this.detectionData,
+    required this.status,
     required this.createdAt,
     required this.updatedAt,
   });
@@ -222,6 +247,7 @@ class InventoryItem extends DataClass implements Insertable<InventoryItem> {
     map['photo_path'] = Variable<String>(photoPath);
     map['thumbnail_path'] = Variable<String>(thumbnailPath);
     map['detection_data'] = Variable<String>(detectionData);
+    map['status'] = Variable<String>(status);
     map['created_at'] = Variable<DateTime>(createdAt);
     map['updated_at'] = Variable<DateTime>(updatedAt);
     return map;
@@ -233,6 +259,7 @@ class InventoryItem extends DataClass implements Insertable<InventoryItem> {
       photoPath: Value(photoPath),
       thumbnailPath: Value(thumbnailPath),
       detectionData: Value(detectionData),
+      status: Value(status),
       createdAt: Value(createdAt),
       updatedAt: Value(updatedAt),
     );
@@ -248,6 +275,7 @@ class InventoryItem extends DataClass implements Insertable<InventoryItem> {
       photoPath: serializer.fromJson<String>(json['photoPath']),
       thumbnailPath: serializer.fromJson<String>(json['thumbnailPath']),
       detectionData: serializer.fromJson<String>(json['detectionData']),
+      status: serializer.fromJson<String>(json['status']),
       createdAt: serializer.fromJson<DateTime>(json['createdAt']),
       updatedAt: serializer.fromJson<DateTime>(json['updatedAt']),
     );
@@ -260,6 +288,7 @@ class InventoryItem extends DataClass implements Insertable<InventoryItem> {
       'photoPath': serializer.toJson<String>(photoPath),
       'thumbnailPath': serializer.toJson<String>(thumbnailPath),
       'detectionData': serializer.toJson<String>(detectionData),
+      'status': serializer.toJson<String>(status),
       'createdAt': serializer.toJson<DateTime>(createdAt),
       'updatedAt': serializer.toJson<DateTime>(updatedAt),
     };
@@ -270,6 +299,7 @@ class InventoryItem extends DataClass implements Insertable<InventoryItem> {
     String? photoPath,
     String? thumbnailPath,
     String? detectionData,
+    String? status,
     DateTime? createdAt,
     DateTime? updatedAt,
   }) => InventoryItem(
@@ -277,6 +307,7 @@ class InventoryItem extends DataClass implements Insertable<InventoryItem> {
     photoPath: photoPath ?? this.photoPath,
     thumbnailPath: thumbnailPath ?? this.thumbnailPath,
     detectionData: detectionData ?? this.detectionData,
+    status: status ?? this.status,
     createdAt: createdAt ?? this.createdAt,
     updatedAt: updatedAt ?? this.updatedAt,
   );
@@ -290,6 +321,7 @@ class InventoryItem extends DataClass implements Insertable<InventoryItem> {
       detectionData: data.detectionData.present
           ? data.detectionData.value
           : this.detectionData,
+      status: data.status.present ? data.status.value : this.status,
       createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
       updatedAt: data.updatedAt.present ? data.updatedAt.value : this.updatedAt,
     );
@@ -302,6 +334,7 @@ class InventoryItem extends DataClass implements Insertable<InventoryItem> {
           ..write('photoPath: $photoPath, ')
           ..write('thumbnailPath: $thumbnailPath, ')
           ..write('detectionData: $detectionData, ')
+          ..write('status: $status, ')
           ..write('createdAt: $createdAt, ')
           ..write('updatedAt: $updatedAt')
           ..write(')'))
@@ -314,6 +347,7 @@ class InventoryItem extends DataClass implements Insertable<InventoryItem> {
     photoPath,
     thumbnailPath,
     detectionData,
+    status,
     createdAt,
     updatedAt,
   );
@@ -325,6 +359,7 @@ class InventoryItem extends DataClass implements Insertable<InventoryItem> {
           other.photoPath == this.photoPath &&
           other.thumbnailPath == this.thumbnailPath &&
           other.detectionData == this.detectionData &&
+          other.status == this.status &&
           other.createdAt == this.createdAt &&
           other.updatedAt == this.updatedAt);
 }
@@ -334,6 +369,7 @@ class InventoryItemsCompanion extends UpdateCompanion<InventoryItem> {
   final Value<String> photoPath;
   final Value<String> thumbnailPath;
   final Value<String> detectionData;
+  final Value<String> status;
   final Value<DateTime> createdAt;
   final Value<DateTime> updatedAt;
   const InventoryItemsCompanion({
@@ -341,6 +377,7 @@ class InventoryItemsCompanion extends UpdateCompanion<InventoryItem> {
     this.photoPath = const Value.absent(),
     this.thumbnailPath = const Value.absent(),
     this.detectionData = const Value.absent(),
+    this.status = const Value.absent(),
     this.createdAt = const Value.absent(),
     this.updatedAt = const Value.absent(),
   });
@@ -349,6 +386,7 @@ class InventoryItemsCompanion extends UpdateCompanion<InventoryItem> {
     required String photoPath,
     required String thumbnailPath,
     required String detectionData,
+    this.status = const Value.absent(),
     required DateTime createdAt,
     required DateTime updatedAt,
   }) : photoPath = Value(photoPath),
@@ -361,6 +399,7 @@ class InventoryItemsCompanion extends UpdateCompanion<InventoryItem> {
     Expression<String>? photoPath,
     Expression<String>? thumbnailPath,
     Expression<String>? detectionData,
+    Expression<String>? status,
     Expression<DateTime>? createdAt,
     Expression<DateTime>? updatedAt,
   }) {
@@ -369,6 +408,7 @@ class InventoryItemsCompanion extends UpdateCompanion<InventoryItem> {
       if (photoPath != null) 'photo_path': photoPath,
       if (thumbnailPath != null) 'thumbnail_path': thumbnailPath,
       if (detectionData != null) 'detection_data': detectionData,
+      if (status != null) 'status': status,
       if (createdAt != null) 'created_at': createdAt,
       if (updatedAt != null) 'updated_at': updatedAt,
     });
@@ -379,6 +419,7 @@ class InventoryItemsCompanion extends UpdateCompanion<InventoryItem> {
     Value<String>? photoPath,
     Value<String>? thumbnailPath,
     Value<String>? detectionData,
+    Value<String>? status,
     Value<DateTime>? createdAt,
     Value<DateTime>? updatedAt,
   }) {
@@ -387,6 +428,7 @@ class InventoryItemsCompanion extends UpdateCompanion<InventoryItem> {
       photoPath: photoPath ?? this.photoPath,
       thumbnailPath: thumbnailPath ?? this.thumbnailPath,
       detectionData: detectionData ?? this.detectionData,
+      status: status ?? this.status,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
     );
@@ -407,6 +449,9 @@ class InventoryItemsCompanion extends UpdateCompanion<InventoryItem> {
     if (detectionData.present) {
       map['detection_data'] = Variable<String>(detectionData.value);
     }
+    if (status.present) {
+      map['status'] = Variable<String>(status.value);
+    }
     if (createdAt.present) {
       map['created_at'] = Variable<DateTime>(createdAt.value);
     }
@@ -423,6 +468,7 @@ class InventoryItemsCompanion extends UpdateCompanion<InventoryItem> {
           ..write('photoPath: $photoPath, ')
           ..write('thumbnailPath: $thumbnailPath, ')
           ..write('detectionData: $detectionData, ')
+          ..write('status: $status, ')
           ..write('createdAt: $createdAt, ')
           ..write('updatedAt: $updatedAt')
           ..write(')'))
@@ -488,7 +534,7 @@ class $LabelsTable extends Labels with TableInfo<$LabelsTable, Label> {
     false,
     type: DriftSqlType.double,
     requiredDuringInsert: false,
-    defaultValue: const Constant(1.0),
+    defaultValue: const Constant(1),
   );
   static const VerificationMeta _createdAtMeta = const VerificationMeta(
     'createdAt',
@@ -859,6 +905,15 @@ class $LabelSearchFtsTable extends LabelSearchFts
     requiredDuringInsert: true,
     $customConstraints: 'NOT NULL',
   );
+  static const VerificationMeta _keyMeta = const VerificationMeta('key');
+  @override
+  late final GeneratedColumn<String> key = GeneratedColumn<String>(
+    'key',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
   static const VerificationMeta _valueMeta = const VerificationMeta('value');
   @override
   late final GeneratedColumn<String> value = GeneratedColumn<String>(
@@ -869,7 +924,7 @@ class $LabelSearchFtsTable extends LabelSearchFts
     requiredDuringInsert: true,
   );
   @override
-  List<GeneratedColumn> get $columns => [labelId, value];
+  List<GeneratedColumn> get $columns => [labelId, key, value];
   @override
   String get aliasedName => _alias ?? actualTableName;
   @override
@@ -889,6 +944,14 @@ class $LabelSearchFtsTable extends LabelSearchFts
       );
     } else if (isInserting) {
       context.missing(_labelIdMeta);
+    }
+    if (data.containsKey('key')) {
+      context.handle(
+        _keyMeta,
+        key.isAcceptableOrUnknown(data['key']!, _keyMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_keyMeta);
     }
     if (data.containsKey('value')) {
       context.handle(
@@ -911,6 +974,10 @@ class $LabelSearchFtsTable extends LabelSearchFts
         DriftSqlType.int,
         data['${effectivePrefix}label_id'],
       )!,
+      key: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}key'],
+      )!,
       value: attachedDatabase.typeMapping.read(
         DriftSqlType.string,
         data['${effectivePrefix}value'],
@@ -932,13 +999,21 @@ class LabelSearchEntry extends DataClass
   /// Reference to labels(id) for result joining
   final int labelId;
 
+  /// Label key (e.g., 'type', 'color')
+  final String key;
+
   /// Label value indexed for full-text search
   final String value;
-  const LabelSearchEntry({required this.labelId, required this.value});
+  const LabelSearchEntry({
+    required this.labelId,
+    required this.key,
+    required this.value,
+  });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
     final map = <String, Expression>{};
     map['label_id'] = Variable<int>(labelId);
+    map['key'] = Variable<String>(key);
     map['value'] = Variable<String>(value);
     return map;
   }
@@ -946,6 +1021,7 @@ class LabelSearchEntry extends DataClass
   LabelSearchFtsCompanion toCompanion(bool nullToAbsent) {
     return LabelSearchFtsCompanion(
       labelId: Value(labelId),
+      key: Value(key),
       value: Value(value),
     );
   }
@@ -957,6 +1033,7 @@ class LabelSearchEntry extends DataClass
     serializer ??= driftRuntimeOptions.defaultSerializer;
     return LabelSearchEntry(
       labelId: serializer.fromJson<int>(json['labelId']),
+      key: serializer.fromJson<String>(json['key']),
       value: serializer.fromJson<String>(json['value']),
     );
   }
@@ -965,17 +1042,21 @@ class LabelSearchEntry extends DataClass
     serializer ??= driftRuntimeOptions.defaultSerializer;
     return <String, dynamic>{
       'labelId': serializer.toJson<int>(labelId),
+      'key': serializer.toJson<String>(key),
       'value': serializer.toJson<String>(value),
     };
   }
 
-  LabelSearchEntry copyWith({int? labelId, String? value}) => LabelSearchEntry(
-    labelId: labelId ?? this.labelId,
-    value: value ?? this.value,
-  );
+  LabelSearchEntry copyWith({int? labelId, String? key, String? value}) =>
+      LabelSearchEntry(
+        labelId: labelId ?? this.labelId,
+        key: key ?? this.key,
+        value: value ?? this.value,
+      );
   LabelSearchEntry copyWithCompanion(LabelSearchFtsCompanion data) {
     return LabelSearchEntry(
       labelId: data.labelId.present ? data.labelId.value : this.labelId,
+      key: data.key.present ? data.key.value : this.key,
       value: data.value.present ? data.value.value : this.value,
     );
   }
@@ -984,47 +1065,59 @@ class LabelSearchEntry extends DataClass
   String toString() {
     return (StringBuffer('LabelSearchEntry(')
           ..write('labelId: $labelId, ')
+          ..write('key: $key, ')
           ..write('value: $value')
           ..write(')'))
         .toString();
   }
 
   @override
-  int get hashCode => Object.hash(labelId, value);
+  int get hashCode => Object.hash(labelId, key, value);
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
       (other is LabelSearchEntry &&
           other.labelId == this.labelId &&
+          other.key == this.key &&
           other.value == this.value);
 }
 
 class LabelSearchFtsCompanion extends UpdateCompanion<LabelSearchEntry> {
   final Value<int> labelId;
+  final Value<String> key;
   final Value<String> value;
   const LabelSearchFtsCompanion({
     this.labelId = const Value.absent(),
+    this.key = const Value.absent(),
     this.value = const Value.absent(),
   });
-  LabelSearchFtsCompanion.insert({required int labelId, required String value})
-    : labelId = Value(labelId),
-      value = Value(value);
+  LabelSearchFtsCompanion.insert({
+    required int labelId,
+    required String key,
+    required String value,
+  }) : labelId = Value(labelId),
+       key = Value(key),
+       value = Value(value);
   static Insertable<LabelSearchEntry> custom({
     Expression<int>? labelId,
+    Expression<String>? key,
     Expression<String>? value,
   }) {
     return RawValuesInsertable({
       if (labelId != null) 'label_id': labelId,
+      if (key != null) 'key': key,
       if (value != null) 'value': value,
     });
   }
 
   LabelSearchFtsCompanion copyWith({
     Value<int>? labelId,
+    Value<String>? key,
     Value<String>? value,
   }) {
     return LabelSearchFtsCompanion(
       labelId: labelId ?? this.labelId,
+      key: key ?? this.key,
       value: value ?? this.value,
     );
   }
@@ -1034,6 +1127,9 @@ class LabelSearchFtsCompanion extends UpdateCompanion<LabelSearchEntry> {
     final map = <String, Expression>{};
     if (labelId.present) {
       map['label_id'] = Variable<int>(labelId.value);
+    }
+    if (key.present) {
+      map['key'] = Variable<String>(key.value);
     }
     if (value.present) {
       map['value'] = Variable<String>(value.value);
@@ -1045,6 +1141,7 @@ class LabelSearchFtsCompanion extends UpdateCompanion<LabelSearchEntry> {
   String toString() {
     return (StringBuffer('LabelSearchFtsCompanion(')
           ..write('labelId: $labelId, ')
+          ..write('key: $key, ')
           ..write('value: $value')
           ..write(')'))
         .toString();
@@ -1084,6 +1181,7 @@ typedef $$InventoryItemsTableCreateCompanionBuilder =
       required String photoPath,
       required String thumbnailPath,
       required String detectionData,
+      Value<String> status,
       required DateTime createdAt,
       required DateTime updatedAt,
     });
@@ -1093,6 +1191,7 @@ typedef $$InventoryItemsTableUpdateCompanionBuilder =
       Value<String> photoPath,
       Value<String> thumbnailPath,
       Value<String> detectionData,
+      Value<String> status,
       Value<DateTime> createdAt,
       Value<DateTime> updatedAt,
     });
@@ -1151,6 +1250,11 @@ class $$InventoryItemsTableFilterComposer
 
   ColumnFilters<String> get detectionData => $composableBuilder(
     column: $table.detectionData,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get status => $composableBuilder(
+    column: $table.status,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -1219,6 +1323,11 @@ class $$InventoryItemsTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<String> get status => $composableBuilder(
+    column: $table.status,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<DateTime> get createdAt => $composableBuilder(
     column: $table.createdAt,
     builder: (column) => ColumnOrderings(column),
@@ -1254,6 +1363,9 @@ class $$InventoryItemsTableAnnotationComposer
     column: $table.detectionData,
     builder: (column) => column,
   );
+
+  GeneratedColumn<String> get status =>
+      $composableBuilder(column: $table.status, builder: (column) => column);
 
   GeneratedColumn<DateTime> get createdAt =>
       $composableBuilder(column: $table.createdAt, builder: (column) => column);
@@ -1321,6 +1433,7 @@ class $$InventoryItemsTableTableManager
                 Value<String> photoPath = const Value.absent(),
                 Value<String> thumbnailPath = const Value.absent(),
                 Value<String> detectionData = const Value.absent(),
+                Value<String> status = const Value.absent(),
                 Value<DateTime> createdAt = const Value.absent(),
                 Value<DateTime> updatedAt = const Value.absent(),
               }) => InventoryItemsCompanion(
@@ -1328,6 +1441,7 @@ class $$InventoryItemsTableTableManager
                 photoPath: photoPath,
                 thumbnailPath: thumbnailPath,
                 detectionData: detectionData,
+                status: status,
                 createdAt: createdAt,
                 updatedAt: updatedAt,
               ),
@@ -1337,6 +1451,7 @@ class $$InventoryItemsTableTableManager
                 required String photoPath,
                 required String thumbnailPath,
                 required String detectionData,
+                Value<String> status = const Value.absent(),
                 required DateTime createdAt,
                 required DateTime updatedAt,
               }) => InventoryItemsCompanion.insert(
@@ -1344,6 +1459,7 @@ class $$InventoryItemsTableTableManager
                 photoPath: photoPath,
                 thumbnailPath: thumbnailPath,
                 detectionData: detectionData,
+                status: status,
                 createdAt: createdAt,
                 updatedAt: updatedAt,
               ),
@@ -1738,10 +1854,15 @@ typedef $$LabelsTableProcessedTableManager =
 typedef $$LabelSearchFtsTableCreateCompanionBuilder =
     LabelSearchFtsCompanion Function({
       required int labelId,
+      required String key,
       required String value,
     });
 typedef $$LabelSearchFtsTableUpdateCompanionBuilder =
-    LabelSearchFtsCompanion Function({Value<int> labelId, Value<String> value});
+    LabelSearchFtsCompanion Function({
+      Value<int> labelId,
+      Value<String> key,
+      Value<String> value,
+    });
 
 class $$LabelSearchFtsTableFilterComposer
     extends Composer<_$AppDatabase, $LabelSearchFtsTable> {
@@ -1754,6 +1875,11 @@ class $$LabelSearchFtsTableFilterComposer
   });
   ColumnFilters<int> get labelId => $composableBuilder(
     column: $table.labelId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get key => $composableBuilder(
+    column: $table.key,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -1777,6 +1903,11 @@ class $$LabelSearchFtsTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<String> get key => $composableBuilder(
+    column: $table.key,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<String> get value => $composableBuilder(
     column: $table.value,
     builder: (column) => ColumnOrderings(column),
@@ -1794,6 +1925,9 @@ class $$LabelSearchFtsTableAnnotationComposer
   });
   GeneratedColumn<int> get labelId =>
       $composableBuilder(column: $table.labelId, builder: (column) => column);
+
+  GeneratedColumn<String> get key =>
+      $composableBuilder(column: $table.key, builder: (column) => column);
 
   GeneratedColumn<String> get value =>
       $composableBuilder(column: $table.value, builder: (column) => column);
@@ -1837,14 +1971,23 @@ class $$LabelSearchFtsTableTableManager
           updateCompanionCallback:
               ({
                 Value<int> labelId = const Value.absent(),
+                Value<String> key = const Value.absent(),
                 Value<String> value = const Value.absent(),
-              }) => LabelSearchFtsCompanion(labelId: labelId, value: value),
+              }) => LabelSearchFtsCompanion(
+                labelId: labelId,
+                key: key,
+                value: value,
+              ),
           createCompanionCallback:
-              ({required int labelId, required String value}) =>
-                  LabelSearchFtsCompanion.insert(
-                    labelId: labelId,
-                    value: value,
-                  ),
+              ({
+                required int labelId,
+                required String key,
+                required String value,
+              }) => LabelSearchFtsCompanion.insert(
+                labelId: labelId,
+                key: key,
+                value: value,
+              ),
           withReferenceMapper: (p0) => p0
               .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
               .toList(),

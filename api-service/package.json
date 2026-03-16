@@ -6,7 +6,7 @@
   "type": "commonjs",
   "scripts": {
     "build": "tsc",
-    "dev": "tsx watch src/app.ts",
+    "dev": "node --env-file=.env ./node_modules/.bin/tsx watch src/app.ts",
     "start": "node dist/app.js",
     "test": "vitest run",
     "test:watch": "vitest",

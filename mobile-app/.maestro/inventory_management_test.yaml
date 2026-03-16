@@ -1,6 +1,6 @@
 # Inventory Management Test - Browse, search, and edit inventory items
 # Tags: inventory, regression
-appId: com.homeinventory.home_inventory
+appId: allmythings
 
 ---
 # Launch the app

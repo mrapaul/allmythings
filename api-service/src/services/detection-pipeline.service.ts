@@ -1,77 +1,123 @@
 import { ObjectDetector, BoundingBoxResult } from '../providers/detector.interface';
 import { ObjectClassifier, ClassifiedObject } from '../providers/classifier.interface';
 import { CircuitBreaker } from '../utils/circuit-breaker';
-import { ServiceUnavailableError } from '../utils/errors';
 import { logger } from '../utils/logger';
+import { ServiceUnavailableError } from '../utils/errors';
+import { EnsembleFusionService } from './ensemble-fusion.service';
 
 export interface PipelineResult {
   detections: ClassifiedObject[];
   processingTimeMs: number;
   detector: string;
   classifier: string;
+  corroborationCount?: number;
 }
 
+/**
+ * Service to coordinate the multi-layered AI detection pipeline
+ */
 export class DetectionPipelineService {
-  private detectors: Array<{ provider: ObjectDetector; breaker: CircuitBreaker }>;
-  private classifiers: Array<{ provider: ObjectClassifier; breaker: CircuitBreaker }>;
+  private detectors: { provider: ObjectDetector; breaker: CircuitBreaker }[];
+  private classifiers: { provider: ObjectClassifier; breaker: CircuitBreaker }[];
+  private fusionService: EnsembleFusionService;
 
   constructor(detectors: ObjectDetector[], classifiers: ObjectClassifier[]) {
-    this.detectors = detectors.map(p => ({
-      provider: p,
-      breaker: new CircuitBreaker(p.name, { failureThreshold: 3, resetTimeout: 30000, halfOpenRequests: 1 }),
+    const breakerOptions = {
+      failureThreshold: 3,
+      resetTimeout: 30000,
+      halfOpenRequests: 2,
+    };
+
+    this.detectors = detectors.map((d) => ({
+      provider: d,
+      breaker: new CircuitBreaker(d.name, breakerOptions),
     }));
-    this.classifiers = classifiers.map(p => ({
-      provider: p,
-      breaker: new CircuitBreaker(p.name, { failureThreshold: 3, resetTimeout: 30000, halfOpenRequests: 1 }),
+
+    this.classifiers = classifiers.map((c) => ({
+      provider: c,
+      breaker: new CircuitBreaker(c.name, breakerOptions),
     }));
+
+    this.fusionService = new EnsembleFusionService();
   }
 
   async detect(image: Buffer): Promise<PipelineResult> {
     const start = Date.now();
+    
+    // Layer 1: Attempt Parallel One-Pass Corroboration
+    // We run the best available cloud LLM (Gemini) and the local fallback (Ollama) in parallel
+    const providersToRun = this.classifiers.filter(c => 
+      (c.provider.name === 'gemini' || c.provider.name === 'ollama') && 
+      c.breaker.getState() !== 'open'
+    );
+
+    if (providersToRun.length > 0) {
+      logger.info({ providers: providersToRun.map(p => p.provider.name) }, 'Starting Parallel Multi-Layered Corroboration');
+      
+      const resultsMap = new Map<string, ClassifiedObject[]>();
+      
+      const promises = providersToRun.map(async ({ provider, breaker }) => {
+        try {
+          const results = await breaker.execute(() => provider.classify(image, []));
+          resultsMap.set(provider.name, results);
+          return results;
+        } catch (error) {
+          logger.warn({ provider: provider.name, error: (error as Error).message }, 'Parallel provider failed');
+          return [];
+        }
+      });
+
+      await Promise.all(promises);
+
+      // Fuse results for corroboration
+      const fusion = await this.fusionService.fuse(resultsMap);
+      
+      if (fusion.detections.length > 0) {
+        return {
+          detections: fusion.detections,
+          processingTimeMs: Date.now() - start,
+          detector: 'multi-vlm-one-pass',
+          classifier: Array.from(resultsMap.keys()).join('+'),
+          corroborationCount: fusion.corroborationCount,
+        };
+      }
+    }
+
+    // Layer 2: Sequential Fallback (Original Pipeline)
+    logger.info('Multi-layered parallel pass failed or no results, falling back to sequential');
+    
     let boxes: BoundingBoxResult[] = [];
     let detectorUsed = 'none';
 
-    // Stage 1: Try detectors with fallback
+    // Try detectors (Google Vision, Grounding DINO)
     for (const { provider, breaker } of this.detectors) {
       try {
         boxes = await breaker.execute(() => provider.detect(image));
         detectorUsed = provider.name;
         break;
       } catch (error) {
-        logger.warn(
-          { provider: provider.name, error: (error as Error).message },
-          'Detector failed, trying next'
-        );
+        logger.warn({ provider: provider.name }, 'Detector failed');
       }
     }
 
-    // Stage 2: Classify (or Ollama-only mode if no detections)
-    let classifiedObjects: ClassifiedObject[] = [];
-    let classifierUsed = 'none';
-
+    // Try classifiers sequentially
     for (const { provider, breaker } of this.classifiers) {
       try {
-        classifiedObjects = await breaker.execute(() => provider.classify(image, boxes));
-        classifierUsed = provider.name;
-        break;
+        const detections = await breaker.execute(() => provider.classify(image, boxes));
+        if (detections.length > 0) {
+          return {
+            detections,
+            processingTimeMs: Date.now() - start,
+            detector: detectorUsed,
+            classifier: provider.name,
+          };
+        }
       } catch (error) {
-        logger.warn(
-          { provider: provider.name, error: (error as Error).message },
-          'Classifier failed, trying next'
-        );
+        logger.warn({ provider: provider.name }, 'Classifier fallback failed');
       }
     }
 
-    if (classifierUsed === 'none') {
-      throw new ServiceUnavailableError('All classification providers failed');
-    }
-
-    return {
-      detections: classifiedObjects,
-      processingTimeMs: Date.now() - start,
-      detector: detectorUsed,
-      classifier: classifierUsed,
-    };
+    throw new ServiceUnavailableError('All AI layers failed to produce results');
   }
 
   async healthCheck(): Promise<Record<string, boolean>> {

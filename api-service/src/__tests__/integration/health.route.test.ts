@@ -12,10 +12,11 @@ function makeMockDetector(healthy: boolean): ObjectDetector {
   };
 }
 
-function makeMockClassifier(healthy: boolean): ObjectClassifier {
+function makeTestClassifier(healthy: boolean): ObjectClassifier {
   return {
-    name: 'mock-classifier',
+    name: 'test-classifier',
     classify: vi.fn().mockResolvedValue([]),
+    generateDetectionPrompt: vi.fn().mockResolvedValue('sofa . lamp . book'),
     healthCheck: vi.fn().mockResolvedValue(healthy),
   };
 }
@@ -28,7 +29,7 @@ describe('GET /v1/health', () => {
   it('returns 200 and healthy status when all providers are up', async () => {
     const mockPipeline = new DetectionPipelineService(
       [makeMockDetector(true)],
-      [makeMockClassifier(true)]
+      [makeTestClassifier(true)]
     );
     const app = await buildApp({ disableRateLimit: true, pipeline: mockPipeline });
 
@@ -41,9 +42,9 @@ describe('GET /v1/health', () => {
     const body = JSON.parse(response.body) as { status: string; providers: Record<string, boolean>; timestamp: string };
     expect(body.status).toBe('healthy');
     expect(body.providers).toHaveProperty('mock-detector');
-    expect(body.providers).toHaveProperty('mock-classifier');
+    expect(body.providers).toHaveProperty('test-classifier');
     expect(body.providers['mock-detector']).toBe(true);
-    expect(body.providers['mock-classifier']).toBe(true);
+    expect(body.providers['test-classifier']).toBe(true);
     expect(body).toHaveProperty('timestamp');
 
     await app.close();
@@ -52,7 +53,7 @@ describe('GET /v1/health', () => {
   it('returns 503 and degraded status when a provider is down', async () => {
     const mockPipeline = new DetectionPipelineService(
       [makeMockDetector(false)],
-      [makeMockClassifier(true)]
+      [makeTestClassifier(true)]
     );
     const app = await buildApp({ disableRateLimit: true, pipeline: mockPipeline });
 

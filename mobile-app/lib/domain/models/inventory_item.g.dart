@@ -31,8 +31,8 @@ _ItemLabel _$ItemLabelFromJson(Map<String, dynamic> json) => _ItemLabel(
   itemId: (json['itemId'] as num).toInt(),
   key: json['key'] as String,
   value: json['value'] as String,
-  confidence: (json['confidence'] as num?)?.toDouble() ?? 1.0,
   createdAt: DateTime.parse(json['createdAt'] as String),
+  confidence: (json['confidence'] as num?)?.toDouble() ?? 1.0,
 );
 
 Map<String, dynamic> _$ItemLabelToJson(_ItemLabel instance) =>
@@ -41,6 +41,6 @@ Map<String, dynamic> _$ItemLabelToJson(_ItemLabel instance) =>
       'itemId': instance.itemId,
       'key': instance.key,
       'value': instance.value,
-      'confidence': instance.confidence,
       'createdAt': instance.createdAt.toIso8601String(),
+      'confidence': instance.confidence,
     };

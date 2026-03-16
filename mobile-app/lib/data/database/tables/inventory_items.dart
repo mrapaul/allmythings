@@ -15,6 +15,9 @@ class InventoryItems extends Table {
   /// JSON: detection metadata (bounding boxes, confidence, etc.)
   TextColumn get detectionData => text()();
 
+  /// Processing status (pending, completed, failed)
+  TextColumn get status => text().withDefault(const Constant('completed'))();
+
   /// Timestamp when item was created
   DateTimeColumn get createdAt => dateTime()();
 

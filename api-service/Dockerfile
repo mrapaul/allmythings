@@ -11,7 +11,7 @@ RUN apk add --no-cache python3 make g++
 COPY package*.json ./
 
 # Install dependencies
-RUN npm ci --only=production && \
+RUN npm install && \
     npm cache clean --force
 
 # Copy source code
@@ -21,8 +21,8 @@ COPY src ./src
 # Build the application
 RUN npm run build
 
-# Create a lighter dev dependencies layer for type checking
-RUN npm ci
+# Remove dev dependencies after build to keep node_modules small
+RUN npm prune --production
 
 # Stage 2: Runtime
 FROM node:20-alpine as runtime
@@ -53,7 +53,7 @@ HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
     CMD curl -f http://localhost:${PORT}/v1/health || exit 1
 
 # Use dumb-init to handle signals properly
-ENTRYPOINT ["/usr/sbin/dumb-init", "--"]
+ENTRYPOINT ["/usr/bin/dumb-init", "--"]
 
 # Start application
 CMD ["node", "dist/app.js"]

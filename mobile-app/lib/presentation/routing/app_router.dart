@@ -1,28 +1,36 @@
+import 'dart:async';
 import 'dart:io';
 
 import 'package:all_my_things/presentation/camera/camera_capture_screen.dart';
+import 'package:all_my_things/presentation/profile/profile_screen.dart';
 import 'package:all_my_things/presentation/screens/detection_results_screen.dart';
 import 'package:all_my_things/presentation/screens/inventory_feed_screen.dart';
 import 'package:all_my_things/presentation/screens/item_detail_screen.dart';
 import 'package:all_my_things/presentation/screens/search_screen.dart';
-import 'package:all_my_things/presentation/profile/profile_screen.dart';
-import 'package:all_my_things/presentation/theme/app_theme.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:path_provider/path_provider.dart';
 
 /// Application routing configuration with transitions
 final routerProvider = Provider<GoRouter>((ref) {
   return GoRouter(
-    initialLocation: '/items',
+    initialLocation: '/verification_flow',
     routes: [
+      // For verification purposes - auto loads ai_interior.jpg
+      GoRoute(
+        path: '/verification_flow',
+        pageBuilder: (context, state) => const NoTransitionPage(
+          child: _VerificationFlowLoader(),
+        ),
+      ),
       // Root shell route with bottom navigation
       ShellRoute(
         builder: (context, state, child) {
           return _RootNavigationShell(child: child);
         },
         routes: [
-          // Inventory feed (home)
           GoRoute(
             path: '/items',
             name: 'items',
@@ -30,8 +38,6 @@ final routerProvider = Provider<GoRouter>((ref) {
               child: InventoryFeedScreen(),
             ),
           ),
-
-          // Search
           GoRoute(
             path: '/search',
             name: 'search',
@@ -39,8 +45,6 @@ final routerProvider = Provider<GoRouter>((ref) {
               child: SearchScreen(),
             ),
           ),
-
-          // Profile
           GoRoute(
             path: '/profile',
             name: 'profile',
@@ -51,7 +55,6 @@ final routerProvider = Provider<GoRouter>((ref) {
         ],
       ),
 
-      // Camera capture (modal)
       GoRoute(
         path: '/camera',
         name: 'camera',
@@ -61,20 +64,14 @@ final routerProvider = Provider<GoRouter>((ref) {
         ),
       ),
 
-      // Detection results (receives File as extra)
       GoRoute(
         path: '/detection',
         name: 'detection',
         pageBuilder: (context, state) {
           final imageFile = state.extra as File?;
           if (imageFile == null) {
-            return const MaterialPage(
-              child: Scaffold(
-                body: Center(child: Text('No image provided')),
-              ),
-            );
+            return const MaterialPage(child: Scaffold(body: Center(child: Text('No image'))));
           }
-
           return CustomTransitionPage(
             child: DetectionResultsScreen(imageFile: imageFile),
             transitionsBuilder: _fadeTransition,
@@ -82,20 +79,12 @@ final routerProvider = Provider<GoRouter>((ref) {
         },
       ),
 
-      // Item detail
       GoRoute(
         path: '/item/:id',
         name: 'item',
         pageBuilder: (context, state) {
           final itemId = int.tryParse(state.pathParameters['id'] ?? '');
-          if (itemId == null) {
-            return const MaterialPage(
-              child: Scaffold(
-                body: Center(child: Text('Invalid item ID')),
-              ),
-            );
-          }
-
+          if (itemId == null) return const MaterialPage(child: Scaffold(body: Center(child: Text('Invalid ID'))));
           return CustomTransitionPage(
             child: ItemDetailScreen(itemId: itemId),
             transitionsBuilder: _fadeTransition,
@@ -103,131 +92,111 @@ final routerProvider = Provider<GoRouter>((ref) {
         },
       ),
     ],
-    errorBuilder: (context, state) => Scaffold(
-      body: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            const Icon(Icons.error_outline, size: 64, color: Colors.red),
-            const SizedBox(height: 16),
-            Text('Route not found: ${state.uri}'),
-          ],
-        ),
-      ),
-    ),
   );
 });
 
-/// Root shell navigation widget with bottom navigation
-class _RootNavigationShell extends StatefulWidget {
-  const _RootNavigationShell({required this.child});
+class _VerificationFlowLoader extends ConsumerStatefulWidget {
+  const _VerificationFlowLoader();
+  @override
+  ConsumerState<_VerificationFlowLoader> createState() => _VerificationFlowLoaderState();
+}
 
-  final Widget child;
+class _VerificationFlowLoaderState extends ConsumerState<_VerificationFlowLoader> {
+  @override
+  void initState() {
+    super.initState();
+    unawaited(_loadAndGo());
+  }
+
+  Future<void> _loadAndGo() async {
+    try {
+      await Future<void>.delayed(const Duration(milliseconds: 500));
+      debugPrint('Loading verification asset: ai_interior.png');
+      final byteData = await rootBundle.load('assets/test_images/ai_interior.png');
+      final directory = await getApplicationDocumentsDirectory();
+      final file = File('${directory.path}/ai_interior.png');
+      
+      debugPrint('Target path: ${file.path}');
+      await file.parent.create(recursive: true);
+      
+      await file.writeAsBytes(
+        byteData.buffer.asUint8List(byteData.offsetInBytes, byteData.lengthInBytes),
+        flush: true,
+      );
+
+      if (mounted) {
+        debugPrint('Asset loaded successfully, starting background processing');
+        // Start background identification
+        await ref.read(inventoryItemsProvider.notifier).processImageInBackground(file);
+        
+        if (mounted) {
+          debugPrint('Navigating to inventory feed');
+          context.go('/items');
+        }
+      }
+    } catch (e, stack) {
+      debugPrint('Verification failed critically: $e');
+      debugPrint(stack.toString());
+      if (mounted) context.go('/items');
+    }
+  }
 
   @override
-  State<_RootNavigationShell> createState() => _RootNavigationShellState();
+  Widget build(BuildContext context) => const Scaffold(body: Center(child: CircularProgressIndicator(color: Colors.black)));
+}
+
+class _RootNavigationShell extends StatefulWidget {
+  const _RootNavigationShell({required this.child});
+  final Widget child;
+  @override State<_RootNavigationShell> createState() => _RootNavigationShellState();
 }
 
 class _RootNavigationShellState extends State<_RootNavigationShell> {
   int _currentIndex = 0;
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      extendBody: true,
       body: widget.child,
-      floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
-      floatingActionButton: FloatingActionButton(
-        onPressed: () {
-          context.push('/camera');
-        },
-        backgroundColor: AppTheme.primaryBlack,
-        shape: const CircleBorder(),
-        heroTag: 'main-camera-fab',
-        child: const Icon(Icons.add, color: Colors.white, size: 32),
-      ),
-      bottomNavigationBar: BottomAppBar(
-        shape: const CircularNotchedRectangle(),
-        notchMargin: 8,
-        color: Colors.white,
-        elevation: 0,
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceAround,
-          children: <Widget>[
-            IconButton(
-              icon: Icon(
-                _currentIndex == 0 ? Icons.home : Icons.home_outlined,
-                color: _currentIndex == 0
-                    ? AppTheme.primaryBlack
-                    : AppTheme.textSecondary,
+      bottomNavigationBar: Container(
+        decoration: BoxDecoration(color: Colors.white, border: Border(top: BorderSide(color: Colors.grey.shade200, width: 0.5))),
+        child: BottomAppBar(
+          height: 60, color: Colors.white, elevation: 0, padding: EdgeInsets.zero,
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceAround,
+            children: <Widget>[
+              _BottomNavItem(icon: _currentIndex == 0 ? Icons.home_filled : Icons.home_outlined, isActive: _currentIndex == 0, onTap: () { setState(() => _currentIndex = 0); context.go('/items'); }),
+              _BottomNavItem(icon: Icons.search_rounded, isActive: _currentIndex == 1, onTap: () { setState(() => _currentIndex = 1); context.go('/search'); }),
+              _BottomNavItem(
+                key: const Key('add-item-nav'),
+                icon: Icons.add_box_outlined, 
+                isActive: false, 
+                onTap: () => context.push('/camera'),
               ),
-              onPressed: () {
-                setState(() => _currentIndex = 0);
-                context.go('/items');
-              },
-            ),
-            IconButton(
-              icon: Icon(
-                _currentIndex == 1 ? Icons.search : Icons.search_outlined,
-                color: _currentIndex == 1
-                    ? AppTheme.primaryBlack
-                    : AppTheme.textSecondary,
+              _BottomNavItem(
+                icon: Icons.favorite_border_rounded, 
+                isActive: false, 
+                onTap: () {},
               ),
-              onPressed: () {
-                setState(() => _currentIndex = 1);
-                context.go('/search');
-              },
-            ),
-            // Spacer for the FAB
-            const SizedBox(width: 48),
-            IconButton(
-              icon: Icon(
-                _currentIndex == 2 ? Icons.person : Icons.person_outline,
-                color: _currentIndex == 2
-                    ? AppTheme.primaryBlack
-                    : AppTheme.textSecondary,
-              ),
-              onPressed: () {
-                setState(() => _currentIndex = 2);
-                context.go('/profile');
-              },
-            ),
-          ],
+              _BottomNavItem(
+                icon: _currentIndex == 2 ? Icons.person : Icons.person_outline, 
+                isActive: _currentIndex == 2, onTap: () { setState(() => _currentIndex = 2); context.go('/profile'); }),
+            ],
+          ),
         ),
       ),
     );
   }
 }
 
-// Transition builders
-Widget _slideUpTransition(
-  BuildContext context,
-  Animation<double> animation,
-  Animation<double> secondaryAnimation,
-  Widget child,
-) {
-  const begin = Offset(0, 1);
-  const end = Offset.zero;
-  const curve = Curves.easeInOutCubic;
-
-  final tween = Tween(begin: begin, end: end).chain(
-    CurveTween(curve: curve),
-  );
-
-  return SlideTransition(
-    position: animation.drive(tween),
-    child: child,
-  );
+class _BottomNavItem extends StatelessWidget {
+  const _BottomNavItem({required this.icon, required this.isActive, required this.onTap, super.key});
+  final IconData icon; final bool isActive; final VoidCallback onTap;
+  @override Widget build(BuildContext context) => IconButton(icon: Icon(icon, size: 30, color: isActive ? Colors.black : Colors.black87), onPressed: onTap);
 }
 
-Widget _fadeTransition(
-  BuildContext context,
-  Animation<double> animation,
-  Animation<double> secondaryAnimation,
-  Widget child,
-) {
-  return FadeTransition(
-    opacity: animation,
-    child: child,
-  );
+Widget _slideUpTransition(BuildContext context, Animation<double> animation, Animation<double> secondaryAnimation, Widget child) {
+  final tween = Tween(begin: const Offset(0, 1), end: Offset.zero).chain(CurveTween(curve: Curves.easeInOutCubic));
+  return SlideTransition(position: animation.drive(tween), child: child);
 }
+
+Widget _fadeTransition(BuildContext context, Animation<double> animation, Animation<double> secondaryAnimation, Widget child) => FadeTransition(opacity: animation, child: child);

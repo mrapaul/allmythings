@@ -123,11 +123,11 @@ class _ErrorViewState extends State<ErrorView>
       case ErrorStyle.general:
         icon = widget.customIcon ?? Icons.error_outline_rounded;
         color = AppTheme.accentRed;
-        backgroundColor = AppTheme.accentRed.withOpacity(0.1);
+        backgroundColor = AppTheme.accentRed.withValues(alpha: 0.1);
       case ErrorStyle.network:
         icon = widget.customIcon ?? Icons.wifi_off_rounded;
         color = AppTheme.accentOrange;
-        backgroundColor = AppTheme.accentOrange.withOpacity(0.1);
+        backgroundColor = AppTheme.accentOrange.withValues(alpha: 0.1);
       case ErrorStyle.empty:
         icon = widget.customIcon ?? Icons.inbox_rounded;
         color = AppTheme.textSecondary;
@@ -201,10 +201,10 @@ class ErrorBanner extends StatelessWidget {
       margin: const EdgeInsets.all(16),
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: backgroundColor ?? AppTheme.accentRed.withOpacity(0.1),
+        color: backgroundColor ?? AppTheme.accentRed.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(12),
         border: Border.all(
-          color: backgroundColor ?? AppTheme.accentRed.withOpacity(0.3),
+          color: backgroundColor ?? AppTheme.accentRed.withValues(alpha: 0.3),
         ),
       ),
       child: Row(
@@ -263,7 +263,7 @@ class ErrorBanner extends StatelessWidget {
                 size: 20,
                 color: backgroundColor != null
                     ? AppTheme.textSecondary
-                    : AppTheme.accentRed.withOpacity(0.7),
+                    : AppTheme.accentRed.withValues(alpha: 0.7),
               ),
             ),
           ],

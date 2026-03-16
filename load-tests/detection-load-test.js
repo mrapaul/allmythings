@@ -69,7 +69,7 @@ export const options = {
 // Test Configuration
 // ============================================================================
 
-const BASE_URL = __ENV.API_URL || 'http://localhost:3000';
+const BASE_URL = __ENV.API_URL || 'http://localhost:14000';
 const AUTH_TOKEN = __ENV.AUTH_TOKEN || 'test-token';
 
 // Test image data (base64 encoded small test image)

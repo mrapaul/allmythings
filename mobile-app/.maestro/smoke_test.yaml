@@ -1,44 +1,48 @@
-# Smoke Test - Basic App Launch and Navigation
-# Tags: smoke, regression
-appId: com.homeinventory.home_inventory
-
+appId: allmythings
 ---
-# Launch the app
-- launchApp
+# Smoke test for Slick UI and Background Detection
+- launchApp:
+    clearState: true
 
-# Wait for the app to load
+# 1. Home Screen Verification
+- assertVisible: "visual_vault"
+- assertVisible: "items"
+- assertVisible: "labels"
+
+# 2. Start Capture Workflow
+- tapOn:
+    id: "add-item-nav"
+
+# 3. Simulated Shutter
+- tapOn:
+    id: "shutter-button"
+
+# 4. Preview and Continue
+- assertVisible: "Continue"
+- tapOn: "Continue"
+
+# 5. Immediate Background Return
+- assertVisible: "visual_vault"
+- assertVisible: "IDENTIFYING"
+
+# 6. Wait for Mock AI results (Mock AI takes ~1.5s + network)
 - waitForAnimationToEnd:
-    timeout: 5000
+    timeout: 10000
 
-# Verify main screen is visible
-- assertVisible:
-    text: "Home"
-    optional: true
-
-# Take a screenshot
-- takeScreenshot: smoke_main_screen
-
-# Check bottom navigation is present
-- assertVisible:
-    id: "bottom_nav"
-    optional: true
-
-# Navigate to camera screen
+# 7. Success Verification
+- assertNotVisible: "IDENTIFYING"
 - tapOn:
-    text: "Camera"
-    optional: true
+    index: 0 # Tap the first grid item (the one we just processed)
 
-- waitForAnimationToEnd
+# 8. Visual Identification Screen
+- assertVisible: "Visual Identification"
+- assertVisible: "Yellow Upholstered Armchair"
+- assertVisible: "Modern Gold Floor Lamp"
 
-# Take screenshot of camera screen
-- takeScreenshot: smoke_camera_screen
+# 9. Edit Workflow
+- tapOn: "EDIT"
+- assertVisible: "Edit Labels"
+- tapOn: "VAULT ITEMS"
 
-# Navigate back to inventory
-- tapOn:
-    text: "Inventory"
-    optional: true
-
-- waitForAnimationToEnd
-
-# Final screenshot
-- takeScreenshot: smoke_test_complete
+# 10. Final check
+- assertVisible: "visual_vault"

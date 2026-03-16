@@ -1,6 +1,7 @@
 import 'dart:convert';
 
 import 'package:all_my_things/data/database/app_database.dart';
+import 'package:all_my_things/data/repositories/detection_repository.dart';
 import 'package:all_my_things/domain/models/detected_object.dart';
 import 'package:drift/drift.dart';
 
@@ -9,7 +10,99 @@ class InventoryRepository {
   InventoryRepository(this._database);
   final AppDatabase _database;
 
-  /// Save a detected object as an inventory item with extracted labels
+  /// Create a new inventory item in pending state
+  Future<int> createPendingItem({
+    required String photoPath,
+    required String thumbnailPath,
+  }) async {
+    final companion = InventoryItemsCompanion.insert(
+      photoPath: photoPath,
+      thumbnailPath: thumbnailPath,
+      detectionData: '{}',
+      status: const Value('pending'),
+      createdAt: DateTime.now(),
+      updatedAt: DateTime.now(),
+    );
+
+    return _database.into(_database.inventoryItems).insert(companion);
+  }
+
+  /// Update item status and detection data
+  Future<void> updateItemStatus({
+    required int itemId,
+    required String status,
+    String? detectionData,
+  }) async {
+    final companion = InventoryItemsCompanion(
+      status: Value(status),
+      updatedAt: Value(DateTime.now()),
+      detectionData: detectionData != null ? Value(detectionData) : const Value.absent(),
+    );
+
+    await (_database.update(_database.inventoryItems)..where((t) => t.id.equals(itemId)))
+        .write(companion);
+  }
+
+  /// Update item thumbnail path
+  Future<void> updateThumbnail(int itemId, String thumbnailPath) async {
+    await (_database.update(_database.inventoryItems)..where((t) => t.id.equals(itemId)))
+        .write(InventoryItemsCompanion(thumbnailPath: Value(thumbnailPath)));
+  }
+
+  /// Extract labels from a DetectionResult
+  List<LabelEntry> extractLabelsFromResult(DetectionResult result) {
+    final labels = <LabelEntry>[];
+    for (final detection in result.detections) {
+      labels.add(LabelEntry('type', detection.label));
+      if (detection.category.isNotEmpty && detection.category != detection.label) {
+        labels.add(LabelEntry('category', detection.category));
+      }
+      if (detection.brand != null) labels.add(LabelEntry('brand', detection.brand!));
+      if (detection.model != null) labels.add(LabelEntry('model', detection.model!));
+      for (final color in detection.colors) {
+        labels.add(LabelEntry('color', color));
+      }
+      for (final material in detection.materials) {
+        labels.add(LabelEntry('material', material));
+      }
+      if (detection.condition != null) {
+        labels.add(LabelEntry('condition', detection.condition!));
+      }
+      if (detection.description != null) {
+        labels.add(LabelEntry('description', detection.description!));
+      }
+    }
+    return labels;
+  }
+
+  /// Replace all labels for an item with a new set
+  Future<void> updateItemLabels(int itemId, List<LabelEntry> newLabels) async {
+    await _database.transaction(() async {
+      // Delete existing labels
+      await (_database.delete(_database.labels)
+            ..where((t) => t.itemId.equals(itemId)))
+          .go();
+
+      // Insert new labels
+      for (final label in newLabels) {
+        await _database.into(_database.labels).insert(
+              LabelsCompanion.insert(
+                itemId: itemId,
+                key: label.key,
+                value: label.value,
+                createdAt: DateTime.now(),
+              ),
+            );
+      }
+      
+      // Update item's updatedAt timestamp
+      await (_database.update(_database.inventoryItems)
+            ..where((t) => t.id.equals(itemId)))
+          .write(InventoryItemsCompanion(updatedAt: Value(DateTime.now())));
+    });
+  }
+
+  /// Save a detected object as an inventory item with extracted labels (Legacy Support)
   Future<int> saveDetection({
     required String photoPath,
     required String thumbnailPath,
@@ -45,31 +138,22 @@ class InventoryRepository {
   }
 
   /// Extract all VLM fields as key-value label pairs
-  List<_LabelEntry> _extractLabels(DetectedObject detection) {
-    final labels = <_LabelEntry>[];
-
-    labels.add(_LabelEntry('label', detection.label));
-    labels.add(_LabelEntry('category', detection.category));
-
-    if (detection.brand != null) {
-      labels.add(_LabelEntry('brand', detection.brand!));
+  List<LabelEntry> _extractLabels(DetectedObject detection) {
+    final labels = <LabelEntry>[];
+    labels.add(LabelEntry('type', detection.label));
+    if (detection.category.isNotEmpty && detection.category != detection.label) {
+      labels.add(LabelEntry('type', detection.category));
     }
-    if (detection.model != null) {
-      labels.add(_LabelEntry('model', detection.model!));
-    }
+    if (detection.brand != null) labels.add(LabelEntry('brand', detection.brand!));
+    if (detection.model != null) labels.add(LabelEntry('model', detection.model!));
     for (final color in detection.colors) {
-      labels.add(_LabelEntry('color', color));
+      labels.add(LabelEntry('color', color));
     }
     for (final material in detection.materials) {
-      labels.add(_LabelEntry('material', material));
+      labels.add(LabelEntry('material', material));
     }
-    if (detection.condition != null) {
-      labels.add(_LabelEntry('condition', detection.condition!));
-    }
-    if (detection.description != null) {
-      labels.add(_LabelEntry('description', detection.description!));
-    }
-
+    if (detection.condition != null) labels.add(LabelEntry('condition', detection.condition!));
+    if (detection.description != null) labels.add(LabelEntry('description', detection.description!));
     return labels;
   }
 
@@ -87,11 +171,12 @@ class InventoryRepository {
         .getSingleOrNull();
   }
 
-  /// Delete item
-  Future<void> deleteItem(int id) async {
-    await (_database.delete(_database.inventoryItems)
-          ..where((t) => t.id.equals(id)))
-        .go();
+  /// Delete an item and its labels
+  Future<void> deleteItem(int itemId) async {
+    await _database.transaction(() async {
+      await (_database.delete(_database.labels)..where((t) => t.itemId.equals(itemId))).go();
+      await (_database.delete(_database.inventoryItems)..where((t) => t.id.equals(itemId))).go();
+    });
   }
 
   /// Get labels for item
@@ -106,45 +191,6 @@ class InventoryRepository {
   Future<List<InventoryItem>> searchItems(String query) async {
     if (query.trim().isEmpty) return [];
     return _database.searchItems(query);
-  }
-
-  /// Add label to item
-  Future<int> addLabel({
-    required int itemId,
-    required String key,
-    required String value,
-  }) async {
-    return _database.into(_database.labels).insert(
-          LabelsCompanion.insert(
-            itemId: itemId,
-            key: key,
-            value: value,
-            createdAt: DateTime.now(),
-          ),
-        );
-  }
-
-  /// Update label
-  Future<void> updateLabel({
-    required int labelId,
-    String? key,
-    String? value,
-  }) async {
-    await (_database.update(_database.labels)
-          ..where((t) => t.id.equals(labelId)))
-        .write(
-      LabelsCompanion(
-        key: key != null ? Value(key) : const Value.absent(),
-        value: value != null ? Value(value) : const Value.absent(),
-      ),
-    );
-  }
-
-  /// Delete label
-  Future<void> deleteLabel(int labelId) async {
-    await (_database.delete(_database.labels)
-          ..where((t) => t.id.equals(labelId)))
-        .go();
   }
 
   /// Get inventory statistics
@@ -167,7 +213,6 @@ class InventoryRepository {
               ..limit(1))
             .getSingleOrNull();
 
-    // Count unique label values for categories
     final allLabels = await _database.select(_database.labels).get();
     final uniqueLabels = allLabels.map((l) => l.value).toSet().length;
 
@@ -181,8 +226,8 @@ class InventoryRepository {
 }
 
 /// Simple key-value pair for label extraction
-class _LabelEntry {
-  _LabelEntry(this.key, this.value);
+class LabelEntry {
+  LabelEntry(this.key, this.value);
   final String key;
   final String value;
 }

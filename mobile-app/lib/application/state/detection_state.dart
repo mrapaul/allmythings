@@ -13,6 +13,7 @@ sealed class DetectionState with _$DetectionState {
     required int processingTimeMs,
     required String detector,
     required String classifier,
+    int? corroborationCount,
   }) = DetectionSuccess;
   const factory DetectionState.empty() = DetectionEmpty;
   const factory DetectionState.error(String message) = DetectionError;

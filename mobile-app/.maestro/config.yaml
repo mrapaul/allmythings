@@ -2,7 +2,7 @@
 # Home Inventory Mobile App E2E Tests
 
 # App configuration
-appId: com.homeinventory.home_inventory
+appId: allmythings
 
 # Test settings
 flows:

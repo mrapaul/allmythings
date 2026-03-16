@@ -51,13 +51,13 @@ jobs:
         run: |
           npm run dev > api-server.log 2>&1 &
           sleep 10
-          curl -s http://localhost:8000/v1/health || echo "API not ready yet"
+          curl -s http://localhost:14000/v1/health || echo "API not ready yet"
 
       - name: Check API health
         id: api-check
         run: |
           for i in {1..30}; do
-            if curl -s http://localhost:8000/v1/health | grep -q "healthy"; then
+            if curl -s http://localhost:14000/v1/health | grep -q "healthy"; then
               echo "status=ready" >> $GITHUB_OUTPUT
               exit 0
             fi

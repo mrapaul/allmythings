@@ -60,7 +60,7 @@ fi
 # Step 6: Environment configuration
 echo -e "${BLUE}Step 6: Creating environment file...${NC}"
 cat > .env.test << EOF
-API_URL=http://localhost:8000
+API_URL=http://localhost:14000
 TEST_IMAGE_PATH=$HOME/Downloads/Images/ai_interior.jpg
 APPIUM_HOST=localhost
 APPIUM_PORT=4723

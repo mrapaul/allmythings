@@ -74,7 +74,7 @@ make install-mobile    # Install Flutter dependencies only
 
 ```bash
 make dev               # Start API and mobile app in parallel (requires two terminals)
-make dev-api           # Start API server on http://localhost:8000 (watch mode)
+make dev-api           # Start API server on http://localhost:14000 (watch mode)
 make dev-mobile        # Start Flutter app (connects to hot reload)
 ```
 
@@ -251,7 +251,7 @@ Integration tests: `mobile-app/integration_test/`
 - Enable Pino logging with `NODE_ENV=development`
 - Check logs: `npm run dev 2>&1 | grep -i error`
 - Type errors: `npm run type-check`
-- Port conflicts: `lsof -i :8000` (or your PORT)
+- Port conflicts: `lsof -i :14000` (or your PORT)
 
 ### Mobile App Debugging
 
@@ -262,7 +262,7 @@ Integration tests: `mobile-app/integration_test/`
 
 ### API Server Won't Start
 
-1. Check port availability: `lsof -i :8000`
+1. Check port availability: `lsof -i :14000`
 2. Kill existing process: `pkill -f "node.*api-service"`
 3. Clear dependencies: `make clean-api && make install-api`
 4. Type check: `npm run type-check`
@@ -281,7 +281,7 @@ Integration tests: `mobile-app/integration_test/`
 Set in `.env` or via `envConfig` in `src/config/env.config.ts`:
 
 ```
-PORT=8000
+PORT=14000
 NODE_ENV=development
 GOOGLE_PROJECT_ID=your-project-id
 AWS_REGION=us-east-1

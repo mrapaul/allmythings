@@ -124,7 +124,7 @@ class _DotsLoaderState extends State<_DotsLoader>
                   width: widget.size / 6,
                   height: widget.size / 6,
                   decoration: BoxDecoration(
-                    color: AppTheme.primaryBlack.withOpacity(0.8 + scale * 0.2),
+                    color: AppTheme.primaryBlack.withValues(alpha: 0.8 + scale * 0.2),
                     shape: BoxShape.circle,
                   ),
                 ),

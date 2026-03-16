@@ -1,0 +1,44 @@
+
+A module that was compiled using NumPy 1.x cannot be run in
+NumPy 2.2.6 as it may crash. To support both 1.x and 2.x
+versions of NumPy, modules must be compiled with NumPy 2.0.
+Some module may need to rebuild instead e.g. with 'pybind11>=2.12'.
+
+If you are a user of the module, the easiest solution will be to
+downgrade to 'numpy<2' or try to upgrade the affected module.
+We expect that some modules will need time to support NumPy 2.
+
+Traceback (most recent call last):  File "/Users/mrarindampaul/Develop/allmythings/detection-service/main.py", line 10, in <module>
+    import torch
+  File "/Users/mrarindampaul/Develop/allmythings/detection-service/venv/lib/python3.12/site-packages/torch/__init__.py", line 1477, in <module>
+    from .functional import *  # noqa: F403
+  File "/Users/mrarindampaul/Develop/allmythings/detection-service/venv/lib/python3.12/site-packages/torch/functional.py", line 9, in <module>
+    import torch.nn.functional as F
+  File "/Users/mrarindampaul/Develop/allmythings/detection-service/venv/lib/python3.12/site-packages/torch/nn/__init__.py", line 1, in <module>
+    from .modules import *  # noqa: F403
+  File "/Users/mrarindampaul/Develop/allmythings/detection-service/venv/lib/python3.12/site-packages/torch/nn/modules/__init__.py", line 35, in <module>
+    from .transformer import TransformerEncoder, TransformerDecoder, \
+  File "/Users/mrarindampaul/Develop/allmythings/detection-service/venv/lib/python3.12/site-packages/torch/nn/modules/transformer.py", line 20, in <module>
+    device: torch.device = torch.device(torch._C._get_default_device()),  # torch.device('cpu'),
+/Users/mrarindampaul/Develop/allmythings/detection-service/venv/lib/python3.12/site-packages/torch/nn/modules/transformer.py:20: UserWarning: Failed to initialize NumPy: _ARRAY_API not found (Triggered internally at /Users/runner/work/pytorch/pytorch/pytorch/torch/csrc/utils/tensor_numpy.cpp:84.)
+  device: torch.device = torch.device(torch._C._get_default_device()),  # torch.device('cpu'),
+INFO:     Started server process [18933]
+INFO:     Waiting for application startup.
+Disabling PyTorch because PyTorch >= 2.4 is required but found 2.2.2
+PyTorch was not found. Models won't be available and only tokenizers, configuration and file/data utilities can be used.
+PyTorch was not found. Models won't be available and only tokenizers, configuration and file/data utilities can be used.
+Warning: You are sending unauthenticated requests to the HF Hub. Please set a HF_TOKEN to enable higher rate limits and faster downloads.
+The image processor of type `GroundingDinoImageProcessor` is now loaded as a fast processor by default, even if the model checkpoint was saved with a slow processor. This is a breaking change and may produce slightly different outputs. To continue using the slow processor, instantiate this class with `use_fast=False`. 
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://0.0.0.0:14001 (Press CTRL+C to quit)
+Using device: cpu
+Loading YOLO model: yolo11n.pt
+YOLO model loaded successfully
+Loading Grounding DINO model: IDEA-Research/grounding-dino-tiny
+Failed to load DINO (likely AVX issue): 
+GroundingDinoImageProcessorFast requires the PyTorch library but it was not found in your environment. Check out the instructions on the
+installation page: https://pytorch.org/get-started/locally/ and follow the ones that match your environment.
+Please note that you may need to restart your runtime after installation.
+
+INFO:     127.0.0.1:49730 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49734 - "GET /health HTTP/1.1" 200 OK

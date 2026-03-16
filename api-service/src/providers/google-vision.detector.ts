@@ -16,7 +16,7 @@ export class GoogleVisionDetector implements ObjectDetector {
     });
   }
 
-  async detect(image: Buffer): Promise<BoundingBoxResult[]> {
+  async detect(image: Buffer, _prompt?: string): Promise<BoundingBoxResult[]> {
     if (!this.client.objectLocalization) {
       throw new Error('GoogleVisionDetector: objectLocalization method not available');
     }

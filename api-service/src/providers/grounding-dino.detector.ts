@@ -18,10 +18,10 @@ export class GroundingDinoDetector implements ObjectDetector {
     this.textThreshold = config.detectionTextThreshold;
   }
 
-  async detect(image: Buffer): Promise<BoundingBoxResult[]> {
+  async detect(image: Buffer, prompt?: string): Promise<BoundingBoxResult[]> {
     const formData = new FormData();
     formData.append('file', new Blob([image]), 'image.jpg');
-    formData.append('prompt', this.prompt);
+    formData.append('prompt', prompt || this.prompt);
     formData.append('box_threshold', String(this.boxThreshold));
     formData.append('text_threshold', String(this.textThreshold));
 
@@ -40,7 +40,8 @@ export class GroundingDinoDetector implements ObjectDetector {
       }
 
       const data: any = await response.json();
-      logger.debug({ count: data.detections?.length }, 'GroundingDinoDetector: received detections');
+      const labels = (data.detections || []).map((d: any) => d.coarse_label || d.label);
+      logger.debug({ count: data.detections?.length, labels }, 'GroundingDinoDetector: received detections');
 
       return (data.detections || []).map((d: any) => ({
         box: { x: d.box.x, y: d.box.y, width: d.box.w ?? d.box.width, height: d.box.h ?? d.box.height },

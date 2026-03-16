@@ -117,7 +117,7 @@ check_health() {
     local attempt=0
 
     while [ $attempt -lt $max_attempts ]; do
-        if curl -sf http://localhost:3000/v1/health > /dev/null 2>&1; then
+        if curl -sf http://localhost:14000/v1/health > /dev/null 2>&1; then
             log_info "API is healthy"
             return 0
         fi

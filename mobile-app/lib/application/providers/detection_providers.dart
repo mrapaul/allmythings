@@ -17,7 +17,7 @@ class DetectionNotifier extends Notifier<DetectionState> {
   DetectionState build() => const DetectionState.initial();
 
   /// Detect objects in image file
-  Future<void> detectObjects(File imageFile) async {
+  Future<DetectionResult> detectObjects(File imageFile) async {
     state = const DetectionState.loading();
 
     try {
@@ -32,10 +32,13 @@ class DetectionNotifier extends Notifier<DetectionState> {
           processingTimeMs: result.processingTimeMs,
           detector: result.detector,
           classifier: result.classifier,
+          corroborationCount: result.corroborationCount,
         );
       }
+      return result;
     } catch (e) {
       state = DetectionState.error(e.toString());
+      rethrow;
     }
   }
 

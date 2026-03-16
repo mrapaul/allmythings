@@ -11,11 +11,13 @@ class DetectionResult {
     required this.detector,
     required this.classifier,
     required this.processingTimeMs,
+    this.corroborationCount,
   });
   final List<DetectedObject> detections;
   final String detector;
   final String classifier;
   final int processingTimeMs;
+  final int? corroborationCount;
 }
 
 /// Repository for object detection via API
@@ -29,7 +31,7 @@ class DetectionRepository {
     try {
       // Prepare multipart form data with image file
       final formData = FormData.fromMap({
-        'image': await MultipartFile.fromFile(
+        'file': await MultipartFile.fromFile(
           imageFile.path,
           filename: imageFile.path.split('/').last,
         ),
@@ -73,12 +75,14 @@ class DetectionRepository {
       final detector = data['detector'] as String? ?? 'unknown';
       final classifier = data['classifier'] as String? ?? 'unknown';
       final processingTimeMs = data['processingTimeMs'] as int? ?? 0;
+      final corroborationCount = data['corroborationCount'] as int?;
 
       return DetectionResult(
         detections: detections,
         detector: detector,
         classifier: classifier,
         processingTimeMs: processingTimeMs,
+        corroborationCount: corroborationCount,
       );
     } catch (e) {
       rethrow;

@@ -18,5 +18,6 @@ export interface ClassifiedObject {
 export interface ObjectClassifier {
   readonly name: string;
   classify(image: Buffer, detections: BoundingBoxResult[]): Promise<ClassifiedObject[]>;
+  generateDetectionPrompt(image: Buffer): Promise<string>;
   healthCheck(): Promise<boolean>;
 }

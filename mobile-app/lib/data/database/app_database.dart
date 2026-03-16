@@ -32,20 +32,42 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase._fromDb(super.e);
 
   /// Creates a database from an arbitrary [QueryExecutor]. Used for testing.
-  AppDatabase.fromExecutor(QueryExecutor e) : super(e);
+  AppDatabase.fromExecutor(super.e);
 
   @override
-  int get schemaVersion => 1;
+  int get schemaVersion => 3;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
         beforeOpen: (details) async {
           await customStatement('PRAGMA foreign_keys = ON');
         },
-        onCreate: (Migrator m) async {
+        onCreate: (m) async {
           await m.createAll();
           await _createFtsTriggers();
           await _createIndexes();
+        },
+        onUpgrade: (m, from, to) async {
+          if (from < 2) {
+            // Re-create FTS table to include key column
+            await m.deleteTable('label_search_fts');
+            await m.createTable(labelSearchFts);
+            
+            // Re-create triggers
+            await customStatement('DROP TRIGGER IF EXISTS label_search_insert');
+            await customStatement('DROP TRIGGER IF EXISTS label_search_update');
+            await customStatement('DROP TRIGGER IF EXISTS label_search_delete');
+            await _createFtsTriggers();
+            
+            // Re-populate FTS table
+            await customStatement('''
+              INSERT INTO label_search_fts(label_id, key, value)
+              SELECT id, key, value FROM labels;
+            ''');
+          }
+          if (from < 3) {
+            await m.addColumn(inventoryItems, inventoryItems.status);
+          }
         },
       );
 
@@ -55,8 +77,8 @@ class AppDatabase extends _$AppDatabase {
     await customStatement('''
       CREATE TRIGGER IF NOT EXISTS label_search_insert AFTER INSERT ON labels
       BEGIN
-        INSERT INTO label_search_fts(label_id, value)
-        VALUES (NEW.id, NEW.value);
+        INSERT INTO label_search_fts(label_id, key, value)
+        VALUES (NEW.id, NEW.key, NEW.value);
       END;
     ''');
 
@@ -65,7 +87,7 @@ class AppDatabase extends _$AppDatabase {
       CREATE TRIGGER IF NOT EXISTS label_search_update AFTER UPDATE ON labels
       BEGIN
         UPDATE label_search_fts
-        SET value = NEW.value
+        SET key = NEW.key, value = NEW.value
         WHERE label_id = NEW.id;
       END;
     ''');

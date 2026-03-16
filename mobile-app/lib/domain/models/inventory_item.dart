@@ -26,8 +26,7 @@ abstract class ItemLabel with _$ItemLabel {
     required int itemId,
     required String key,
     required String value,
-    @Default(1.0) double confidence,
-    required DateTime createdAt,
+    required DateTime createdAt, @Default(1.0) double confidence,
   }) = _ItemLabel;
 
   factory ItemLabel.fromJson(Map<String, dynamic> json) =>

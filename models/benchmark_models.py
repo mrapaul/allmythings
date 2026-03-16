@@ -12,7 +12,7 @@ from ultralytics import YOLO
 
 # Test images
 TEST_IMAGES = [
-    "../api-service/tests/fixtures/test-image.jpg",
+    "../test_images/ai_interior.jpg",
 ]
 
 # Models to benchmark

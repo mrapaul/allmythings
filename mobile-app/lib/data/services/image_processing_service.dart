@@ -1,7 +1,9 @@
 import 'dart:io';
-import 'package:image/image.dart' as img;
-import 'package:all_my_things/domain/models/detected_object.dart';
+
 import 'package:all_my_things/core/config/app_config.dart';
+import 'package:all_my_things/domain/models/detected_object.dart';
+import 'package:image/image.dart' as img;
+import 'package:path/path.dart' as p;
 
 /// Service for image processing, including thumbnail generation and cropping
 class ImageProcessingService {
@@ -21,7 +23,7 @@ class ImageProcessingService {
 
     final cropped = img.copyCrop(image, x: x, y: y, width: w, height: h);
     
-    final targetSize = AppConfig.thumbnailSize;
+    const targetSize = AppConfig.thumbnailSize;
     
     // Resize maintaining aspect ratio
     final resized = img.copyResize(
@@ -31,9 +33,10 @@ class ImageProcessingService {
     );
 
     // Create thumbnail path with timestamp to avoid name collisions
+    final extension = p.extension(photo.path);
     final thumbnailPath = photo.path.replaceAll(
-      '.jpg', 
-      '_thumb_${DateTime.now().millisecondsSinceEpoch}.jpg',
+      extension, 
+      '_thumb_${DateTime.now().millisecondsSinceEpoch}$extension',
     );
     
     final thumbnailFile = File(thumbnailPath);
