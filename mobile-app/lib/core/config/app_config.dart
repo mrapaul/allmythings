@@ -9,14 +9,19 @@ class AppConfig {
     if (envUrl.isNotEmpty) {
       return envUrl;
     }
+    
+    // Default fallback logic for local development
     if (kIsWeb) {
       return 'http://localhost:14000';
     }
     try {
       if (Platform.isAndroid) {
+        // Android emulator sees host as 10.0.2.2
         return 'http://10.0.2.2:14000';
       }
     } catch (_) {}
+    
+    // iOS Simulator and desktop
     return 'http://localhost:14000';
   }
 
