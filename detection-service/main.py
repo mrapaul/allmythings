@@ -76,6 +76,14 @@ async def lifespan(app: FastAPI):
 app = FastAPI(title="Unified Detection Service", version="3.0.0", lifespan=lifespan)
 app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])
 
+@app.get("/")
+async def root():
+    return {
+        "service": "Unified Detection Service",
+        "version": "3.0.0",
+        "endpoints": ["/health", "/detect"]
+    }
+
 @app.get("/health")
 async def health_check():
     return {

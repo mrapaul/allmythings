@@ -24,21 +24,21 @@
     - [ ] Implement logic to switch between localhost (emulator) and host IP (physical device).
 - [ ] Task: Conductor - User Manual Verification 'Phase 2: Mobile Deployment Configuration' (Protocol in workflow.md)
 
-## Phase 3: Full Local Automation (Unified Script)
-- [~] Task: Create Unified Auto-Deploy Script
-    - [ ] Create `scripts/auto-deploy.sh` that starts Docker, detects device, and runs app.
-    - [ ] Add logic to automatically fetch Mac IP for physical device connection.
-    - [ ] Implement smart device detection (iPhone vs Android).
-- [ ] Task: Conductor - User Manual Verification 'Phase 3: Full Local Automation' (Protocol in workflow.md)
+## Phase 3: Full Local Automation (Unified Script) [checkpoint: 3d4f0ff]
+- [x] Task: Create Unified Auto-Deploy Script (3e7fdcf)
+    - [x] Create `scripts/auto-deploy.sh` that starts Docker, detects device, and runs app.
+    - [x] Add logic to automatically fetch Mac IP for physical device connection.
+    - [x] Implement smart device detection (iPhone vs Android).
+- [x] Task: Conductor - User Manual Verification 'Phase 3: Full Local Automation' (Protocol in workflow.md)
 
 ## Phase 4: Continuous Integration (GitHub Actions)
-- [ ] Task: Core CI Workflow Implementation
-    - [ ] Create `.github/workflows/ci.yml`.
-    - [ ] Add jobs for API linting, type-checking, and unit tests.
-    - [ ] Add jobs for Detection service linting and unit tests.
-- [ ] Task: Flutter Build Verification in CI
-    - [ ] Add job to run `flutter analyze` and `flutter test`.
-    - [ ] Add job for basic `flutter build apk` verification (dry run).
+- [x] Task: Core CI Workflow Implementation
+    - [x] Create `.github/workflows/ci.yml` (Updated existing with Detection tests).
+    - [x] Add jobs for API linting, type-checking, and unit tests (Verified).
+    - [x] Add jobs for Detection service linting and unit tests (Created tests and CI job).
+- [x] Task: Flutter Build Verification in CI
+    - [x] Add job to run `flutter analyze` and `flutter test` (Already in ci.yml).
+    - [x] Add job for basic `flutter build apk` verification (Already in ci.yml).
 - [ ] Task: Conductor - User Manual Verification 'Phase 4: Continuous Integration' (Protocol in workflow.md)
 
 ## Phase 5: Automated E2E Testing

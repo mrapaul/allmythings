@@ -104,6 +104,7 @@ test:
 	@echo "${GREEN}Running all tests...${NC}"
 	@$(MAKE) test-api
 	@$(MAKE) test-mobile
+	@$(MAKE) test-detection
 
 test-api:
 	@echo "${GREEN}Running API tests...${NC}"
@@ -112,6 +113,10 @@ test-api:
 test-mobile:
 	@echo "${GREEN}Running Flutter tests...${NC}"
 	@cd $(MOBILE_DIR) && flutter test
+
+test-detection:
+	@echo "${GREEN}Running Detection service tests...${NC}"
+	@cd $(DETECTION_DIR) && ./venv/bin/python -m pytest test_main.py
 
 # Linting
 lint: lint-api lint-mobile
