@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:io';
 
+import 'package:all_my_things/application/providers/inventory_providers.dart';
 import 'package:all_my_things/presentation/camera/camera_capture_screen.dart';
 import 'package:all_my_things/presentation/profile/profile_screen.dart';
 import 'package:all_my_things/presentation/screens/detection_results_screen.dart';
@@ -126,8 +127,8 @@ class _VerificationFlowLoaderState extends ConsumerState<_VerificationFlowLoader
 
       if (mounted) {
         debugPrint('Asset loaded successfully, starting background processing');
-        // Start background identification
-        await ref.read(inventoryItemsProvider.notifier).processImageInBackground(file);
+        // Start background identification - do NOT await here so we can navigate immediately
+        unawaited(ref.read(inventoryItemsProvider.notifier).processImageInBackground(file));
         
         if (mounted) {
           debugPrint('Navigating to inventory feed');

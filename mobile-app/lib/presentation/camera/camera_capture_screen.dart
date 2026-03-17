@@ -155,8 +155,8 @@ class _CameraCaptureScreenState extends ConsumerState<CameraCaptureScreen> {
       setState(() => _isCapturing = true);
       
       try {
-        // Start background identification
-        await ref.read(inventoryItemsProvider.notifier).processImageInBackground(_capturedImageFile!);
+        // Start background identification - do NOT await here
+        unawaited(ref.read(inventoryItemsProvider.notifier).processImageInBackground(_capturedImageFile!));
 
         if (mounted) {
           // Return to collection instantly
