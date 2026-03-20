@@ -14,7 +14,7 @@
 - **Language:** TypeScript
 - **Validation:** Zod 3.22
 - **Logging:** Pino
-- **Database:** PostgreSQL (Remote)
+- **Database:** PostgreSQL 15 (Managed or Containerized)
 
 ## 3. Specialized Services (Microservices)
 - **Detection Service:**
@@ -23,12 +23,13 @@
     - **Inference:** ONNX / PyTorch
 
 ## 4. AI & Machine Learning (Vision Pipeline)
-- **Primary Provider (Cloud):** Google Gemini 1.5 Flash (Multimodal)
-- **Secondary Provider (Local):** Ollama (LLaVA)
+- **Primary Provider (Cloud):** Google Gemini 1.5 Flash (Optimized for Free Tier)
+- **Secondary Provider (Local):** Ollama (LLaVA / Qwen2.5-VL)
 - **Fallback:** Mock Adapter (Development)
 
 ## 5. Infrastructure & DevOps
 - **Containerization:** Docker & Docker Compose
 - **Orchestration & IaC:** Terraform
-- **Deployment Strategy:** Production-grade build & deployment system (Custom/To be defined)
+- **Deployment Strategy:** Independent release orchestration (via local-release.sh)
+- **Production Target:** Independent NixOS hosting or Docker-based VPS deployment.
 - **Observability:** OpenObserve (Logs, Metrics, Traces)

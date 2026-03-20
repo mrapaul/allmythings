@@ -30,15 +30,18 @@ An AI-powered mobile app with Instagram-style UI and multi-provider vision AI in
     - **Deep Analysis (Ollama/Gemini):** Asynchronous processing for detailed attribute extraction (brand, material, condition) and complex classification.
 - **Self-Improving Models:** A system that learns from user corrections to continuously refine local detection models.
 - **Multi-Provider Ensemble:** Aggregating results from multiple vision providers to maximize confidence and coverage.
+- **Production-Grade Monitoring:** Built-in system health checks and resource monitoring for the detection pipeline.
 
 ### 3.2 User Experience
 - **"Instagram-Style" Feed:** A polished, infinite-scroll interface for browsing inventory items.
 - **Smart Tagging:** Automatic generation of relevant labels based on object attributes and spatial context.
 - **Resilient Offline Mode:** Full capability to capture and organize items without an internet connection, syncing when connectivity is restored.
+- **Legal & Transparency:** Dedicated views for Privacy Policy and Terms of Service to ensure user data ownership and processing transparency.
 
 ### 3.3 Architecture & Monetization
 - **Modular Design:** A service-oriented architecture that allows individual components (like specific detection models) to be swapped, upgraded, or gated.
 - **Performance Focus:** Engineered for low latency to ensure the user experience remains fluid even when performing complex AI operations.
+- **Independent Distribution:** Support for fully independent, private deployment via Docker or NixOS without third-party platform reliance.
 
 ## 4. Success Metrics
 - **Detection Accuracy:** >95% successful identification of visible household objects.
