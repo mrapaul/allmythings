@@ -3,7 +3,7 @@
 **Phase 1: Foundation & Production Assets**
 - [x] Task: Create production-ready app icons and splash screens. (11bab74)
 - [x] Task: Draft boilerplate Privacy Policy and Terms of Service (Markdown). (c92c824)
-- [ ] Task: Implement "About" and "Legal" views in the mobile app.
+- [x] Task: Implement "About" and "Legal" views in the mobile app. (87c547d)
 - [ ] Task: Conductor - User Manual Verification 'Phase 1' (Protocol in workflow.md)
 
 **Phase 2: Backend Production Environment**
