@@ -10,10 +10,10 @@
 - [x] Task: Define a NixOS configuration (`configuration.nix`) for the backend service (Fastify + PostgreSQL). (7feff6a)
 - [x] Task: Optimize `VisionOrchestratorService` to use Gemini Flash and Google Vision free tiers. (4aa16a1)
 - [x] Task: Implement a production-grade detection health check endpoint. (fbb05aa)
-- [ ] Task: Conductor - User Manual Verification 'Phase 2' (Protocol in workflow.md)
+- [x] Task: Conductor - User Manual Verification 'Phase 2' (Protocol in workflow.md) (560fe93)
 
 **Phase 3: Automated Build & Distribution Pipeline**
-- [ ] Task: Configure GitHub Actions for Flutter iOS/Android production builds.
+- [x] Task: Configure GitHub Actions for Flutter iOS/Android production builds. (e8192c4)
 - [ ] Task: Set up Firebase App Distribution (for Android) and TestFlight (for iOS) CLI uploads.
 - [ ] Task: Create a top-level `deploy-production.sh` script for unified deployment.
 - [ ] Task: Conductor - User Manual Verification 'Phase 3' (Protocol in workflow.md)
