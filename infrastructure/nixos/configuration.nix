@@ -32,7 +32,7 @@ in
       User = "allmythings";
       Group = "allmythings";
       WorkingDirectory = "${app_dir}/api-service";
-      ExecStart = "${pkgs.nodejs_20}/bin/node dist/src/index.js";
+      ExecStart = "${pkgs.nodejs_20}/bin/node dist/app.js";
       Restart = "always";
       Environment = [
         "PORT=${toString api_port}"

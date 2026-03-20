@@ -52,7 +52,7 @@ cat > "$RELEASE_DIR/README.md" <<EOF
 1. Copy \`backend/\` to your server.
 2. Run \`npm install --production\`.
 3. Configure \`.env\` with your \`GEMINI_API_KEY\`.
-4. Run \`node dist/src/index.js\`.
+4. Run \`node dist/app.js\`.
 
 ### Backend (Docker)
 1. Use the provided \`docker-compose.yml\`.
