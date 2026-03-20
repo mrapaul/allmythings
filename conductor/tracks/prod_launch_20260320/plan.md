@@ -12,11 +12,11 @@
 - [x] Task: Implement a production-grade detection health check endpoint. (fbb05aa)
 - [x] Task: Conductor - User Manual Verification 'Phase 2' (Protocol in workflow.md) (560fe93)
 
-**Phase 3: Independent Release Pipeline**
+**Phase 3: Independent Release Pipeline** [checkpoint: 894e1c7]
 - [x] Task: Configure local build orchestration for API and Mobile. (51e6bd6)
 - [x] Task: Create `scripts/local-release.sh` for one-click independent distribution. (48b1fb6)
 - [x] Task: Optimize Docker configuration for private/local production hosting. (ca2abf1)
-- [ ] Task: Conductor - User Manual Verification 'Phase 3' (Protocol in workflow.md)
+- [x] Task: Conductor - User Manual Verification 'Phase 3' (Protocol in workflow.md) (894e1c7)
 
 **Phase 4: Verification & Handover**
 - [ ] Task: Perform end-to-end smoke tests on a production-build device.
