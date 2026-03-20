@@ -24,6 +24,13 @@ jobs:
       - name: Build AAB
         run: cd mobile-app && flutter build appbundle --release
       
+      - name: Distribute to Firebase
+        uses: w9jds/firebase-action@master
+        with:
+          args: appdistribution:distribute mobile-app/build/app/outputs/bundle/release/app-release.aab --app ${{ secrets.FIREBASE_APP_ID }} --groups "internal-testers"
+        env:
+          GCP_SA_KEY: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+
       - name: Upload Artifact
         uses: actions/upload-artifact@v4
         with:
@@ -48,8 +55,11 @@ jobs:
         run: |
           cd mobile-app
           flutter build ios --release --no-codesign
-          # Note: Full IPA creation usually requires codesigning certificates
-          # This build verifies the project compiles correctly for iOS.
+      
+      - name: Distribute to TestFlight (Placeholder)
+        run: |
+          echo "TestFlight distribution requires codesigning and App Store Connect credentials."
+          echo "Typical command: xcrun altool --upload-app -f build/ios/ipa/*.ipa -u $APPLE_ID -p $APP_SPECIFIC_PASSWORD"
       
       - name: Upload Artifact
         uses: actions/upload-artifact@v4
