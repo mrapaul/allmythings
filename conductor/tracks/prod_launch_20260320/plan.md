@@ -12,10 +12,10 @@
 - [x] Task: Implement a production-grade detection health check endpoint. (fbb05aa)
 - [x] Task: Conductor - User Manual Verification 'Phase 2' (Protocol in workflow.md) (560fe93)
 
-**Phase 3: Automated Build & Distribution Pipeline**
-- [x] Task: Configure GitHub Actions for Flutter iOS/Android production builds. (e8192c4)
-- [x] Task: Set up Firebase App Distribution (for Android) and TestFlight (for iOS) CLI uploads. (bf08b3f)
-- [x] Task: Create a top-level `deploy-production.sh` script for unified deployment. (51e6bd6)
+**Phase 3: Independent Release Pipeline**
+- [x] Task: Configure local build orchestration for API and Mobile. (51e6bd6)
+- [x] Task: Create `scripts/local-release.sh` for one-click independent distribution. (48b1fb6)
+- [ ] Task: Optimize Docker configuration for private/local production hosting.
 - [ ] Task: Conductor - User Manual Verification 'Phase 3' (Protocol in workflow.md)
 
 **Phase 4: Verification & Handover**
