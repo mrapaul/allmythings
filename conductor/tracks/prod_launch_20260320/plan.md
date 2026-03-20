@@ -19,6 +19,6 @@
 - [x] Task: Conductor - User Manual Verification 'Phase 3' (Protocol in workflow.md) (894e1c7)
 
 **Phase 4: Verification & Handover**
-- [ ] Task: Perform end-to-end smoke tests on a production-build device.
+- [x] Task: Perform end-to-end smoke tests on a production-build device. (67c63ce)
 - [ ] Task: Verify backend response times and cloud service usage (confirm within free tiers).
 - [ ] Task: Conductor - User Manual Verification 'Phase 4' (Protocol in workflow.md)
