@@ -15,7 +15,7 @@
 **Phase 3: Automated Build & Distribution Pipeline**
 - [x] Task: Configure GitHub Actions for Flutter iOS/Android production builds. (e8192c4)
 - [x] Task: Set up Firebase App Distribution (for Android) and TestFlight (for iOS) CLI uploads. (bf08b3f)
-- [ ] Task: Create a top-level `deploy-production.sh` script for unified deployment.
+- [x] Task: Create a top-level `deploy-production.sh` script for unified deployment. (51e6bd6)
 - [ ] Task: Conductor - User Manual Verification 'Phase 3' (Protocol in workflow.md)
 
 **Phase 4: Verification & Handover**
