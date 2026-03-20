@@ -18,7 +18,7 @@
 - [x] Task: Optimize Docker configuration for private/local production hosting. (ca2abf1)
 - [x] Task: Conductor - User Manual Verification 'Phase 3' (Protocol in workflow.md) (894e1c7)
 
-**Phase 4: Verification & Handover**
+**Phase 4: Verification & Handover** [checkpoint: 85b4dfb]
 - [x] Task: Perform end-to-end smoke tests on a production-build device. (67c63ce)
 - [x] Task: Verify backend response times and cloud service usage (confirm within free tiers). (09968ac)
-- [~] Task: Conductor - User Manual Verification 'Phase 4' (Protocol in workflow.md)
+- [x] Task: Conductor - User Manual Verification 'Phase 4' (Protocol in workflow.md) (85b4dfb)
