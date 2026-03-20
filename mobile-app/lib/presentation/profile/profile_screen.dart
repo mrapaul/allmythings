@@ -3,6 +3,7 @@ import 'package:all_my_things/presentation/common/custom_app_bar.dart';
 import 'package:all_my_things/presentation/common/loading_indicator.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 /// Profile screen with stats and settings
 class ProfileScreen extends ConsumerWidget {
@@ -115,15 +116,7 @@ class ProfileScreen extends ConsumerWidget {
                 leading: const Icon(Icons.info_outline),
                 title: const Text('About'),
                 trailing: const Icon(Icons.chevron_right),
-                onTap: () {
-                  showAboutDialog(
-                    context: context,
-                    applicationName: 'Home Inventory',
-                    applicationVersion: '1.0.0',
-                    applicationLegalese:
-                        '© 2025 Visual Home Inventory Manager\n\nMinimalistic Instagram-style home inventory app with AI-powered object detection.',
-                  );
-                },
+                onTap: () => context.push('/profile/about'),
               ),
               ListTile(
                 leading: const Icon(Icons.help_outline),

@@ -3,6 +3,8 @@ import 'dart:io';
 
 import 'package:all_my_things/application/providers/inventory_providers.dart';
 import 'package:all_my_things/presentation/camera/camera_capture_screen.dart';
+import 'package:all_my_things/presentation/profile/about_screen.dart';
+import 'package:all_my_things/presentation/profile/legal_document_screen.dart';
 import 'package:all_my_things/presentation/profile/profile_screen.dart';
 import 'package:all_my_things/presentation/screens/detection_results_screen.dart';
 import 'package:all_my_things/presentation/screens/inventory_feed_screen.dart';
@@ -52,6 +54,38 @@ final routerProvider = Provider<GoRouter>((ref) {
             pageBuilder: (context, state) => const NoTransitionPage(
               child: ProfileScreen(),
             ),
+            routes: [
+              GoRoute(
+                path: 'about',
+                name: 'about',
+                pageBuilder: (context, state) => const CustomTransitionPage(
+                  child: AboutScreen(),
+                  transitionsBuilder: _fadeTransition,
+                ),
+              ),
+              GoRoute(
+                path: 'privacy',
+                name: 'privacy',
+                pageBuilder: (context, state) => const CustomTransitionPage(
+                  child: LegalDocumentScreen(
+                    title: 'Privacy Policy',
+                    assetPath: 'assets/legal/privacy_policy.md',
+                  ),
+                  transitionsBuilder: _fadeTransition,
+                ),
+              ),
+              GoRoute(
+                path: 'terms',
+                name: 'terms',
+                pageBuilder: (context, state) => const CustomTransitionPage(
+                  child: LegalDocumentScreen(
+                    title: 'Terms of Service',
+                    assetPath: 'assets/legal/terms_of_service.md',
+                  ),
+                  transitionsBuilder: _fadeTransition,
+                ),
+              ),
+            ],
           ),
         ],
       ),
