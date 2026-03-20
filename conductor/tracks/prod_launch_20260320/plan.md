@@ -1,10 +1,10 @@
 # Implementation Plan: Production Launch & Beta Distribution
 
-**Phase 1: Foundation & Production Assets**
+**Phase 1: Foundation & Production Assets** [checkpoint: 176a576]
 - [x] Task: Create production-ready app icons and splash screens. (11bab74)
 - [x] Task: Draft boilerplate Privacy Policy and Terms of Service (Markdown). (c92c824)
 - [x] Task: Implement "About" and "Legal" views in the mobile app. (87c547d)
-- [ ] Task: Conductor - User Manual Verification 'Phase 1' (Protocol in workflow.md)
+- [x] Task: Conductor - User Manual Verification 'Phase 1' (Protocol in workflow.md) (176a576)
 
 **Phase 2: Backend Production Environment**
 - [ ] Task: Define a NixOS configuration (`configuration.nix`) for the backend service (Fastify + PostgreSQL).
