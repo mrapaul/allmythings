@@ -67,3 +67,5 @@ flutter:
   uses-material-design: true
   assets:
     - assets/test_images/
+    - assets/images/
+    - assets/legal/
