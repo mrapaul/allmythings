@@ -23,7 +23,7 @@ cd ..
 echo "📱 Checking Mobile App Compilability..."
 cd mobile-app
 flutter pub get
-flutter build appbundle --release --no-codesign
+flutter build appbundle --release
 cd ..
 
 # 4. Versioning & Trigger CI

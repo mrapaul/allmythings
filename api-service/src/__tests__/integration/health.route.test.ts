@@ -50,7 +50,7 @@ describe('GET /v1/health', () => {
     await app.close();
   });
 
-  it('returns 503 and degraded status when a provider is down', async () => {
+  it('returns 200 and degraded status when a provider is down but others are up', async () => {
     const mockPipeline = new DetectionPipelineService(
       [makeMockDetector(false)],
       [makeTestClassifier(true)]
@@ -62,9 +62,28 @@ describe('GET /v1/health', () => {
       url: '/v1/health',
     });
 
-    expect(response.statusCode).toBe(503);
+    expect(response.statusCode).toBe(200);
     const body = JSON.parse(response.body) as { status: string };
     expect(body.status).toBe('degraded');
+
+    await app.close();
+  });
+
+  it('returns 503 and unhealthy status when all providers are down', async () => {
+    const mockPipeline = new DetectionPipelineService(
+      [makeMockDetector(false)],
+      [makeTestClassifier(false)]
+    );
+    const app = await buildApp({ disableRateLimit: true, pipeline: mockPipeline });
+
+    const response = await app.inject({
+      method: 'GET',
+      url: '/v1/health',
+    });
+
+    expect(response.statusCode).toBe(503);
+    const body = JSON.parse(response.body) as { status: string };
+    expect(body.status).toBe('unhealthy');
 
     await app.close();
   });

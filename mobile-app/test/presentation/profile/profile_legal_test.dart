@@ -4,7 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
-  testWidgets('AboutScreen displays app information', (WidgetTester tester) async {
+  testWidgets('AboutScreen displays app information', (tester) async {
     // Need a dummy Material app and Scaffold
     await tester.pumpWidget(const MaterialApp(home: AboutScreen()));
 
@@ -14,7 +14,7 @@ void main() {
     expect(find.text('Terms of Service'), findsOneWidget);
   });
 
-  testWidgets('LegalDocumentScreen displays title', (WidgetTester tester) async {
+  testWidgets('LegalDocumentScreen displays title', (tester) async {
     await tester.pumpWidget(
       const MaterialApp(
         home: LegalDocumentScreen(

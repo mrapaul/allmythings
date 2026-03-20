@@ -9,5 +9,5 @@ This file tracks all major tracks for the project. Each track has its own detail
 
 ---
 
-- [ ] **Track: Production Launch & Beta Distribution**
+- [~] **Track: Production Launch & Beta Distribution**
 *Link: [./conductor/tracks/prod_launch_20260320/](./conductor/tracks/prod_launch_20260320/)*

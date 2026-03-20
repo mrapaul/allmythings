@@ -4,9 +4,9 @@ import 'package:flutter_markdown_plus/flutter_markdown_plus.dart';
 
 class LegalDocumentScreen extends StatelessWidget {
   const LegalDocumentScreen({
-    super.key,
     required this.title,
     required this.assetPath,
+    super.key,
   });
 
   final String title;
