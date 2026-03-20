@@ -15,21 +15,22 @@ services:
 
       # Gemini (primary classifier)
       GEMINI_API_KEY: ${GEMINI_API_KEY:-}
-      GEMINI_MODEL: ${GEMINI_MODEL:-gemini-2.0-flash}
+      GEMINI_MODEL: ${GEMINI_MODEL:-gemini-1.5-flash}
 
       # Ollama (fallback classifier)
       OLLAMA_BASE_URL: ${OLLAMA_BASE_URL:-http://ollama:11434}
-      OLLAMA_MODEL: ${OLLAMA_MODEL:-llava}
+      OLLAMA_MODEL: ${OLLAMA_MODEL:-qwen2.5-vl:7b}
       OLLAMA_ENABLED: ${OLLAMA_ENABLED:-true}
 
-      # Google Vision (fallback detector)
-      GOOGLE_PROJECT_ID: ${GOOGLE_PROJECT_ID:-}
-      GOOGLE_CREDENTIALS: ${GOOGLE_CREDENTIALS:-}
+      # Database
+      DATABASE_URL: ${DATABASE_URL:-postgresql://allmythings:allmythings@db:5432/allmythings}
     ports:
       - "${API_PORT:-14000}:14000"
     depends_on:
       detection:
         condition: service_started
+      db:
+        condition: service_healthy
     networks:
       - inventory-network
     restart: unless-stopped
@@ -75,8 +76,28 @@ services:
     profiles:
       - local-llm
 
+  # Database (PostgreSQL)
+  db:
+    image: postgres:15-alpine
+    container_name: inventory-db
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-allmythings}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-allmythings}
+      POSTGRES_DB: ${POSTGRES_DB:-allmythings}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - inventory-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U allmythings"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
 volumes:
   ollama_data:
+    driver: local
+  postgres_data:
     driver: local
 
 networks:
