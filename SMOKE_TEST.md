@@ -20,3 +20,8 @@ Follow these steps to ensure the production release is functional.
 ## 4. Performance
 - [ ] **Latency:** Initial detection feedback should be fast (< 2s).
 - [ ] **Smoothness:** Feed scrolling should be fluid.
+
+## 5. Cost & Usage Monitoring
+- [ ] **Gemini Usage:** Log in to Google AI Studio and verify requests are within the free tier limits (15 RPM, 1,500 RPD).
+- [ ] **Backend Latency:** Check API logs for `responseTime` metrics. Ensure they are consistently < 1s for the one-pass corridor.
+- [ ] **Cloud Vision (If enabled):** Monitor Google Cloud Console usage to stay under 1,000 requests/month.
