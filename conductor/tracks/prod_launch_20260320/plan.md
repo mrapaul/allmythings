@@ -1,7 +1,7 @@
 # Implementation Plan: Production Launch & Beta Distribution
 
 **Phase 1: Foundation & Production Assets**
-- [ ] Task: Create production-ready app icons and splash screens.
+- [x] Task: Create production-ready app icons and splash screens. (11bab74)
 - [ ] Task: Draft boilerplate Privacy Policy and Terms of Service (Markdown).
 - [ ] Task: Implement "About" and "Legal" views in the mobile app.
 - [ ] Task: Conductor - User Manual Verification 'Phase 1' (Protocol in workflow.md)
