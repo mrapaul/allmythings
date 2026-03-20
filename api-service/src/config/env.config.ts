@@ -28,7 +28,7 @@ export const envConfig: EnvConfig = {
   detectionTextThreshold: parseFloat(process.env.DETECTION_TEXT_THRESHOLD || '0.2'),
   detectionPrompt: process.env.DETECTION_PROMPT || 'object . item . furniture . household item . appliance . electronic . decor',
   geminiApiKey: process.env.GEMINI_API_KEY || '',
-  geminiModel: process.env.GEMINI_MODEL || 'gemini-2.5-pro',
+  geminiModel: process.env.GEMINI_MODEL || 'gemini-1.5-flash',
   classificationTimeoutMs: parseInt(process.env.CLASSIFICATION_TIMEOUT_MS || '300000', 10),
   classificationMinConfidence: parseFloat(process.env.CLASSIFICATION_MIN_CONFIDENCE || '0.5'),
   ollamaBaseUrl: process.env.OLLAMA_BASE_URL || 'http://localhost:11434',
