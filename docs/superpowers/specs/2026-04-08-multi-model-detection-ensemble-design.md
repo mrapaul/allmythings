@@ -121,8 +121,9 @@ Native processes (Overmind or launchd)
   detection-deep-worker  (Python, on-demand during work hours; continuous off-hours)
 
 Models resident (MLX + Core ML):
-  Fast pool  ~3 GB  — CLIP ViT-B/32 (gatekeeper), YOLOE-11L, CLIP ViT-L/14
-  Deep pool ~23 GB  — Qwen2.5-VL-32B Q4 MLX, Molmo-7B-D Q4 MLX
+  Fast pool  ~3 GB  — CLIP ViT-B/32 (gatekeeper, ANE), YOLOE-11L (Core ML),
+                      CLIP ViT-L/14 (Core ML, shared with deep pass)
+  Deep pool ~23 GB  — Qwen2.5-VL-32B Q4 MLX (~18 GB), Molmo-7B-D Q4 MLX (~5 GB)
   Total     ~26 GB (of 48 GB)  leaves ~22 GB for OS + Docker stack + user apps
 
 iPhone app reaches api-service via Tailscale (any network, zero config)
@@ -381,9 +382,9 @@ Two models, not three. Grounding DINO was removed from the ensemble because its 
 
 | Model | Role | Disk | RAM | Backend |
 |---|---|---|---|---|
-| Qwen2.5-VL-32B Instruct MLX Q4 | Primary bbox + label + attribute | ~18 GB | ~20 GB | mlx-vlm |
+| Qwen2.5-VL-32B Instruct MLX Q4 | Primary bbox + label + attribute | ~18 GB | ~18 GB | mlx-vlm |
 | Molmo-7B-D MLX Q4 | Point corroboration + rescue | ~4 GB | ~5 GB | mlx-vlm |
-| CLIP ViT-L/14 (shared with fast pass) | Memory-bank reuse | ~0.9 GB | resident | Core ML ANE |
+| CLIP ViT-L/14 (shared with fast pass) | Memory-bank reuse | ~0.9 GB | shared | Core ML ANE |
 
 **Prod equivalents:** `Qwen/Qwen2.5-VL-32B-Instruct-AWQ` via vLLM; `allenai/Molmo-7B-D-0924` via vLLM. Same backend interface. When A100/H100 becomes available, swap the MLflow artifact name to `Qwen2.5-VL-72B-AWQ` or `Qwen3-VL-235B-A22B-FP8` — zero code change.
 
@@ -454,7 +455,9 @@ def fuse(qwen: list[QwenDet], molmo_pts: list[MolmoPoint]) -> list[ClassifiedObj
             closest = min(containing,
                           key=lambda i: merged[i].box.center_dist(pt.xy))
             merged[closest].molmo_corroborated = True
-            if labels_semantically_distant(merged[closest].label, pt.label):
+            # Distant = CLIP text cosine(a, b) < 0.5 (roughly: not the same item).
+            # Threshold is tuned weekly by retrain.flow against correction rate.
+            if labels_semantically_distant(merged[closest].label, pt.label, threshold=0.5):
                 merged[closest].candidate_labels.append(pt.label)
                 merged[closest].disagreement_flag = True
         else:
@@ -764,6 +767,10 @@ Daily `memory_bank_gc.flow`: delete candidates past `expires_at`, rebuild HNSW s
 
 ```python
 def priority_score(event: FeedbackEvent) -> int:
+    # semantic_distance(a, b) = 1 - cosine(clip_text_embed(a), clip_text_embed(b))
+    # so distance > 0.5 means cosine < 0.5, i.e. old and new labels are
+    # meaningfully different concepts (not just refinement like "chair"
+    # vs "Eames chair").
     if event.event_type == "add_missing":
         return 100    # ensemble failure; highest signal
     if event.event_type == "relabel" and semantic_distance(old, new) > 0.5:
@@ -917,12 +924,14 @@ Budget exhausted → freeze non-essential changes (new prompts, adapters, model 
 
 ### 4.12 Golden set lifecycle
 
-- **Day 0:** 10 photos including `ai_interior.jpg`
-- **Month 1:** 100 photos; grow via Label Studio, one reviewer item per workday
-- **Month 6+:** 500 photos; community contributions via opted-in users with evaluator role
+- **Day 0:** 10 photos including `ai_interior.jpg`, hand-labeled by the founder
+- **Month 1 target:** 35 photos; grow via Label Studio at ~1 reviewer item per workday (≈22/month) plus a weekend batch labeling session for +3
+- **Month 6 target:** 150 photos; sustained ~1-2/workday + opt-in testers contributing
+- **Month 12 target:** 500 photos; community contributions via opted-in users with evaluator role
 - **Never modified casually** — golden set PRs require human review
 - **Versioned in DVC** alongside code; pulled by `retrain.flow`
 - **Consent:** no tenant photo enters the golden set without explicit `golden_set_consent=true`
+- **Manual-promotion window:** retrain auto-promotion is disabled until the golden set reaches **30 photos**; earlier retrains still run but require human approval in MLflow UI
 
 ### 4.13 GDPR through the learning loop
 
