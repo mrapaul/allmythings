@@ -4,6 +4,23 @@
 
 **Goal:** Stand up the full FOSS dev stack (Postgres+pgvector, MinIO, NATS, Prometheus/Tempo/Loki/Grafana, MLflow, Label Studio, Prefect) on the M4 Pro Mac, wire OpenTelemetry end-to-end, implement the `InferenceBackend` abstraction with an MLX backend, and deliver the fast-pass detection pipeline (Tier-0 CLIP gatekeeper → YOLOE+SAHI → CLIP memory-bank read) exposed via an async API (202 + SSE). Acceptance: `test_images/ai_interior.jpg` fast pass returns ≥15 detections, gatekeeper rejects a selfie with 422, fast-pass p95 ≤ 10 s under 30 RPM load.
 
+---
+
+## ⚠️ License risks acknowledged — read before execution
+
+Research verified two **commercial-use blockers** baked into Plan A:
+
+1. **YOLOE weights distributed via the `ultralytics` Python package are AGPL-3.0.** That's the exact weight file (`yoloe-11l-seg-pf.pt` on `jameslahm/yoloe`) Plan A uses. AGPL-3.0 triggers copyleft obligations if you ship a SaaS, hosted service, or distributed binary.
+2. **Apple FastVLM** (mentioned only in the spec's v2 on-device roadmap diagram, **not** in any Plan A task) is Apple ML Research Model License — research-only, no commercial exploitation.
+
+**Decision locked in (option X):** Ship Plan A with YOLOE for now. This is a **development / internal test environment**; no external distribution, no public SaaS, no binary shipping until the swap. Before any commercial launch the following must happen (tracked separately as a Plan A+ follow-up, not blocking Plan A):
+
+- Replace YOLOE-11L with **YOLO-World v2-L** (Apache-2.0) or **OWLv2-large-ensemble** (Apache-2.0)
+- Fast-pass ≥15 floor is still expected to hold post-swap because Plan B's deep pass (Qwen2.5-VL + Molmo) carries the real recall burden
+- Ensure no FastVLM code ever lands in any tier path; v2 on-device roadmap uses **PaliGemma-2 3B** or **Qwen2.5-VL-3B MLX Q4** (both Apache-2.0) instead
+
+A `models/MANIFEST.yaml` file is committed in Task 1 step 3 to make license status visible in code review and prevent this from silently regressing.
+
 **Architecture:** Docker Compose runs all stateless FOSS infra on the Mac. Native Python processes (outside Docker) run inference to access Metal/ANE. api-service (Fastify, Node 20) receives uploads, publishes jobs to NATS `fast.q`, returns 202 + jobId immediately; mobile subscribes to SSE under that jobId. detection-service (Python 3.12, FastAPI) hosts the fast-pass worker that pulls from `fast.q`, runs the pipeline through `MLXBackend`, persists results to Postgres, and publishes `fast.complete` back to NATS. Every stage emits OpenTelemetry traces and metrics.
 
 **Tech Stack:** TypeScript 5, Fastify 4, Kysely + pg, @opentelemetry/sdk-node, nats.js, Vitest — Python 3.12, FastAPI, uv (package manager), mlx, mlx-vlm, transformers, open-clip-torch (CPU/MPS), ultralytics (YOLOE), sahi, psycopg[binary], nats-py, opentelemetry-distro, pytest — Docker Compose, Postgres 16 + pgvector, MinIO, NATS JetStream 2.10, Prometheus, Grafana Tempo + Loki + Grafana OSS, MLflow 2.x, Label Studio Community, Prefect 2 — dbmate for migrations, DVC for golden set.
@@ -273,6 +290,54 @@ Append to `.gitignore`:
 .docker-data/
 ```
 
+Create `models/MANIFEST.yaml` (tracks every model weight this repo loads, with license status so commercial-use risks are visible in code review):
+
+```yaml
+# Model manifest — update whenever a new model is wired into any backend.
+# commercial: true/false is the hard gate. Anything `false` must be
+# removed before any commercial release.
+models:
+  - name: yoloe-11l-pf
+    hf_repo: jameslahm/yoloe
+    weights_file: yoloe-11l-seg-pf.pt
+    license: agpl-3.0
+    commercial: false
+    size_gb: 0.06
+    backend: pytorch
+    purpose: fast-pass prompt-free open-vocab detection
+    notes: |
+      AGPL-3.0 via Ultralytics distribution. Plan A uses this during
+      development only. Must swap to YOLO-World v2-L (Apache-2.0) or
+      OWLv2-large-ensemble (Apache-2.0) before commercial launch.
+      Tracked as Plan A+ follow-up.
+
+  - name: clip-vit-b32
+    hf_repo: openai/clip-vit-base-patch32
+    license: mit
+    commercial: true
+    size_gb: 0.6
+    backend: transformers
+    purpose: Tier-0 interior-photo gatekeeper (zero-shot classifier)
+
+  - name: clip-vit-l14
+    hf_repo: openai/clip-vit-large-patch14
+    license: mit
+    commercial: true
+    size_gb: 1.7
+    backend: transformers
+    purpose: memory-bank embeddings (768-dim via get_image_features)
+
+# Models explicitly excluded from this repo for license reasons:
+excluded:
+  - name: fastvlm
+    github_repo: apple/ml-fastvlm
+    license: apple-ml-research-model-license
+    commercial: false
+    reason: research-only license, excludes commercial exploitation.
+            v2 on-device roadmap uses PaliGemma-2 3B or
+            Qwen2.5-VL-3B MLX Q4 (both Apache-2.0) instead.
+```
+
 - [ ] **Step 4: Run stack-up test**
 
 Run: `bash tests/compose/test_stack_up.sh`
@@ -281,8 +346,9 @@ Expected: PASS, prints `STACK_UP_OK`.
 - [ ] **Step 5: Commit**
 
 ```bash
-git add docker-compose.dev.yml infra/postgres/init/01_extensions.sql .gitignore tests/compose/test_stack_up.sh
-git commit -m "feat(infra): docker-compose base — Postgres+pgvector, MinIO, NATS JetStream"
+git add docker-compose.dev.yml infra/postgres/init/01_extensions.sql .gitignore \
+  tests/compose/test_stack_up.sh models/MANIFEST.yaml
+git commit -m "feat(infra): docker-compose base — Postgres+pgvector, MinIO, NATS JetStream + model manifest"
 ```
 
 ---
@@ -1255,7 +1321,9 @@ dependencies = [
   "sahi>=0.11.22",
   "open-clip-torch>=2.29",
   "mlx>=0.22; platform_system == 'Darwin'",
-  "mlx-vlm>=0.1.16; platform_system == 'Darwin'",
+  # mlx-vlm 0.4.4 (Apr 2026) is the pinned Plan-B-ready version.
+  # Plan A doesn't actually use VLMs, but we pin so Plan B doesn't drift.
+  "mlx-vlm==0.4.4; platform_system == 'Darwin'",
   # OTel
   "opentelemetry-api>=1.29",
   "opentelemetry-sdk>=1.29",
@@ -2776,8 +2844,17 @@ Modify `detection-service/src/detection_service/backends/mlx_backend.py` — add
     def get_sahi_yoloe_model(self, confidence_threshold: float):
         """Lazily instantiate a SAHI AutoDetectionModel wrapping YOLOE-11L.
 
-        SAHI has native model_type='yoloe' support. Weights are pulled from
-        jameslahm/yoloe-11l-seg-pf via the ultralytics package on first use.
+        Uses model_type='ultralytics' because SAHI's verified supported
+        model_types are: ultralytics, yolov5, mmdet, huggingface, torchvision,
+        roboflow, rtdetr (no native 'yoloe' key). The ultralytics adapter
+        should accept YOLOE weights because ultralytics >= 8.3.234 ships
+        YOLOE as an ultralytics.YOLOE class that the SAHI adapter
+        instantiates via ultralytics.YOLO(...)/YOLOE(...).
+
+        RUNTIME VERIFICATION REQUIRED: if `model_type='ultralytics'` does
+        not load yoloe-11l-seg-pf.pt cleanly, fall back to a custom
+        sahi.models.base.DetectionModel subclass — this is the
+        documented escape hatch.
         """
         if not self._fast_loaded:
             raise RuntimeError("Fast models not loaded")
@@ -2788,12 +2865,12 @@ Modify `detection-service/src/detection_service/backends/mlx_backend.py` — add
         from sahi import AutoDetectionModel
 
         self._sahi_yoloe = AutoDetectionModel.from_pretrained(
-            model_type="yoloe",
+            model_type="ultralytics",
             model_path="yoloe-11l-seg-pf.pt",
             confidence_threshold=confidence_threshold,
             device="mps" if self._clip_b32_device == "mps" else "cpu",
         )
-        log.info("YOLOE-11L prompt-free loaded via SAHI")
+        log.info("YOLOE-11L prompt-free loaded via SAHI (ultralytics adapter)")
         return self._sahi_yoloe
 
     def fast_detect(self, image: Image.Image) -> list[FastDetection]:
