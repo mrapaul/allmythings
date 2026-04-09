@@ -1,0 +1,16 @@
+The image shows numbered red bounding boxes around home inventory items.
+For EACH numbered box, return a JSON object in a single JSON array, in order:
+
+{
+  "label": specific label, max 5 words,
+  "category": concise free-form category,
+  "brand": brand name or null,
+  "model": model name/number or null,
+  "colors": array of 1-3 color names,
+  "materials": array of 1-2 material names,
+  "condition": one of ["excellent","good","fair","poor"],
+  "estimated_value_usd": integer or null (conservative retail guess),
+  "description": one-sentence inventory description, max 20 words
+}
+
+Return ONLY the JSON array with exactly {N} entries.

@@ -1,0 +1,20 @@
+version: 1
+description: CLIP zero-shot prompts for the Tier-0 interior-photo gatekeeper.
+accept:
+  - "a photo of a home interior"
+  - "a photo of furniture and household objects"
+  - "a photo of a room with decor and belongings"
+  - "a close-up photo of household items"
+reject:
+  - "a photo of a person or people"
+  - "a selfie"
+  - "a photo of an outdoor scene or landscape"
+  - "a document, receipt, or screenshot"
+  - "a photo of food or a meal"
+  - "a meme or text image"
+  - "a photo of a vehicle"
+  - "a photo of an animal"
+  - "a chart, graph, or diagram"
+thresholds:
+  reject_below_margin: 0.10
+  low_confidence_below_margin: 0.25
