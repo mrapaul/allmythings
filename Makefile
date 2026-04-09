@@ -156,4 +156,18 @@ clean-mobile:
 	@echo "${GREEN}Cleaning Flutter...${NC}"
 	@cd $(MOBILE_DIR) && flutter clean
 
-.PHONY: help setup install install-api install-mobile dev dev-api dev-mobile build build-api build-mobile test test-api test-mobile lint lint-api lint-mobile format format-api format-mobile generate clean clean-api clean-mobile build-api-raw build-mobile-raw verify guarantee test-ios release-ios test-iphone
+# Database migrations (dbmate)
+DBMATE := docker run --rm --network allmythings-dev_allmythings-dev \
+  -v $(PWD)/db:/db -w /db --env-file db/dbmate.env \
+  ghcr.io/amacneil/dbmate:2.25
+
+db-up:
+	$(DBMATE) up
+
+db-down:
+	$(DBMATE) down
+
+db-new:
+	$(DBMATE) new $(NAME)
+
+.PHONY: help setup install install-api install-mobile dev dev-api dev-mobile build build-api build-mobile test test-api test-mobile lint lint-api lint-mobile format format-api format-mobile generate clean clean-api clean-mobile build-api-raw build-mobile-raw verify guarantee test-ios release-ios test-iphone db-up db-down db-new
