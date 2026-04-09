@@ -1,0 +1,62 @@
+[project]
+name = "detection-service"
+version = "0.1.0"
+description = "Detection pipeline for the Visual Home Inventory Manager"
+requires-python = ">=3.12,<3.13"
+dependencies = [
+  "fastapi>=0.115,<0.116",
+  "uvicorn[standard]>=0.32",
+  "pydantic>=2.9",
+  "pydantic-settings>=2.7",
+  "psycopg[binary,pool]>=3.2",
+  "nats-py>=2.8",
+  "pyyaml>=6.0",
+  "pillow>=10.4",
+  "numpy>=1.26",
+  "imagehash>=4.3",
+  # ML
+  "torch>=2.5",
+  "torchvision>=0.20",
+  "transformers>=4.48",
+  "ultralytics>=8.3.234",
+  "sahi>=0.11.22",
+  "open-clip-torch>=2.29",
+  "mlx>=0.22; platform_system == 'Darwin'",
+  # mlx-vlm 0.4.4 (Apr 2026) is the pinned Plan-B-ready version.
+  # Plan A doesn't actually use VLMs, but we pin so Plan B doesn't drift.
+  "mlx-vlm==0.4.4; platform_system == 'Darwin'",
+  # OTel
+  "opentelemetry-api>=1.29",
+  "opentelemetry-sdk>=1.29",
+  "opentelemetry-exporter-otlp-proto-grpc>=1.29",
+  "opentelemetry-instrumentation-fastapi>=0.50b0",
+  "opentelemetry-instrumentation-psycopg>=0.50b0",
+  "opentelemetry-instrumentation-httpx>=0.50b0",
+  "prometheus-client>=0.21",
+]
+
+[project.optional-dependencies]
+dev = [
+  "pytest>=8.3",
+  "pytest-asyncio>=0.24",
+  "httpx>=0.28",
+  "ruff>=0.9",
+  "mypy>=1.14",
+]
+
+[tool.uv]
+managed = true
+# sahi<=0.11.36 declares opencv-python<=4.11.0.86 but mlx-vlm==0.4.4 requires
+# opencv-python>=4.12.0.88.  Override lets uv pick the newest available wheel
+# that satisfies mlx-vlm; sahi works fine at runtime with a newer OpenCV.
+override-dependencies = [
+  "opencv-python>=4.12.0.88",
+]
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+
+[tool.pytest.ini_options]
+pythonpath = ["src", "."]
+asyncio_mode = "auto"
