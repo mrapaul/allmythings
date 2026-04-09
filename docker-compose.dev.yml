@@ -12,6 +12,9 @@ volumes:
   tempo-data:
   loki-data:
   grafana-data:
+  mlflow-data:
+  label-studio-data:
+  prefect-data:
 
 services:
   postgres:
@@ -134,4 +137,64 @@ services:
       - grafana-data:/var/lib/grafana
       - ./infra/grafana/provisioning:/etc/grafana/provisioning:ro
     depends_on: [prometheus, tempo, loki]
+    networks: [allmythings-dev]
+
+  mlflow:
+    image: ghcr.io/mlflow/mlflow:v2.20.1
+    container_name: amt-mlflow
+    command: >
+      mlflow server
+      --host 0.0.0.0
+      --port 5000
+      --backend-store-uri postgresql://allmythings:allmythings_dev@postgres:5432/allmythings
+      --default-artifact-root s3://mlflow/
+    environment:
+      AWS_ACCESS_KEY_ID: allmythings
+      AWS_SECRET_ACCESS_KEY: allmythings_dev
+      MLFLOW_S3_ENDPOINT_URL: http://minio:9000
+      AWS_DEFAULT_REGION: us-east-1
+    ports:
+      - "5000:5000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      minio-init:
+        condition: service_completed_successfully
+    networks: [allmythings-dev]
+
+  label-studio:
+    image: heartexlabs/label-studio:1.15.0
+    container_name: amt-label-studio
+    environment:
+      DJANGO_DB: default
+      POSTGRE_NAME: allmythings
+      POSTGRE_USER: allmythings
+      POSTGRE_PASSWORD: allmythings_dev
+      POSTGRE_HOST: postgres
+      POSTGRE_PORT: 5432
+      LABEL_STUDIO_USERNAME: admin@local
+      LABEL_STUDIO_PASSWORD: allmythings_dev
+    ports:
+      - "8080:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    volumes:
+      - label-studio-data:/label-studio/data
+    networks: [allmythings-dev]
+
+  prefect:
+    image: prefecthq/prefect:2.20-python3.12
+    container_name: amt-prefect
+    command: prefect server start --host 0.0.0.0
+    environment:
+      PREFECT_SERVER_DATABASE_CONNECTION_URL: postgresql+asyncpg://allmythings:allmythings_dev@postgres:5432/allmythings
+      PREFECT_API_URL: http://localhost:4200/api
+    ports:
+      - "4200:4200"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    volumes:
+      - prefect-data:/root/.prefect
     networks: [allmythings-dev]
