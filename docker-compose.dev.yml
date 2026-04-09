@@ -8,6 +8,10 @@ volumes:
   postgres-data:
   minio-data:
   nats-data:
+  prometheus-data:
+  tempo-data:
+  loki-data:
+  grafana-data:
 
 services:
   postgres:
@@ -76,4 +80,58 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
+    networks: [allmythings-dev]
+
+  prometheus:
+    image: prom/prometheus:v3.1.0
+    container_name: amt-prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.enable-lifecycle'
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./infra/prometheus:/etc/prometheus:ro
+      - prometheus-data:/prometheus
+    networks: [allmythings-dev]
+
+  tempo:
+    image: grafana/tempo:2.7.0
+    container_name: amt-tempo
+    command: ["-config.file=/etc/tempo.yaml"]
+    ports:
+      - "3200:3200"
+      - "4317:4317"
+      - "4318:4318"
+    volumes:
+      - ./infra/tempo/tempo.yaml:/etc/tempo.yaml:ro
+      - tempo-data:/var/tempo
+    networks: [allmythings-dev]
+
+  loki:
+    image: grafana/loki:3.4.1
+    container_name: amt-loki
+    command: ["-config.file=/etc/loki/loki-config.yaml"]
+    ports:
+      - "3100:3100"
+    volumes:
+      - ./infra/loki/loki-config.yaml:/etc/loki/loki-config.yaml:ro
+      - loki-data:/loki
+    networks: [allmythings-dev]
+
+  grafana:
+    image: grafana/grafana-oss:11.5.1
+    container_name: amt-grafana
+    environment:
+      GF_SECURITY_ADMIN_USER: admin
+      GF_SECURITY_ADMIN_PASSWORD: admin
+      GF_AUTH_ANONYMOUS_ENABLED: "true"
+      GF_AUTH_ANONYMOUS_ORG_ROLE: Viewer
+    ports:
+      - "3000:3000"
+    volumes:
+      - grafana-data:/var/lib/grafana
+      - ./infra/grafana/provisioning:/etc/grafana/provisioning:ro
+    depends_on: [prometheus, tempo, loki]
     networks: [allmythings-dev]
