@@ -1,3 +1,5 @@
+import { initTelemetry } from './telemetry';
+void initTelemetry();
 import Fastify, { FastifyInstance } from 'fastify';
 import multipart from '@fastify/multipart';
 import cors from '@fastify/cors';
