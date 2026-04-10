@@ -17,6 +17,10 @@ export interface EnvConfig {
   googleCredentials: string;
   apiKey: string;
   useMockAi: boolean;
+  claudeApiKey: string;
+  claudeModel: string;
+  multiPassRetryThreshold: number;
+  multiPassQuadrantOverlap: number;
 }
 
 export const envConfig: EnvConfig = {
@@ -38,4 +42,8 @@ export const envConfig: EnvConfig = {
   googleCredentials: process.env.GOOGLE_APPLICATION_CREDENTIALS || '',
   apiKey: process.env.API_KEY || '',
   useMockAi: process.env.USE_MOCK_AI === 'true',
+  claudeApiKey: process.env.CLAUDE_API_KEY || '',
+  claudeModel: process.env.CLAUDE_MODEL || 'claude-sonnet-4-20250514',
+  multiPassRetryThreshold: parseInt(process.env.MULTI_PASS_RETRY_THRESHOLD || '15', 10),
+  multiPassQuadrantOverlap: parseFloat(process.env.MULTI_PASS_QUADRANT_OVERLAP || '0.55'),
 };

@@ -8,7 +8,7 @@ export default defineConfig({
     env: {
       NODE_ENV: 'development',
     },
-    include: ['src/**/*.test.ts'],
+    include: ['src/**/*.test.ts', 'tests/**/*.test.ts'],
     testTimeout: 30_000,
     hookTimeout: 30_000,
     coverage: {
