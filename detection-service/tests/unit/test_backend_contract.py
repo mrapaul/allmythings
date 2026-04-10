@@ -1,8 +1,7 @@
-import numpy as np
 import pytest
 from PIL import Image
 from detection_service.backends.base import (
-    InferenceBackend, GatekeeperResult, FastDetection, BoundingBox,
+    InferenceBackend, GatekeeperResult, BoundingBox,
 )
 from detection_service.backends.mlx_backend import MLXBackend
 

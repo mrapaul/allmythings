@@ -1,4 +1,3 @@
-import json
 import pytest
 from detection_service.nats_client.client import NatsClient
 
