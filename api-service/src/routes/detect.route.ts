@@ -28,15 +28,60 @@ export async function detectRoute(app: FastifyInstance): Promise<void> {
     logger.info({ filename: data.filename, size: imageBuffer.length }, 'Processing detection request');
 
     const quality = await qualityService.analyzeQuality(imageBuffer);
-    const result = await pipeline.detect(imageBuffer);
+    const mode = (request.query as { mode?: string }).mode;
 
-    return reply.code(200).send({
-      ...result,
-      imageQuality: {
-        blur: quality.blurScore,
-        brightness: quality.brightness,
-        contrast: quality.contrast,
-      },
+    // Blocking mode: single JSON response
+    if (mode === 'full') {
+      const result = await pipeline.detectFull(imageBuffer);
+      return reply.code(200).send({
+        ...result,
+        imageQuality: { blur: quality.blurScore, brightness: quality.brightness, contrast: quality.contrast },
+      });
+    }
+
+    // SSE streaming mode (default)
+    reply.raw.writeHead(200, {
+      'Content-Type': 'text/event-stream',
+      'Cache-Control': 'no-cache',
+      'Connection': 'keep-alive',
     });
+
+    const sendSSE = (event: string, data: unknown) => {
+      reply.raw.write(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`);
+    };
+
+    const fullResult = await pipeline.detectFull(imageBuffer);
+
+    if (fullResult.fastPass) {
+      sendSSE('fast_pass', {
+        phase: 'fast',
+        detections: fullResult.fastPass.detections,
+        count: fullResult.fastPass.detections.length,
+        processing_ms: fullResult.fastPass.processingTimeMs,
+      });
+    }
+
+    if (fullResult.deepPass) {
+      sendSSE('deep_pass', {
+        phase: 'deep',
+        detections: fullResult.fused,
+        count: fullResult.fused.length,
+        processing_ms: fullResult.deepPass.processingTimeMs,
+      });
+    }
+
+    const matchedCount = fullResult.fused.filter((d) => d.source === 'matched').length;
+    const fastOnlyCount = fullResult.fused.filter((d) => d.source === 'fast_only').length;
+    const deepOnlyCount = fullResult.fused.filter((d) => d.source === 'deep_only').length;
+
+    sendSSE('done', {
+      total: fullResult.fused.length,
+      fast_only: fastOnlyCount,
+      deep_only: deepOnlyCount,
+      matched: matchedCount,
+      imageQuality: { blur: quality.blurScore, brightness: quality.brightness, contrast: quality.contrast },
+    });
+
+    reply.raw.end();
   });
 }

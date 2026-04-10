@@ -3,7 +3,27 @@ import { ObjectClassifier, ClassifiedObject } from '../providers/classifier.inte
 import { CircuitBreaker } from '../utils/circuit-breaker';
 import { logger } from '../utils/logger';
 import { ServiceUnavailableError } from '../utils/errors';
-import { EnsembleFusionService } from './ensemble-fusion.service';
+import { EnsembleFusionService, FastPassDetection, FusedDetection } from './ensemble-fusion.service';
+import { MultiPassVlmClassifier } from './multi-pass-vlm.classifier';
+import { envConfig } from '../config/env.config';
+
+export interface FastPassResult {
+  detections: FastPassDetection[];
+  processingTimeMs: number;
+}
+
+export interface DeepPassResult {
+  detections: ClassifiedObject[];
+  processingTimeMs: number;
+  provider: string;
+}
+
+export interface FullPipelineResult {
+  fastPass: FastPassResult | null;
+  deepPass: DeepPassResult | null;
+  fused: FusedDetection[];
+  totalProcessingMs: number;
+}
 
 export interface PipelineResult {
   detections: ClassifiedObject[];
@@ -13,111 +33,112 @@ export interface PipelineResult {
   corroborationCount?: number;
 }
 
-/**
- * Service to coordinate the multi-layered AI detection pipeline
- */
+interface PipelineOptions {
+  fastDetectorUrl: string;
+  multiPassVlm: MultiPassVlmClassifier;
+  classifiers: ObjectClassifier[];
+  detectors: ObjectDetector[];
+}
+
 export class DetectionPipelineService {
+  private fastDetectorUrl: string;
+  private multiPassVlm: MultiPassVlmClassifier;
+  private fusionService: EnsembleFusionService;
   private detectors: { provider: ObjectDetector; breaker: CircuitBreaker }[];
   private classifiers: { provider: ObjectClassifier; breaker: CircuitBreaker }[];
-  private fusionService: EnsembleFusionService;
 
-  constructor(detectors: ObjectDetector[], classifiers: ObjectClassifier[]) {
-    const breakerOptions = {
-      failureThreshold: 3,
-      resetTimeout: 30000,
-      halfOpenRequests: 2,
-    };
-
-    this.detectors = detectors.map((d) => ({
-      provider: d,
-      breaker: new CircuitBreaker(d.name, breakerOptions),
-    }));
-
-    this.classifiers = classifiers.map((c) => ({
-      provider: c,
-      breaker: new CircuitBreaker(c.name, breakerOptions),
-    }));
-
+  constructor(options: PipelineOptions) {
+    this.fastDetectorUrl = options.fastDetectorUrl;
+    this.multiPassVlm = options.multiPassVlm;
     this.fusionService = new EnsembleFusionService();
+
+    const breakerOptions = { failureThreshold: 3, resetTimeout: 30000, halfOpenRequests: 2 };
+    this.detectors = options.detectors.map((d) => ({ provider: d, breaker: new CircuitBreaker(d.name, breakerOptions) }));
+    this.classifiers = options.classifiers.map((c) => ({ provider: c, breaker: new CircuitBreaker(c.name, breakerOptions) }));
+  }
+
+  async detectFull(image: Buffer): Promise<FullPipelineResult> {
+    const start = Date.now();
+
+    const [fastPass, deepPass] = await Promise.all([
+      this.runFastPass(image),
+      this.runDeepPass(image),
+    ]);
+
+    const fastDetections = fastPass?.detections || [];
+    const deepDetections = deepPass?.detections || [];
+    const fused = this.fusionService.fuseFastAndDeep(fastDetections, deepDetections);
+
+    return {
+      fastPass,
+      deepPass,
+      fused,
+      totalProcessingMs: Date.now() - start,
+    };
   }
 
   async detect(image: Buffer): Promise<PipelineResult> {
+    const result = await this.detectFull(image);
+
+    return {
+      detections: result.fused,
+      processingTimeMs: result.totalProcessingMs,
+      detector: result.fastPass ? 'yoloe' : 'none',
+      classifier: result.deepPass?.provider || 'none',
+    };
+  }
+
+  private async runFastPass(image: Buffer): Promise<FastPassResult | null> {
     const start = Date.now();
-    
-    // Layer 1: Attempt Parallel One-Pass Corroboration
-    // We run the best available cloud LLM (Gemini) and the local fallback (Ollama) in parallel
-    const providersToRun = this.classifiers.filter(c => 
-      (c.provider.name === 'gemini' || c.provider.name === 'ollama') && 
-      c.breaker.getState() !== 'open'
-    );
+    try {
+      const detections = await this.callFastDetector(image);
+      return { detections, processingTimeMs: Date.now() - start };
+    } catch (error) {
+      logger.warn({ error: (error as Error).message }, 'Fast pass failed, continuing with deep pass only');
+      return null;
+    }
+  }
 
-    if (providersToRun.length > 0) {
-      logger.info({ providers: providersToRun.map(p => p.provider.name) }, 'Starting Parallel Multi-Layered Corroboration');
-      
-      const resultsMap = new Map<string, ClassifiedObject[]>();
-      
-      const promises = providersToRun.map(async ({ provider, breaker }) => {
-        try {
-          const results = await breaker.execute(() => provider.classify(image, []));
-          resultsMap.set(provider.name, results);
-          return results;
-        } catch (error) {
-          logger.warn({ provider: provider.name, error: (error as Error).message }, 'Parallel provider failed');
-          return [];
-        }
-      });
+  private async callFastDetector(image: Buffer): Promise<FastPassDetection[]> {
+    const formData = new FormData();
+    formData.append('file', new Blob([image], { type: 'image/jpeg' }), 'image.jpg');
 
-      await Promise.all(promises);
+    const response = await fetch(`${this.fastDetectorUrl}/detect/fast`, {
+      method: 'POST',
+      body: formData,
+      signal: AbortSignal.timeout(5000),
+    });
 
-      // Fuse results for corroboration
-      const fusion = await this.fusionService.fuse(resultsMap);
-      
-      if (fusion.detections.length > 0) {
-        return {
-          detections: fusion.detections,
-          processingTimeMs: Date.now() - start,
-          detector: 'multi-vlm-one-pass',
-          classifier: Array.from(resultsMap.keys()).join('+'),
-          corroborationCount: fusion.corroborationCount,
-        };
-      }
+    if (!response.ok) {
+      throw new Error(`Fast detector returned ${response.status}`);
     }
 
-    // Layer 2: Sequential Fallback (Original Pipeline)
-    logger.info('Multi-layered parallel pass failed or no results, falling back to sequential');
-    
-    let boxes: BoundingBoxResult[] = [];
-    let detectorUsed = 'none';
+    const data: any = await response.json();
+    return (data.detections || []).map((d: any) => ({
+      label: d.label,
+      confidence: d.confidence,
+      boundingBox: {
+        x: d.box[0],
+        y: d.box[1],
+        width: d.box[2],
+        height: d.box[3],
+      },
+    }));
+  }
 
-    // Try detectors (Google Vision, Grounding DINO)
-    for (const { provider, breaker } of this.detectors) {
-      try {
-        boxes = await breaker.execute(() => provider.detect(image));
-        detectorUsed = provider.name;
-        break;
-      } catch (error) {
-        logger.warn({ provider: provider.name }, 'Detector failed');
-      }
+  private async runDeepPass(image: Buffer): Promise<DeepPassResult | null> {
+    const start = Date.now();
+    try {
+      const detections = await this.multiPassVlm.detect(image);
+      return {
+        detections,
+        processingTimeMs: Date.now() - start,
+        provider: 'multi-pass-vlm',
+      };
+    } catch (error) {
+      logger.warn({ error: (error as Error).message }, 'Deep pass failed');
+      return null;
     }
-
-    // Try classifiers sequentially
-    for (const { provider, breaker } of this.classifiers) {
-      try {
-        const detections = await breaker.execute(() => provider.classify(image, boxes));
-        if (detections.length > 0) {
-          return {
-            detections,
-            processingTimeMs: Date.now() - start,
-            detector: detectorUsed,
-            classifier: provider.name,
-          };
-        }
-      } catch (error) {
-        logger.warn({ provider: provider.name }, 'Classifier fallback failed');
-      }
-    }
-
-    throw new ServiceUnavailableError('All AI layers failed to produce results');
   }
 
   async healthCheck(): Promise<Record<string, boolean>> {

@@ -15,6 +15,8 @@ import { GoogleVisionDetector } from './providers/google-vision.detector';
 import { GeminiClassifier } from './providers/gemini.classifier';
 import { OllamaClassifier } from './providers/ollama.classifier';
 import { MockClassifier } from './providers/mock.classifier';
+import { ClaudeClassifier } from './providers/claude.classifier';
+import { MultiPassVlmClassifier } from './services/multi-pass-vlm.classifier';
 
 process.on('uncaughtException', (err) => {
   logger.fatal({ err: err.message, stack: err.stack }, 'Uncaught Exception');
@@ -68,7 +70,13 @@ function createDefaultPipeline(): DetectionPipelineService {
   if (envConfig.useMockAi) {
     logger.info('Using Mock AI for detection pipeline');
     classifiers.push(new MockClassifier());
-    return new DetectionPipelineService([], classifiers);
+    const multiPassVlm = new MultiPassVlmClassifier(classifiers, envConfig);
+    return new DetectionPipelineService({
+      fastDetectorUrl: envConfig.detectionServiceUrl,
+      multiPassVlm,
+      classifiers: [],
+      detectors: [],
+    });
   }
 
   detectors.push(new GroundingDinoDetector(envConfig));
@@ -79,11 +87,21 @@ function createDefaultPipeline(): DetectionPipelineService {
   if (envConfig.geminiApiKey) {
     classifiers.push(new GeminiClassifier(envConfig));
   }
+  if (envConfig.claudeApiKey) {
+    classifiers.push(new ClaudeClassifier(envConfig));
+  }
   if (envConfig.ollamaEnabled) {
     classifiers.push(new OllamaClassifier(envConfig));
   }
 
-  return new DetectionPipelineService(detectors, classifiers);
+  const multiPassVlm = new MultiPassVlmClassifier(classifiers, envConfig);
+
+  return new DetectionPipelineService({
+    fastDetectorUrl: envConfig.detectionServiceUrl,
+    multiPassVlm,
+    classifiers,
+    detectors,
+  });
 }
 
 async function start(): Promise<void> {
