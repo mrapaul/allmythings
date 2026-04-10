@@ -26,6 +26,15 @@ class Settings(BaseSettings):
     # Model cache dir
     model_cache_dir: str = "~/.cache/detection-service/models"
 
+    # YOLOE
+    yoloe_model: str = "yolo11n.pt"
+    yoloe_prompt: str = "object . item . thing"
+    yoloe_confidence: float = 0.15
+    sahi_grid_cols: int = 2
+    sahi_grid_rows: int = 2
+    sahi_overlap: float = 0.2
+    sahi_nms_threshold: float = 0.5
+
 
 @lru_cache(maxsize=1)
 def get_settings() -> Settings:
