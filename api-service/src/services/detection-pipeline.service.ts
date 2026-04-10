@@ -1,11 +1,9 @@
-import { ObjectDetector, BoundingBoxResult } from '../providers/detector.interface';
+import { ObjectDetector } from '../providers/detector.interface';
 import { ObjectClassifier, ClassifiedObject } from '../providers/classifier.interface';
 import { CircuitBreaker } from '../utils/circuit-breaker';
 import { logger } from '../utils/logger';
-import { ServiceUnavailableError } from '../utils/errors';
 import { EnsembleFusionService, FastPassDetection, FusedDetection } from './ensemble-fusion.service';
 import { MultiPassVlmClassifier } from './multi-pass-vlm.classifier';
-import { envConfig } from '../config/env.config';
 
 export interface FastPassResult {
   detections: FastPassDetection[];
