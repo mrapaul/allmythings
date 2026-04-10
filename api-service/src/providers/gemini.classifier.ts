@@ -61,19 +61,18 @@ export class GeminiClassifier implements ObjectClassifier {
   }
 
   private buildFullImagePrompt(): string {
-    return `Perform a high-end visual inventory of this interior space. 
-For EVERY identifiable object, return a JSON array of objects with:
-1. label: Specific name (e.g. "Red Velvet Dining Chair", "Silver Teapot").
-2. category: One of [Furniture, Lighting, Textiles, Wall Decor, Home Decor, Kitchenware, Books, Plants, Electronics].
-3. colors: Array of primary colors.
-4. materials: Array of specific materials (e.g. ["brass", "copper", "velvet", "faux fur", "shag", "marble", "glass", "wood"]).
-5. condition: "new" or "good".
-6. description: A brief spatial location (e.g. "On the bistro table").
-7. confidence: 0.0 to 1.0.
-8. bounding_box: [ymin, xmin, ymax, xmax] in normalized 0-1000 coordinates.
+    return `Enumerate every visible object in this image. Return a JSON array where each element has:
+- "label": specific descriptive name (e.g. "brass floor lamp", "ceramic coffee mug")
+- "category": freeform category that fits the object
+- "bounding_box": [ymin, xmin, ymax, xmax] in normalized 0-1000 coordinates
+- "confidence": 0.0 to 1.0
+- "colors": array of colors
+- "materials": array of materials
+- "condition": "new", "good", "fair", or "worn"
+- "estimated_value_usd": rough estimate as integer
 
-CRITICAL: Look for small items on tables (sugar bowls, tea cups, miniature vases) and textiles draped over furniture (fur throws, patterned pillows).
-Return ONLY valid JSON.`;
+Be exhaustive — aim for completeness over brevity. Include small items on surfaces, textiles, wall decor, and anything partially visible. Use any label and category that fits the object.
+Return ONLY valid JSON array, no other text.`;
   }
 
   private extractJson(text: string): string {
@@ -103,7 +102,9 @@ Return ONLY valid JSON.`;
       colors: item.colors || [],
       materials: item.materials || [],
       condition: item.condition || null,
-      estimatedValue: null,
+      estimatedValue: item.estimated_value_usd
+        ? { low: Math.round(item.estimated_value_usd * 0.7), high: Math.round(item.estimated_value_usd * 1.3) }
+        : null,
       description: item.description || null,
       confidence: item.confidence ?? 0,
       boundingBox,

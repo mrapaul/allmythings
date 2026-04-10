@@ -52,16 +52,39 @@ describe('GeminiClassifier', () => {
     expect(results[0].boundingBox).toEqual({ x: 0.1, y: 0.2, width: 0.3, height: 0.4 });
   });
 
-  it('should use high-end inventory prompt', async () => {
+  it('should use open-vocabulary inventory prompt', async () => {
     mockModel.generateContent.mockResolvedValueOnce({
       response: { text: () => '[]' },
     });
 
     await classifier.classify(Buffer.from('img'), []);
-    
+
     const callArgs = mockModel.generateContent.mock.calls[0][0];
     const promptText = typeof callArgs === 'string' ? callArgs : JSON.stringify(callArgs);
-    expect(promptText).toContain('high-end visual inventory');
+    expect(promptText).toContain('Enumerate every visible object');
+  });
+
+  it('should map estimated_value_usd to low/high range', async () => {
+    mockModel.generateContent.mockResolvedValueOnce({
+      response: {
+        text: () => JSON.stringify([
+          {
+            label: 'oak dining table',
+            category: 'Furniture',
+            colors: ['brown'],
+            materials: ['oak'],
+            condition: 'good',
+            confidence: 0.9,
+            bounding_box: [0, 0, 500, 500],
+            estimated_value_usd: 200,
+          }
+        ]),
+      },
+    });
+
+    const results = await classifier.classify(Buffer.from('img'), []);
+    expect(results).toHaveLength(1);
+    expect(results[0].estimatedValue).toEqual({ low: 140, high: 260 });
   });
 
   it('should handle markdown-wrapped JSON', async () => {
