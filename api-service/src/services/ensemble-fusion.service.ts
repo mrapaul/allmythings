@@ -1,5 +1,15 @@
 import { ClassifiedObject } from '../providers/classifier.interface';
 
+export interface FastPassDetection {
+  label: string;
+  confidence: number;
+  boundingBox: { x: number; y: number; width: number; height: number };
+}
+
+export interface FusedDetection extends ClassifiedObject {
+  source: 'matched' | 'fast_only' | 'deep_only';
+}
+
 export interface FusionResult {
   detections: ClassifiedObject[];
   corroborationCount: number;
@@ -79,6 +89,87 @@ export class EnsembleFusionService {
       confidence: boostedConfidence,
       // Metadata can be combined if needed
     };
+  }
+
+  fuseFastAndDeep(fast: FastPassDetection[], deep: ClassifiedObject[]): FusedDetection[] {
+    const results: FusedDetection[] = [];
+    const matchedFastIndices = new Set<number>();
+
+    for (const deepObj of deep) {
+      const bestMatch = this.findBestFastMatch(deepObj, fast, matchedFastIndices);
+
+      if (bestMatch !== null) {
+        matchedFastIndices.add(bestMatch.index);
+        results.push({
+          ...deepObj,
+          boundingBox: fast[bestMatch.index].boundingBox,
+          source: 'matched',
+        });
+      } else {
+        results.push({ ...deepObj, source: 'deep_only' });
+      }
+    }
+
+    for (let i = 0; i < fast.length; i++) {
+      if (matchedFastIndices.has(i)) continue;
+      results.push({
+        boxIndex: 0,
+        label: fast[i].label,
+        category: 'uncategorized',
+        brand: null,
+        model: null,
+        colors: [],
+        materials: [],
+        condition: null,
+        estimatedValue: null,
+        description: null,
+        confidence: fast[i].confidence,
+        boundingBox: fast[i].boundingBox,
+        source: 'fast_only',
+      });
+    }
+
+    return results;
+  }
+
+  private findBestFastMatch(
+    deepObj: ClassifiedObject,
+    fast: FastPassDetection[],
+    excludeIndices: Set<number>,
+  ): { index: number; score: number } | null {
+    let best: { index: number; score: number } | null = null;
+
+    const deepCx = deepObj.boundingBox.x + deepObj.boundingBox.width / 2;
+    const deepCy = deepObj.boundingBox.y + deepObj.boundingBox.height / 2;
+
+    for (let i = 0; i < fast.length; i++) {
+      if (excludeIndices.has(i)) continue;
+
+      const fastCx = fast[i].boundingBox.x + fast[i].boundingBox.width / 2;
+      const fastCy = fast[i].boundingBox.y + fast[i].boundingBox.height / 2;
+      const dist = Math.sqrt((deepCx - fastCx) ** 2 + (deepCy - fastCy) ** 2);
+
+      if (dist >= 0.15) continue;
+
+      const labelSim = this.jaccardSimilarity(deepObj.label, fast[i].label);
+      if (labelSim < 0.3) continue;
+
+      const score = labelSim * (1 - dist);
+      if (!best || score > best.score) {
+        best = { index: i, score };
+      }
+    }
+
+    return best;
+  }
+
+  private jaccardSimilarity(a: string, b: string): number {
+    const tokensA = new Set(a.toLowerCase().split(/\s+/));
+    const tokensB = new Set(b.toLowerCase().split(/\s+/));
+    const intersection = new Set([...tokensA].filter((t) => tokensB.has(t)));
+    const union = new Set([...tokensA, ...tokensB]);
+    if (union.size === 0) return 0;
+    return intersection.size / union.size;
   }
 
   /**
