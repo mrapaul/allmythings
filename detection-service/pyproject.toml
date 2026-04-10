@@ -5,6 +5,7 @@ description = "Detection pipeline for the Visual Home Inventory Manager"
 requires-python = ">=3.12,<3.13"
 dependencies = [
   "fastapi>=0.115,<0.116",
+  "python-multipart>=0.0.9",
   "uvicorn[standard]>=0.32",
   "pydantic>=2.9",
   "pydantic-settings>=2.7",
