@@ -1,18 +1,18 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { DetectionPipelineService } from '../../services/detection-pipeline.service';
-import { ObjectDetector, BoundingBoxResult } from '../../providers/detector.interface';
+import { MultiPassVlmClassifier } from '../../services/multi-pass-vlm.classifier';
+import { envConfig } from '../../config/env.config';
+import { ObjectDetector } from '../../providers/detector.interface';
 import { ObjectClassifier, ClassifiedObject } from '../../providers/classifier.interface';
-import { ServiceUnavailableError } from '../../utils/errors';
+
 
 describe('DetectionPipelineService', () => {
   let pipeline: DetectionPipelineService;
   let mockDetector: ObjectDetector;
   let mockClassifier: ObjectClassifier;
+  let mockMultiPassVlm: MultiPassVlmClassifier;
 
   const testImage = Buffer.from('test-image');
-  const sampleDetections: BoundingBoxResult[] = [
-    { box: { x: 0, y: 0, width: 0.5, height: 0.5 }, coarseLabel: 'item', confidence: 0.9 }
-  ];
   const sampleClassified: ClassifiedObject[] = [
     {
       boxIndex: 0,
@@ -33,7 +33,7 @@ describe('DetectionPipelineService', () => {
   beforeEach(() => {
     mockDetector = {
       name: 'test-detector',
-      detect: vi.fn().mockResolvedValue(sampleDetections),
+      detect: vi.fn().mockResolvedValue([]),
       healthCheck: vi.fn().mockResolvedValue(true),
     };
     mockClassifier = {
@@ -42,47 +42,64 @@ describe('DetectionPipelineService', () => {
       generateDetectionPrompt: vi.fn().mockResolvedValue('prompt'),
       healthCheck: vi.fn().mockResolvedValue(true),
     };
-    pipeline = new DetectionPipelineService([mockDetector], [mockClassifier]);
+    mockMultiPassVlm = new MultiPassVlmClassifier([mockClassifier], envConfig);
+    vi.spyOn(mockMultiPassVlm, 'detect').mockResolvedValue(sampleClassified);
+
+    pipeline = new DetectionPipelineService({
+      fastDetectorUrl: envConfig.detectionServiceUrl,
+      multiPassVlm: mockMultiPassVlm,
+      classifiers: [mockClassifier],
+      detectors: [mockDetector],
+    });
   });
 
   describe('happy path', () => {
-    it('should detect and classify when all providers succeed', async () => {
+    it('should detect and classify when deep pass succeeds', async () => {
       const result = await pipeline.detect(testImage);
 
-      expect(result.detections).toEqual(sampleClassified);
-      // Now returns 'multi-vlm-one-pass' for the parallel path
-      expect(result.detector).toBe('multi-vlm-one-pass');
-      expect(result.classifier).toBe('gemini');
+      // FusedDetection extends ClassifiedObject with a 'source' field
+      expect(result.detections).toHaveLength(sampleClassified.length);
+      expect(result.detections[0]).toMatchObject(sampleClassified[0]);
+      // Fast pass fails (no real service), so detector is 'none'
+      expect(result.detector).toBe('none');
+      expect(result.classifier).toBe('multi-pass-vlm');
       expect(result.processingTimeMs).toBeGreaterThanOrEqual(0);
     });
   });
 
   describe('detector fallback', () => {
-    it('should fall back to secondary detector when primary fails', async () => {
+    it('should still return deep pass results when fast detector is unavailable', async () => {
       const mockDetector2 = {
         name: 'test-detector-2',
-        detect: vi.fn().mockResolvedValue(sampleDetections),
+        detect: vi.fn().mockResolvedValue([]),
         healthCheck: vi.fn().mockResolvedValue(true),
       };
-      // Primary fails
-      mockDetector.detect = vi.fn().mockRejectedValue(new Error('Fail'));
-      
-      const pipelineWithFallback = new DetectionPipelineService([mockDetector, mockDetector2], [mockClassifier]);
+
+      const fallbackMultiPassVlm = new MultiPassVlmClassifier([mockClassifier], envConfig);
+      vi.spyOn(fallbackMultiPassVlm, 'detect').mockResolvedValue(sampleClassified);
+
+      const pipelineWithFallback = new DetectionPipelineService({
+        fastDetectorUrl: envConfig.detectionServiceUrl,
+        multiPassVlm: fallbackMultiPassVlm,
+        classifiers: [mockClassifier],
+        detectors: [mockDetector, mockDetector2],
+      });
       const result = await pipelineWithFallback.detect(testImage);
 
-      // Still tries parallel first, and if that fails or returns nothing, it falls back
-      // Since parallel uses classifiers which might succeed, it might return 'multi-vlm-one-pass'
-      expect(result.detections).toEqual(sampleClassified);
+      expect(result.detections).toHaveLength(sampleClassified.length);
+      expect(result.detections[0]).toMatchObject(sampleClassified[0]);
     });
   });
 
   describe('all providers fail', () => {
-    it('should throw ServiceUnavailableError when all AI layers produce no results', async () => {
-      mockDetector.detect = vi.fn().mockRejectedValue(new Error('Fail'));
-      mockClassifier.classify = vi.fn().mockResolvedValue([]);
+    it('should return empty detections when both fast and deep pass fail', async () => {
+      vi.spyOn(mockMultiPassVlm, 'detect').mockRejectedValue(new Error('VLM unavailable'));
 
-      await expect(pipeline.detect(testImage)).rejects.toThrow(ServiceUnavailableError);
-      await expect(pipeline.detect(testImage)).rejects.toThrow('All AI layers failed to produce results');
+      const result = await pipeline.detect(testImage);
+
+      expect(result.detections).toEqual([]);
+      expect(result.detector).toBe('none');
+      expect(result.classifier).toBe('none');
     });
   });
 

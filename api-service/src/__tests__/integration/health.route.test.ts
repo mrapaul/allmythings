@@ -1,6 +1,8 @@
 import { describe, it, expect, vi, afterEach } from 'vitest';
 import { buildApp } from '../../app';
 import { DetectionPipelineService } from '../../services/detection-pipeline.service';
+import { MultiPassVlmClassifier } from '../../services/multi-pass-vlm.classifier';
+import { envConfig } from '../../config/env.config';
 import { ObjectDetector } from '../../providers/detector.interface';
 import { ObjectClassifier } from '../../providers/classifier.interface';
 
@@ -27,10 +29,15 @@ describe('GET /v1/health', () => {
   });
 
   it('returns 200 and healthy status when all providers are up', async () => {
-    const mockPipeline = new DetectionPipelineService(
-      [makeMockDetector(true)],
-      [makeTestClassifier(true)]
-    );
+    const classifiers = [makeTestClassifier(true)];
+    const detectors = [makeMockDetector(true)];
+    const multiPassVlm = new MultiPassVlmClassifier(classifiers, envConfig);
+    const mockPipeline = new DetectionPipelineService({
+      fastDetectorUrl: envConfig.detectionServiceUrl,
+      multiPassVlm,
+      classifiers,
+      detectors,
+    });
     const app = await buildApp({ disableRateLimit: true, pipeline: mockPipeline });
 
     const response = await app.inject({
@@ -51,10 +58,15 @@ describe('GET /v1/health', () => {
   });
 
   it('returns 200 and degraded status when a provider is down but others are up', async () => {
-    const mockPipeline = new DetectionPipelineService(
-      [makeMockDetector(false)],
-      [makeTestClassifier(true)]
-    );
+    const classifiers = [makeTestClassifier(true)];
+    const detectors = [makeMockDetector(false)];
+    const multiPassVlm = new MultiPassVlmClassifier(classifiers, envConfig);
+    const mockPipeline = new DetectionPipelineService({
+      fastDetectorUrl: envConfig.detectionServiceUrl,
+      multiPassVlm,
+      classifiers,
+      detectors,
+    });
     const app = await buildApp({ disableRateLimit: true, pipeline: mockPipeline });
 
     const response = await app.inject({
@@ -70,10 +82,15 @@ describe('GET /v1/health', () => {
   });
 
   it('returns 503 and unhealthy status when all providers are down', async () => {
-    const mockPipeline = new DetectionPipelineService(
-      [makeMockDetector(false)],
-      [makeTestClassifier(false)]
-    );
+    const classifiers = [makeTestClassifier(false)];
+    const detectors = [makeMockDetector(false)];
+    const multiPassVlm = new MultiPassVlmClassifier(classifiers, envConfig);
+    const mockPipeline = new DetectionPipelineService({
+      fastDetectorUrl: envConfig.detectionServiceUrl,
+      multiPassVlm,
+      classifiers,
+      detectors,
+    });
     const app = await buildApp({ disableRateLimit: true, pipeline: mockPipeline });
 
     const response = await app.inject({

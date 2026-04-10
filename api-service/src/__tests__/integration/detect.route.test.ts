@@ -2,6 +2,8 @@ import { describe, it, expect, vi, afterEach } from 'vitest';
 import FormData from 'form-data';
 import { buildApp } from '../../app';
 import { DetectionPipelineService } from '../../services/detection-pipeline.service';
+import { MultiPassVlmClassifier } from '../../services/multi-pass-vlm.classifier';
+import { envConfig } from '../../config/env.config';
 import { sampleClassifiedObjects } from '../fixtures/test-data';
 import { ObjectDetector, BoundingBoxResult } from '../../providers/detector.interface';
 import { ObjectClassifier } from '../../providers/classifier.interface';
@@ -33,16 +35,24 @@ function makeJpegBuffer(): Buffer {
   return buf;
 }
 
+function makeMockPipeline(detectors: ObjectDetector[], classifiers: ObjectClassifier[]): DetectionPipelineService {
+  const multiPassVlm = new MultiPassVlmClassifier(classifiers, envConfig);
+  vi.spyOn(multiPassVlm, 'detect').mockResolvedValue([]);
+  return new DetectionPipelineService({
+    fastDetectorUrl: envConfig.detectionServiceUrl,
+    multiPassVlm,
+    classifiers,
+    detectors,
+  });
+}
+
 describe('POST /v1/detect', () => {
   afterEach(() => {
     vi.restoreAllMocks();
   });
 
-  it('returns 200 with detection result shape', async () => {
-    const mockPipeline = new DetectionPipelineService(
-      [makeMockDetector([])],
-      [makeTestClassifier()]
-    );
+  it('returns 200 with detection result shape in full mode', async () => {
+    const mockPipeline = makeMockPipeline([makeMockDetector([])], [makeTestClassifier()]);
     const app = await buildApp({ disableRateLimit: true, pipeline: mockPipeline });
 
     const form = new FormData();
@@ -50,26 +60,23 @@ describe('POST /v1/detect', () => {
 
     const response = await app.inject({
       method: 'POST',
-      url: '/v1/detect',
+      url: '/v1/detect?mode=full',
       headers: form.getHeaders(),
       payload: form.getBuffer(),
     });
 
     expect(response.statusCode).toBe(200);
     const body = JSON.parse(response.body) as Record<string, unknown>;
-    expect(body).toHaveProperty('detections');
-    expect(body).toHaveProperty('processingTimeMs');
+    expect(body).toHaveProperty('fused');
+    expect(body).toHaveProperty('totalProcessingMs');
     expect(body).toHaveProperty('imageQuality');
-    expect(Array.isArray(body.detections)).toBe(true);
+    expect(Array.isArray(body.fused)).toBe(true);
 
     await app.close();
   });
 
   it('returns 400 when no file is uploaded', async () => {
-    const mockPipeline = new DetectionPipelineService(
-      [makeMockDetector([])],
-      [makeTestClassifier()]
-    );
+    const mockPipeline = makeMockPipeline([makeMockDetector([])], [makeTestClassifier()]);
     const app = await buildApp({ disableRateLimit: true, pipeline: mockPipeline });
 
     const form = new FormData();
@@ -87,18 +94,12 @@ describe('POST /v1/detect', () => {
     await app.close();
   });
 
-  it('returns detections matching classified objects', async () => {
-    const sampleBoxes: BoundingBoxResult[] = [
-      { box: { x: 0.1, y: 0.05, width: 0.25, height: 0.85 }, coarseLabel: 'furniture', confidence: 0.9 },
-    ];
-    const mockPipeline = new DetectionPipelineService(
-      [makeMockDetector(sampleBoxes)],
-      [makeTestClassifier()]
-    );
+  it('returns SSE stream by default', async () => {
+    const mockPipeline = makeMockPipeline([makeMockDetector([])], [makeTestClassifier()]);
     const app = await buildApp({ disableRateLimit: true, pipeline: mockPipeline });
 
     const form = new FormData();
-    form.append('file', makeJpegBuffer(), { filename: 'room.jpg', contentType: 'image/jpeg' });
+    form.append('file', makeJpegBuffer(), { filename: 'test.jpg', contentType: 'image/jpeg' });
 
     const response = await app.inject({
       method: 'POST',
@@ -108,8 +109,8 @@ describe('POST /v1/detect', () => {
     });
 
     expect(response.statusCode).toBe(200);
-    const body = JSON.parse(response.body) as { detections: unknown[] };
-    expect(body.detections).toHaveLength(sampleClassifiedObjects.length);
+    expect(response.headers['content-type']).toContain('text/event-stream');
+    expect(response.body).toContain('event: done');
 
     await app.close();
   });
