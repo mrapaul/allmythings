@@ -28,7 +28,7 @@
 		<true/>
 		<key>NSBonjourServices</key>
 		<array>
-			<string>_http._tcp</string>
+			<string>_http._tcp.</string>
 		</array>
 		<key>NSLocalNetworkUsageDescription</key>
 		<string>Used to find the detection server on your local network for object detection.</string>
