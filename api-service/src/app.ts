@@ -17,6 +17,7 @@ import { OllamaClassifier } from './providers/ollama.classifier';
 import { MockClassifier } from './providers/mock.classifier';
 import { ClaudeClassifier } from './providers/claude.classifier';
 import { MultiPassVlmClassifier } from './services/multi-pass-vlm.classifier';
+import { advertiseService } from './utils/bonjour-advertiser';
 
 process.on('uncaughtException', (err) => {
   logger.fatal({ err: err.message, stack: err.stack }, 'Uncaught Exception');
@@ -110,8 +111,12 @@ async function start(): Promise<void> {
     const address = await app.listen({ port: envConfig.port, host: '0.0.0.0' });
     logger.info({ address, port: envConfig.port, nodeEnv: envConfig.nodeEnv }, 'Server started');
 
+    const stopBonjour = advertiseService(envConfig.port);
+    logger.info({ name: 'allmythings-server', port: envConfig.port }, 'Bonjour advertisement started');
+
     const shutdown = async (signal: string) => {
       logger.info({ signal }, 'Shutting down');
+      stopBonjour();
       await app.close();
       process.exit(0);
     };
