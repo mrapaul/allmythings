@@ -30,9 +30,9 @@ class Settings(BaseSettings):
     yoloe_model: str = "yolo11n.pt"
     yoloe_prompt: str = "object . item . thing"
     yoloe_confidence: float = 0.15
-    sahi_grid_cols: int = 2
-    sahi_grid_rows: int = 2
-    sahi_overlap: float = 0.2
+    sahi_grid_cols: int = 3
+    sahi_grid_rows: int = 3
+    sahi_overlap: float = 0.3
     sahi_nms_threshold: float = 0.5
 
 
