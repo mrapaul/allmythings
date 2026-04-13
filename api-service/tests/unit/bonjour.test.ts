@@ -1,7 +1,8 @@
 import { describe, it, expect, vi } from 'vitest';
 
 vi.mock('bonjour-service', () => {
-  const publishMock = vi.fn();
+  const serviceMock = { on: vi.fn() };
+  const publishMock = vi.fn().mockReturnValue(serviceMock);
   const destroyMock = vi.fn();
 
   return {
@@ -9,8 +10,6 @@ vi.mock('bonjour-service', () => {
       publish: publishMock,
       destroy: destroyMock,
     })),
-    publishMock: () => publishMock,
-    destroyMock: () => destroyMock,
   };
 });
 
@@ -21,8 +20,10 @@ describe('Bonjour advertisement', () => {
 
     const stop = advertiseService(14000);
 
-    const BonjourClass = module.default;
-    const instance = BonjourClass.mock.results[0].value;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const BonjourClass = (module as any).default;
+    const results = BonjourClass.mock.results;
+    const instance = results[results.length - 1].value;
 
     expect(instance.publish).toHaveBeenCalledWith({
       name: 'allmythings-server',
