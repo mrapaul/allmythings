@@ -52,33 +52,34 @@ class CoreMLDetector: NSObject {
             return
         }
 
-        guard let mlModel = try? MLModel(contentsOf: modelURL, configuration: MLModelConfiguration()),
-              let vnModel = try? VNCoreMLModel(for: mlModel) else {
-            result(FlutterError(code: "MODEL_LOAD_ERROR", message: "Could not load CoreML model", details: nil))
-            return
-        }
-
-        let request = VNCoreMLRequest(model: vnModel) { request, error in
-            // VNCoreMLRequest completion fires on the global background thread — marshal to main
-            DispatchQueue.main.async {
-                if let error = error {
-                    result(FlutterError(code: "INFERENCE_ERROR", message: error.localizedDescription, details: nil))
-                    return
-                }
-                let detections = CoreMLDetector.mapObservations(request.results)
-                result(detections)
-            }
-        }
-        request.imageCropAndScaleOption = .scaleFit
-
+        // Model loading and inference run off the main thread to avoid UI jank
         DispatchQueue.global(qos: .userInitiated).async {
+            guard let mlModel = try? MLModel(contentsOf: modelURL, configuration: MLModelConfiguration()),
+                  let vnModel = try? VNCoreMLModel(for: mlModel) else {
+                DispatchQueue.main.async {
+                    result(FlutterError(code: "MODEL_LOAD_ERROR", message: "Could not load CoreML model", details: nil))
+                }
+                return
+            }
+
+            let request = VNCoreMLRequest(model: vnModel) { request, error in
+                // VNCoreMLRequest completion fires on the background thread — marshal to main
+                DispatchQueue.main.async {
+                    if let error = error {
+                        result(FlutterError(code: "INFERENCE_ERROR", message: error.localizedDescription, details: nil))
+                        return
+                    }
+                    let detections = CoreMLDetector.mapObservations(request.results)
+                    result(detections)
+                }
+            }
+            request.imageCropAndScaleOption = .scaleFit
+
             let handler = VNImageRequestHandler(cgImage: cgImage, options: [:])
             do {
                 try handler.perform([request])
             } catch {
-                // Only call result here if the completion closure has NOT already called it.
-                // perform() is synchronous — if completion fired, it enqueued on main before this catch runs.
-                // Use main.async to serialize after any pending completion dispatch.
+                // perform() is synchronous — completion either already enqueued on main or was never called
                 DispatchQueue.main.async {
                     result(FlutterError(code: "HANDLER_ERROR", message: error.localizedDescription, details: nil))
                 }
