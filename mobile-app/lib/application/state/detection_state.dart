@@ -14,6 +14,7 @@ sealed class DetectionState with _$DetectionState {
     required String detector,
     required String classifier,
     int? corroborationCount,
+    @Default(false) bool isEnriching,
   }) = DetectionSuccess;
   const factory DetectionState.empty() = DetectionEmpty;
   const factory DetectionState.error(String message) = DetectionError;

@@ -128,12 +128,12 @@ return error(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>({TResult Function()?  initial,TResult Function()?  loading,TResult Function( List<DetectedObject> detections,  int processingTimeMs,  String detector,  String classifier,  int? corroborationCount)?  success,TResult Function()?  empty,TResult Function( String message)?  error,required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>({TResult Function()?  initial,TResult Function()?  loading,TResult Function( List<DetectedObject> detections,  int processingTimeMs,  String detector,  String classifier,  int? corroborationCount,  bool isEnriching)?  success,TResult Function()?  empty,TResult Function( String message)?  error,required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case DetectionInitial() when initial != null:
 return initial();case DetectionLoading() when loading != null:
 return loading();case DetectionSuccess() when success != null:
-return success(_that.detections,_that.processingTimeMs,_that.detector,_that.classifier,_that.corroborationCount);case DetectionEmpty() when empty != null:
+return success(_that.detections,_that.processingTimeMs,_that.detector,_that.classifier,_that.corroborationCount,_that.isEnriching);case DetectionEmpty() when empty != null:
 return empty();case DetectionError() when error != null:
 return error(_that.message);case _:
   return orElse();
@@ -153,12 +153,12 @@ return error(_that.message);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>({required TResult Function()  initial,required TResult Function()  loading,required TResult Function( List<DetectedObject> detections,  int processingTimeMs,  String detector,  String classifier,  int? corroborationCount)  success,required TResult Function()  empty,required TResult Function( String message)  error,}) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>({required TResult Function()  initial,required TResult Function()  loading,required TResult Function( List<DetectedObject> detections,  int processingTimeMs,  String detector,  String classifier,  int? corroborationCount,  bool isEnriching)  success,required TResult Function()  empty,required TResult Function( String message)  error,}) {final _that = this;
 switch (_that) {
 case DetectionInitial():
 return initial();case DetectionLoading():
 return loading();case DetectionSuccess():
-return success(_that.detections,_that.processingTimeMs,_that.detector,_that.classifier,_that.corroborationCount);case DetectionEmpty():
+return success(_that.detections,_that.processingTimeMs,_that.detector,_that.classifier,_that.corroborationCount,_that.isEnriching);case DetectionEmpty():
 return empty();case DetectionError():
 return error(_that.message);}
 }
@@ -174,12 +174,12 @@ return error(_that.message);}
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>({TResult? Function()?  initial,TResult? Function()?  loading,TResult? Function( List<DetectedObject> detections,  int processingTimeMs,  String detector,  String classifier,  int? corroborationCount)?  success,TResult? Function()?  empty,TResult? Function( String message)?  error,}) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>({TResult? Function()?  initial,TResult? Function()?  loading,TResult? Function( List<DetectedObject> detections,  int processingTimeMs,  String detector,  String classifier,  int? corroborationCount,  bool isEnriching)?  success,TResult? Function()?  empty,TResult? Function( String message)?  error,}) {final _that = this;
 switch (_that) {
 case DetectionInitial() when initial != null:
 return initial();case DetectionLoading() when loading != null:
 return loading();case DetectionSuccess() when success != null:
-return success(_that.detections,_that.processingTimeMs,_that.detector,_that.classifier,_that.corroborationCount);case DetectionEmpty() when empty != null:
+return success(_that.detections,_that.processingTimeMs,_that.detector,_that.classifier,_that.corroborationCount,_that.isEnriching);case DetectionEmpty() when empty != null:
 return empty();case DetectionError() when error != null:
 return error(_that.message);case _:
   return null;
@@ -257,7 +257,7 @@ String toString() {
 
 
 class DetectionSuccess implements DetectionState {
-  const DetectionSuccess({required final  List<DetectedObject> detections, required this.processingTimeMs, required this.detector, required this.classifier, this.corroborationCount}): _detections = detections;
+  const DetectionSuccess({required final  List<DetectedObject> detections, required this.processingTimeMs, required this.detector, required this.classifier, this.corroborationCount, this.isEnriching = false}): _detections = detections;
   
 
  final  List<DetectedObject> _detections;
@@ -271,6 +271,7 @@ class DetectionSuccess implements DetectionState {
  final  String detector;
  final  String classifier;
  final  int? corroborationCount;
+@JsonKey() final  bool isEnriching;
 
 /// Create a copy of DetectionState
 /// with the given fields replaced by the non-null parameter values.
@@ -282,16 +283,16 @@ $DetectionSuccessCopyWith<DetectionSuccess> get copyWith => _$DetectionSuccessCo
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is DetectionSuccess&&const DeepCollectionEquality().equals(other._detections, _detections)&&(identical(other.processingTimeMs, processingTimeMs) || other.processingTimeMs == processingTimeMs)&&(identical(other.detector, detector) || other.detector == detector)&&(identical(other.classifier, classifier) || other.classifier == classifier)&&(identical(other.corroborationCount, corroborationCount) || other.corroborationCount == corroborationCount));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is DetectionSuccess&&const DeepCollectionEquality().equals(other._detections, _detections)&&(identical(other.processingTimeMs, processingTimeMs) || other.processingTimeMs == processingTimeMs)&&(identical(other.detector, detector) || other.detector == detector)&&(identical(other.classifier, classifier) || other.classifier == classifier)&&(identical(other.corroborationCount, corroborationCount) || other.corroborationCount == corroborationCount)&&(identical(other.isEnriching, isEnriching) || other.isEnriching == isEnriching));
 }
 
 
 @override
-int get hashCode => Object.hash(runtimeType,const DeepCollectionEquality().hash(_detections),processingTimeMs,detector,classifier,corroborationCount);
+int get hashCode => Object.hash(runtimeType,const DeepCollectionEquality().hash(_detections),processingTimeMs,detector,classifier,corroborationCount,isEnriching);
 
 @override
 String toString() {
-  return 'DetectionState.success(detections: $detections, processingTimeMs: $processingTimeMs, detector: $detector, classifier: $classifier, corroborationCount: $corroborationCount)';
+  return 'DetectionState.success(detections: $detections, processingTimeMs: $processingTimeMs, detector: $detector, classifier: $classifier, corroborationCount: $corroborationCount, isEnriching: $isEnriching)';
 }
 
 
@@ -302,7 +303,7 @@ abstract mixin class $DetectionSuccessCopyWith<$Res> implements $DetectionStateC
   factory $DetectionSuccessCopyWith(DetectionSuccess value, $Res Function(DetectionSuccess) _then) = _$DetectionSuccessCopyWithImpl;
 @useResult
 $Res call({
- List<DetectedObject> detections, int processingTimeMs, String detector, String classifier, int? corroborationCount
+ List<DetectedObject> detections, int processingTimeMs, String detector, String classifier, int? corroborationCount, bool isEnriching
 });
 
 
@@ -319,14 +320,15 @@ class _$DetectionSuccessCopyWithImpl<$Res>
 
 /// Create a copy of DetectionState
 /// with the given fields replaced by the non-null parameter values.
-@pragma('vm:prefer-inline') $Res call({Object? detections = null,Object? processingTimeMs = null,Object? detector = null,Object? classifier = null,Object? corroborationCount = freezed,}) {
+@pragma('vm:prefer-inline') $Res call({Object? detections = null,Object? processingTimeMs = null,Object? detector = null,Object? classifier = null,Object? corroborationCount = freezed,Object? isEnriching = null,}) {
   return _then(DetectionSuccess(
 detections: null == detections ? _self._detections : detections // ignore: cast_nullable_to_non_nullable
 as List<DetectedObject>,processingTimeMs: null == processingTimeMs ? _self.processingTimeMs : processingTimeMs // ignore: cast_nullable_to_non_nullable
 as int,detector: null == detector ? _self.detector : detector // ignore: cast_nullable_to_non_nullable
 as String,classifier: null == classifier ? _self.classifier : classifier // ignore: cast_nullable_to_non_nullable
 as String,corroborationCount: freezed == corroborationCount ? _self.corroborationCount : corroborationCount // ignore: cast_nullable_to_non_nullable
-as int?,
+as int?,isEnriching: null == isEnriching ? _self.isEnriching : isEnriching // ignore: cast_nullable_to_non_nullable
+as bool,
   ));
 }
 
