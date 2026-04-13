@@ -37,7 +37,7 @@ export const envConfig: EnvConfig = {
   classificationMinConfidence: parseFloat(process.env.CLASSIFICATION_MIN_CONFIDENCE || '0.5'),
   ollamaBaseUrl: process.env.OLLAMA_BASE_URL || 'http://localhost:11434',
   ollamaModel: process.env.OLLAMA_MODEL || 'qwen2.5-vl:7b',
-  ollamaEnabled: process.env.OLLAMA_ENABLED === 'true',
+  ollamaEnabled: process.env.OLLAMA_ENABLED !== 'false',
   googleProjectId: process.env.GOOGLE_CLOUD_PROJECT_ID || '',
   googleCredentials: process.env.GOOGLE_APPLICATION_CREDENTIALS || '',
   apiKey: process.env.API_KEY || '',
