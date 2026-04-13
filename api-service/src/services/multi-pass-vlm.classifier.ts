@@ -108,8 +108,8 @@ export class MultiPassVlmClassifier {
       ),
     );
 
-    // Try primary classifier (Gemini Flash)
-    const primary = this.findClassifier('gemini');
+    // Try primary classifier (Ollama; fallback to Gemini)
+    const primary = this.findClassifier('ollama') ?? this.findClassifier('gemini');
     if (primary) {
       try {
         const results = await this.runMultiPass(primary, image, cropBuffers, crops, imageWidth, imageHeight);
@@ -118,7 +118,7 @@ export class MultiPassVlmClassifier {
         }
 
         logger.info({ count: results.length, threshold: this.config.multiPassRetryThreshold }, 'Below retry threshold, trying secondary');
-        const secondary = this.findClassifier('claude') || this.findClassifier('ollama');
+        const secondary = this.classifiers.find((c) => c !== primary && (c.name === 'claude' || c.name === 'ollama' || c.name === 'gemini'));
         if (secondary) {
           const overviewRetry = await this.callClassifier(secondary, image);
           const combined = deduplicateObjects([...results, ...overviewRetry]);
@@ -131,9 +131,9 @@ export class MultiPassVlmClassifier {
       }
     }
 
-    // Fallback: try Claude or Ollama for full multi-pass
+    // Fallback: try remaining classifiers
     for (const classifier of this.classifiers) {
-      if (classifier.name === 'gemini') continue;
+      if (primary && classifier.name === primary.name) continue;
       try {
         return await this.runMultiPass(classifier, image, cropBuffers, crops, imageWidth, imageHeight);
       } catch (error) {
