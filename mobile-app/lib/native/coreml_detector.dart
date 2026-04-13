@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'package:flutter/foundation.dart' show visibleForTesting;
 import 'package:flutter/services.dart';
 
 class CoreMLBox {
@@ -24,6 +25,11 @@ class CoreMLBox {
 class CoreMLDetector {
   static const _channel = MethodChannel('com.allmythings/coreml_detector');
 
+  /// Test-only: set to bypass the platform channel in unit tests.
+  /// Always reset to null in tearDown.
+  @visibleForTesting
+  static Future<List<CoreMLBox>> Function(File)? detectOverride;
+
   /// Returns true if the CoreML model is bundled and available.
   static Future<bool> isAvailable() async {
     try {
@@ -36,6 +42,7 @@ class CoreMLDetector {
   /// Run YOLO inference on [imageFile]. Returns detected boxes with coarse labels.
   /// Confidence threshold 0.3 — cast wide net, VLM prunes false positives.
   static Future<List<CoreMLBox>> detect(File imageFile) async {
+    if (detectOverride != null) return detectOverride!(imageFile);
     final bytes = await imageFile.readAsBytes();
     try {
       final raw = await _channel.invokeMethod<List<dynamic>>(
