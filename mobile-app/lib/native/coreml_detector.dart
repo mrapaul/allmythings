@@ -28,7 +28,7 @@ class CoreMLDetector {
   static Future<bool> isAvailable() async {
     try {
       return await _channel.invokeMethod<bool>('isAvailable') ?? false;
-    } on PlatformException {
+    } catch (_) {
       return false;
     }
   }

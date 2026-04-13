@@ -12,7 +12,7 @@ class MacServerDiscovery {
         {'timeoutSeconds': timeout.inSeconds},
       );
       return url;
-    } on PlatformException {
+    } catch (_) {
       return null;
     }
   }
