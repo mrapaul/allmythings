@@ -45,18 +45,18 @@ class CoreMLDetector {
       if (raw == null) return [];
       return raw.map((item) {
         final m = Map<String, dynamic>.from(item as Map);
-        final box = (m['box'] as List<dynamic>).cast<double>();
+        final box = m['box'] as List<dynamic>;
         return CoreMLBox(
           label: m['label'] as String,
           confidence: (m['confidence'] as num).toDouble(),
           boxIndex: (m['boxIndex'] as num).toInt(),
-          x: box[0],
-          y: box[1],
-          width: box[2],
-          height: box[3],
+          x: (box[0] as num).toDouble(),
+          y: (box[1] as num).toDouble(),
+          width: (box[2] as num).toDouble(),
+          height: (box[3] as num).toDouble(),
         );
       }).toList();
-    } on PlatformException {
+    } catch (_) {
       return [];
     }
   }
