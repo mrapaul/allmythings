@@ -58,13 +58,16 @@ class CoreMLDetector: NSObject {
             return
         }
 
-        let request = VNCoreMLRequest(model: vnModel) { [weak self] request, error in
-            if let error = error {
-                result(FlutterError(code: "INFERENCE_ERROR", message: error.localizedDescription, details: nil))
-                return
+        let request = VNCoreMLRequest(model: vnModel) { request, error in
+            // VNCoreMLRequest completion fires on the global background thread — marshal to main
+            DispatchQueue.main.async {
+                if let error = error {
+                    result(FlutterError(code: "INFERENCE_ERROR", message: error.localizedDescription, details: nil))
+                    return
+                }
+                let detections = CoreMLDetector.mapObservations(request.results)
+                result(detections)
             }
-            let detections = self?.mapObservations(request.results) ?? []
-            result(detections)
         }
         request.imageCropAndScaleOption = .scaleFit
 
@@ -73,12 +76,17 @@ class CoreMLDetector: NSObject {
             do {
                 try handler.perform([request])
             } catch {
-                result(FlutterError(code: "HANDLER_ERROR", message: error.localizedDescription, details: nil))
+                // Only call result here if the completion closure has NOT already called it.
+                // perform() is synchronous — if completion fired, it enqueued on main before this catch runs.
+                // Use main.async to serialize after any pending completion dispatch.
+                DispatchQueue.main.async {
+                    result(FlutterError(code: "HANDLER_ERROR", message: error.localizedDescription, details: nil))
+                }
             }
         }
     }
 
-    private func mapObservations(_ results: [Any]?) -> [[String: Any]] {
+    private static func mapObservations(_ results: [Any]?) -> [[String: Any]] {
         guard let observations = results as? [VNRecognizedObjectObservation] else { return [] }
         return observations
             .filter { $0.confidence >= 0.3 }
