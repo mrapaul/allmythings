@@ -87,17 +87,43 @@ Do not use generic categories like "furniture" or "item" if a more specific name
   }
 
   private buildDetectionPrompt(detections: BoundingBoxResult[]): string {
-    const boxes = detections.map((d, i) => ({ index: i, box: d.box, coarse_label: d.coarseLabel }));
+    const boxes = detections.map((d, i) => ({ index: i, coarse_label: d.coarseLabel }));
     return `You are analyzing a photo for a home inventory application.
-
-Objects detected at:
+Objects detected at the following positions:
 ${JSON.stringify(boxes, null, 2)}
 
-For each, return a minimal JSON array of objects with exactly 3 keys: "box_index" (number), "label" (string), "category" (string). Do not add descriptions or other fields to save time. Return valid JSON only.`;
+For each object, return a JSON array. Each element must have exactly these keys:
+- "box_index": number (match the index above)
+- "label": string (specific name, e.g. "Eames lounge chair", not just "chair")
+- "category": string (e.g. "Furniture", "Electronics")
+- "brand": string or null (manufacturer/brand if identifiable, else null)
+- "model": string or null (specific model name if identifiable, else null)
+- "primary_color": string (dominant color, e.g. "walnut brown", "matte black")
+- "material": string (primary material, e.g. "oak wood", "brushed steel")
+- "condition": string — one of: "excellent", "good", "fair", "poor"
+- "estimated_value_low": number or null (USD, low estimate for resale)
+- "estimated_value_high": number or null (USD, high estimate for resale)
+
+Return valid JSON array only. No markdown, no explanation.`;
   }
 
   private buildFullImagePrompt(): string {
-    return `Analyze this image and identify all household objects you can see. Return a minimal JSON array of objects with: "box_index", "label", "category", "confidence", "bounding_box". Return valid JSON only.`;
+    return `You are analyzing a photo for a home inventory application.
+Identify all household objects visible in the image. Return a JSON array where each element has:
+- "box_index": number (sequential, starting at 0)
+- "label": string (specific name, e.g. "Eames lounge chair", not just "chair")
+- "category": string (e.g. "Furniture", "Electronics")
+- "brand": string or null
+- "model": string or null
+- "primary_color": string (dominant color)
+- "material": string (primary material)
+- "condition": string — one of: "excellent", "good", "fair", "poor"
+- "estimated_value_low": number or null (USD)
+- "estimated_value_high": number or null (USD)
+- "confidence": number (0.0–1.0)
+- "bounding_box": [y1, x1, y2, x2] normalized 0–1
+
+Return valid JSON array only. No markdown, no explanation.`;
   }
 
   private extractJson(text: string): string {
@@ -176,16 +202,24 @@ For each, return a minimal JSON array of objects with exactly 3 keys: "box_index
       }
     }
 
+    const brand: string | null = item.brand ?? null;
+    const model: string | null = item.model ?? null;
+    const primaryColor: string | null = item.primary_color ?? null;
+    const material: string | null = item.material ?? null;
+    const condition: string | null = item.condition ?? null;
+    const valueLow: number | null = item.estimated_value_low ?? null;
+    const valueHigh: number | null = item.estimated_value_high ?? null;
+
     return {
       boxIndex,
       label: this.capitalize(label),
       category: item.category || 'household item',
-      brand: 'Generic',
-      model: null,
-      colors: [],
-      materials: [],
-      condition: 'good',
-      estimatedValue: null,
+      brand,
+      model,
+      colors: primaryColor ? [primaryColor] : [],
+      materials: material ? [material] : [],
+      condition,
+      estimatedValue: valueLow !== null && valueHigh !== null ? { low: valueLow, high: valueHigh } : null,
       description: `A ${label.toLowerCase()} found in the room.`,
       confidence: item.confidence ?? (detection?.confidence || 0.8),
       boundingBox,
