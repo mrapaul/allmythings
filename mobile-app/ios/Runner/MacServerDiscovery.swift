@@ -2,6 +2,8 @@ import Foundation
 import Flutter
 
 class MacServerDiscovery: NSObject, NetServiceBrowserDelegate, NetServiceDelegate {
+    private static var shared: MacServerDiscovery?
+
     private var browser: NetServiceBrowser?
     private var service: NetService?
     private var completion: ((String?) -> Void)?
@@ -10,12 +12,15 @@ class MacServerDiscovery: NSObject, NetServiceBrowserDelegate, NetServiceDelegat
 
     static func register(messenger: FlutterBinaryMessenger) {
         let instance = MacServerDiscovery()
+        MacServerDiscovery.shared = instance  // explicit app-lifetime ownership; prevents deallocation
         let channel = FlutterMethodChannel(
             name: "com.allmythings/server_discovery",
             binaryMessenger: messenger
         )
         instance.channel = channel
-        channel.setMethodCallHandler(instance.handle)
+        channel.setMethodCallHandler { [weak instance] call, result in
+            instance?.handle(call, result: result) ?? result(FlutterMethodNotImplemented)
+        }
     }
 
     func handle(_ call: FlutterMethodCall, result: @escaping FlutterResult) {
@@ -40,6 +45,7 @@ class MacServerDiscovery: NSObject, NetServiceBrowserDelegate, NetServiceDelegat
 
         browser = NetServiceBrowser()
         browser?.delegate = self
+        browser?.schedule(in: .main, forMode: .common)  // ensure delegate callbacks fire on main thread
         browser?.searchForServices(ofType: "_http._tcp.", inDomain: "local.")
     }
 
@@ -67,6 +73,8 @@ class MacServerDiscovery: NSObject, NetServiceBrowserDelegate, NetServiceDelegat
     private func finish(url: String?) {
         timer?.invalidate()
         timer = nil
+        service?.delegate = nil  // prevent callbacks on torn-down state
+        service = nil
         browser?.stop()
         browser = nil
         let c = completion
