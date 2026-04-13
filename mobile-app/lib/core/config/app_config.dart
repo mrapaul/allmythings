@@ -14,18 +14,14 @@ class AppConfig {
       _resolvedApiBaseUrl = 'http://localhost:14000';
       return;
     }
-    if (!kIsWeb) {
-      try {
-        if (Platform.isAndroid) {
-          _resolvedApiBaseUrl = 'http://10.0.2.2:14000';
-          return;
-        }
-        if (Platform.isIOS) {
-          final discovered = await MacServerDiscovery.resolve();
-          _resolvedApiBaseUrl = discovered ?? 'http://localhost:14000';
-          return;
-        }
-      } on Exception catch (_) {}
+    if (Platform.isAndroid) {
+      _resolvedApiBaseUrl = 'http://10.0.2.2:14000';
+      return;
+    }
+    if (Platform.isIOS) {
+      final discovered = await MacServerDiscovery.resolve();
+      _resolvedApiBaseUrl = discovered ?? 'http://localhost:14000';
+      return;
     }
     _resolvedApiBaseUrl = 'http://localhost:14000';
   }
