@@ -38,6 +38,19 @@ describe('OllamaClassifier rich attribute prompts', () => {
       expect(prompt).toContain('excellent');
       expect(prompt).toContain('poor');
     });
+
+    it('includes box position in the prompt', () => {
+      const classifier = new OllamaClassifier(config);
+      const prompt = (classifier as any).buildDetectionPrompt([sampleDetection]);
+      expect(prompt).toContain('0.1'); // box coordinate present
+    });
+
+    it('includes confidence and bounding_box output fields', () => {
+      const classifier = new OllamaClassifier(config);
+      const prompt = (classifier as any).buildDetectionPrompt([sampleDetection]);
+      expect(prompt).toContain('confidence');
+      expect(prompt).toContain('bounding_box');
+    });
   });
 
   describe('buildFullImagePrompt', () => {
@@ -134,6 +147,20 @@ describe('OllamaClassifier rich attribute prompts', () => {
 
       const result = (classifier as any).mapToClassifiedObject(item, detections);
       expect(result.estimatedValue).toBeNull();
+    });
+
+    it('rejects invalid condition values', () => {
+      const classifier = new OllamaClassifier(config);
+      const detections = [sampleDetection];
+      const item = {
+        box_index: 0,
+        label: 'chair',
+        category: 'Furniture',
+        condition: 'like new',
+      };
+
+      const result = (classifier as any).mapToClassifiedObject(item, detections);
+      expect(result.condition).toBeNull();
     });
   });
 });

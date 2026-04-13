@@ -87,7 +87,7 @@ Do not use generic categories like "furniture" or "item" if a more specific name
   }
 
   private buildDetectionPrompt(detections: BoundingBoxResult[]): string {
-    const boxes = detections.map((d, i) => ({ index: i, coarse_label: d.coarseLabel }));
+    const boxes = detections.map((d, i) => ({ index: i, coarse_label: d.coarseLabel, box: d.box }));
     return `You are analyzing a photo for a home inventory application.
 Objects detected at the following positions:
 ${JSON.stringify(boxes, null, 2)}
@@ -103,6 +103,8 @@ For each object, return a JSON array. Each element must have exactly these keys:
 - "condition": string — one of: "excellent", "good", "fair", "poor"
 - "estimated_value_low": number or null (USD, low estimate for resale)
 - "estimated_value_high": number or null (USD, high estimate for resale)
+- "confidence": number (0.0–1.0)
+- "bounding_box": [y1, x1, y2, x2] normalized 0–1
 
 Return valid JSON array only. No markdown, no explanation.`;
   }
@@ -202,26 +204,28 @@ Return valid JSON array only. No markdown, no explanation.`;
       }
     }
 
-    const brand: string | null = item.brand ?? null;
-    const model: string | null = item.model ?? null;
-    const primaryColor: string | null = item.primary_color ?? null;
-    const material: string | null = item.material ?? null;
-    const condition: string | null = item.condition ?? null;
-    const valueLow: number | null = item.estimated_value_low ?? null;
-    const valueHigh: number | null = item.estimated_value_high ?? null;
+    const VALID_CONDITIONS = ['excellent', 'good', 'fair', 'poor'] as const;
+    const rawCondition = item.condition as string | null | undefined;
+    const condition: string | null =
+      rawCondition != null && (VALID_CONDITIONS as readonly string[]).includes(rawCondition)
+        ? rawCondition
+        : null;
 
     return {
       boxIndex,
       label: this.capitalize(label),
-      category: item.category || 'household item',
-      brand,
-      model,
-      colors: primaryColor ? [primaryColor] : [],
-      materials: material ? [material] : [],
+      category: (item.category as string) || 'household item',
+      brand: (item.brand as string | null) ?? null,
+      model: (item.model as string | null) ?? null,
+      colors: item.primary_color ? [item.primary_color as string] : [],
+      materials: item.material ? [item.material as string] : [],
       condition,
-      estimatedValue: valueLow !== null && valueHigh !== null ? { low: valueLow, high: valueHigh } : null,
+      estimatedValue:
+        item.estimated_value_low != null && item.estimated_value_high != null
+          ? { low: item.estimated_value_low as number, high: item.estimated_value_high as number }
+          : null,
       description: `A ${label.toLowerCase()} found in the room.`,
-      confidence: item.confidence ?? (detection?.confidence || 0.8),
+      confidence: (item.confidence as number | undefined) ?? (detection?.confidence ?? 0.8),
       boundingBox,
     };
   }
