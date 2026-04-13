@@ -7,10 +7,11 @@ class MacServerDiscovery: NSObject, NetServiceBrowserDelegate, NetServiceDelegat
     private var browser: NetServiceBrowser?
     private var service: NetService?
     private var completion: ((String?) -> Void)?
-    private var timer: Timer?
+    private var timeoutWork: DispatchWorkItem?
     private var channel: FlutterMethodChannel?
 
     static func register(messenger: FlutterBinaryMessenger) {
+        guard shared == nil else { return }  // single-registration guard
         let instance = MacServerDiscovery()
         MacServerDiscovery.shared = instance  // explicit app-lifetime ownership; prevents deallocation
         let channel = FlutterMethodChannel(
@@ -39,9 +40,9 @@ class MacServerDiscovery: NSObject, NetServiceBrowserDelegate, NetServiceDelegat
     private func discover(timeout: TimeInterval, completion: @escaping (String?) -> Void) {
         self.completion = completion
 
-        timer = Timer.scheduledTimer(withTimeInterval: timeout, repeats: false) { [weak self] _ in
-            self?.finish(url: nil)
-        }
+        let work = DispatchWorkItem { [weak self] in self?.finish(url: nil) }
+        timeoutWork = work
+        DispatchQueue.main.asyncAfter(deadline: .now() + timeout, execute: work)
 
         browser = NetServiceBrowser()
         browser?.delegate = self
@@ -71,8 +72,8 @@ class MacServerDiscovery: NSObject, NetServiceBrowserDelegate, NetServiceDelegat
     }
 
     private func finish(url: String?) {
-        timer?.invalidate()
-        timer = nil
+        timeoutWork?.cancel()
+        timeoutWork = nil
         service?.delegate = nil  // prevent callbacks on torn-down state
         service = nil
         browser?.stop()
