@@ -2,6 +2,15 @@ import { describe, it, expect, vi } from 'vitest';
 import { MultiPassVlmClassifier, deduplicateObjects, cropQuadrant, jaccardSimilarity } from '../../src/services/multi-pass-vlm.classifier';
 import { ClassifiedObject } from '../../src/providers/classifier.interface';
 
+vi.mock('sharp', () => {
+  const sharpInstance = {
+    metadata: vi.fn().mockResolvedValue({ width: 100, height: 100 }),
+    extract: vi.fn().mockReturnThis(),
+    toBuffer: vi.fn().mockResolvedValue(Buffer.alloc(10)),
+  };
+  return { default: vi.fn().mockReturnValue(sharpInstance) };
+});
+
 function makeObj(overrides: Partial<ClassifiedObject> = {}): ClassifiedObject {
   return {
     boxIndex: 0,
@@ -77,5 +86,43 @@ describe('cropQuadrant', () => {
   it('should return correct crop coords for bottom-right', () => {
     const crop = cropQuadrant('bottom-right', 1000, 800, 0.55);
     expect(crop).toEqual({ x: 450, y: 360, width: 550, height: 440 });
+  });
+});
+
+describe('MultiPassVlmClassifier primary selection', () => {
+  const config = { multiPassQuadrantOverlap: 0.55, multiPassRetryThreshold: 2 } as any;
+
+  function makeClassifier(name: string, results: ClassifiedObject[] = []) {
+    return {
+      name,
+      classify: vi.fn().mockResolvedValue(results),
+      generateDetectionPrompt: vi.fn().mockResolvedValue(''),
+      healthCheck: vi.fn().mockResolvedValue(true),
+    };
+  }
+
+  it('uses ollama as primary when available', async () => {
+    const ollama = makeClassifier('ollama', [makeObj()]);
+    const gemini = makeClassifier('gemini', [makeObj(), makeObj(), makeObj()]);
+    const classifier = new MultiPassVlmClassifier([gemini, ollama], config);
+    await classifier.detect(Buffer.alloc(10));
+    expect(ollama.classify).toHaveBeenCalled();
+    expect(gemini.classify).not.toHaveBeenCalled();
+  });
+
+  it('falls back to gemini when ollama is not registered', async () => {
+    const gemini = makeClassifier('gemini', [makeObj(), makeObj(), makeObj()]);
+    const classifier = new MultiPassVlmClassifier([gemini], config);
+    await classifier.detect(Buffer.alloc(10));
+    expect(gemini.classify).toHaveBeenCalled();
+  });
+
+  it('tries secondary (not primary) when primary returns below threshold', async () => {
+    const ollama = makeClassifier('ollama', []); // returns 0, below threshold of 2
+    const gemini = makeClassifier('gemini', [makeObj()]);
+    const classifier = new MultiPassVlmClassifier([ollama, gemini], config);
+    await classifier.detect(Buffer.alloc(10));
+    expect(ollama.classify).toHaveBeenCalled();
+    expect(gemini.classify).toHaveBeenCalled(); // secondary should fire
   });
 });

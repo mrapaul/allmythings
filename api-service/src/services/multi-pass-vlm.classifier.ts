@@ -118,7 +118,7 @@ export class MultiPassVlmClassifier {
         }
 
         logger.info({ count: results.length, threshold: this.config.multiPassRetryThreshold }, 'Below retry threshold, trying secondary');
-        const secondary = this.classifiers.find((c) => c !== primary && (c.name === 'claude' || c.name === 'ollama' || c.name === 'gemini'));
+        const secondary = this.classifiers.find((c) => c !== primary);
         if (secondary) {
           const overviewRetry = await this.callClassifier(secondary, image);
           const combined = deduplicateObjects([...results, ...overviewRetry]);
@@ -133,7 +133,7 @@ export class MultiPassVlmClassifier {
 
     // Fallback: try remaining classifiers
     for (const classifier of this.classifiers) {
-      if (primary && classifier.name === primary.name) continue;
+      if (classifier === primary) continue;
       try {
         return await this.runMultiPass(classifier, image, cropBuffers, crops, imageWidth, imageHeight);
       } catch (error) {
