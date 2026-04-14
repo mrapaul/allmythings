@@ -10,7 +10,8 @@ const EVAL_ROOT = path.dirname(new URL(import.meta.url).pathname);
 const FIXTURES = path.join(EVAL_ROOT, 'fixtures');
 const ORACLES  = path.join(EVAL_ROOT, 'oracle');
 const RUNS     = path.join(EVAL_ROOT, 'runs');
-const OLLAMA   = process.env.OLLAMA_BASE_URL ?? 'http://localhost:11434';
+const OLLAMA      = process.env.OLLAMA_BASE_URL ?? 'http://localhost:11434';
+const HYBRID_URL  = process.env.HYBRID_URL ?? 'http://localhost:14000/v1/detect?mode=full';
 
 const PROMPT = `You are cataloging a photo for a home inventory. Identify EVERY distinct physical item visible - furniture, appliances, electronics, decor, plants, lighting, wall art, rugs, curtains, and any other discrete objects. Aim for 6-15 items. Do not include the room itself, walls, ceiling, or floor as items (but DO include rugs, carpets, window treatments).
 
@@ -65,6 +66,22 @@ async function runModel(model, imagePath) {
     }
   }
   return { text: '', elapsedMs: Date.now() - t0, error: String(lastErr), attempt: MAX_ATTEMPTS };
+}
+
+async function runHybrid(imagePath) {
+  const t0 = Date.now();
+  const form = new FormData();
+  const file = new Blob([await fs.readFile(imagePath)], { type: 'image/jpeg' });
+  form.append('file', file, 'image.jpg');
+  try {
+    const res = await fetch(HYBRID_URL, { method: 'POST', body: form, signal: AbortSignal.timeout(180_000) });
+    if (!res.ok) return { text: '', elapsedMs: Date.now() - t0, error: `HTTP ${res.status}`, attempt: 1 };
+    const data = await res.json();
+    const items = (data.fused ?? []).map((d) => ({ label: d.label, category: d.category, count: 1 }));
+    return { text: JSON.stringify(items), elapsedMs: Date.now() - t0, attempt: 1 };
+  } catch (e) {
+    return { text: '', elapsedMs: Date.now() - t0, error: String(e), attempt: 1 };
+  }
 }
 
 function extractJson(text) {
@@ -148,7 +165,7 @@ async function main() {
       const name = f.replace('.jpg', '');
       const imagePath = path.join(FIXTURES, f);
       process.stdout.write(`  ${name}: `);
-      const runResult = await runModel(model, imagePath);
+      const runResult = model.startsWith('hybrid:') ? await runHybrid(imagePath) : await runModel(model, imagePath);
       if (runResult.error) {
         failures++;
         console.log(`ERROR (${runResult.elapsedMs}ms): ${runResult.error.slice(0, 80)}`);
