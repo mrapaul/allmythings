@@ -328,6 +328,19 @@ If Phase 4 (OWLv2 + 7B) doesn't hit 85% recall, swap Qwen 7B → 32B (MLX-4bit, 
 | 7 | Inventory feed shows per-item records, not per-photo; search finds items by label or attribute | Manual UI test |
 | 8 | No AGPL-licensed model in production bundle (iOS or server) | `grep -r "ultralytics\|AGPL" .` |
 
+## Platform Strategy: iPhone First, Android-Ready
+
+The mobile architecture targets both iPhone and Android; iPhone ships first. Choices that keep Android viable:
+
+- **Tier 1 model format:** YOLOv10-S gets exported to **both** CoreML (iPhone) and TFLite or ONNX Runtime Mobile (Android). The Dart `CoreMLDetector` becomes `OnDeviceDetector` with platform-specific handlers behind one MethodChannel interface. Apple Vision remains iPhone-only as a platform-specific enhancement.
+- **API surface is platform-agnostic:** SSE streaming + JSON works identically on both platforms. The `DetectionRepository` already uses Dio (cross-platform).
+- **mDNS service discovery:** the Mac server's Bonjour broadcast is consumed by iPhone's `NetServiceBrowser`; Android uses `NsdManager` — same service name (`allmythings-server`), same `_http._tcp.` type, different native APIs behind one Dart interface.
+- **Local network permission prompts:** iOS has `NSLocalNetworkUsageDescription`; Android 12+ needs `android.permission.ACCESS_WIFI_STATE` + runtime prompt for local network. Both wrapped in one `permissions_handler` flow.
+- **Drift ORM:** already works identically on both platforms.
+- **Camera:** the `camera` Flutter plugin supports both. Real-time YOLO inference runs via MethodChannel to native code on each platform.
+
+Android-specific work deferred to a follow-up plan after iPhone ships: TFLite conversion, Android native handlers for both MethodChannels, Android manifest permissions, Play Store submission. No architecture decision in this spec should require rework for Android; if one does, call it out during review.
+
 ## What's Explicitly Out of Scope
 
 - Multi-user / multi-tenant (this is a personal-use home inventory)
