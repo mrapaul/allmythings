@@ -1,0 +1,133 @@
+sofa
+armchair
+office chair
+dining chair
+stool
+coffee table
+side table
+dining table
+desk
+bookshelf
+bookcase
+cabinet
+sideboard
+credenza
+chest of drawers
+bed
+nightstand
+wardrobe
+floor lamp
+table lamp
+desk lamp
+pendant light
+chandelier
+wall sconce
+ceiling fan
+television
+monitor
+laptop
+keyboard
+mouse
+speaker
+soundbar
+router
+printer
+camera
+headphones
+game console
+remote control
+refrigerator
+microwave
+oven
+dishwasher
+washing machine
+dryer
+coffee machine
+kettle
+toaster
+blender
+pot
+pan
+cutting board
+snake plant
+monstera
+fiddle leaf fig
+pothos
+cactus
+succulent
+orchid
+fern
+bamboo plant
+potted plant
+planter
+vase
+flowers
+picture frame
+painting
+wall art
+mirror
+clock
+candle
+candle holder
+sculpture
+figurine
+bookend
+tray
+basket
+box
+storage bin
+rug
+carpet
+curtain
+blinds
+cushion
+throw pillow
+blanket
+throw blanket
+towel
+tablecloth
+placemat
+book
+magazine
+notebook
+pen
+phone
+charger
+cable
+power strip
+humidifier
+air purifier
+fan
+heater
+thermostat
+smoke detector
+trash can
+laundry basket
+shoe rack
+coat rack
+umbrella
+bag
+backpack
+suitcase
+shoes
+hat
+jacket
+toy
+stuffed animal
+musical instrument
+guitar
+plant stand
+broom
+vacuum
+yoga mat
+dumbbell
+perfume bottle
+watch
+clock radio
+decorative plate
+bowl
+mug
+plate
+glass
+bottle
+wine rack
