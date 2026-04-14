@@ -3,6 +3,7 @@ import { ObjectClassifier, ClassifiedObject } from '../providers/classifier.inte
 import { CircuitBreaker } from '../utils/circuit-breaker';
 import { EnsembleFusionService, FastPassDetection, FusedDetection } from './ensemble-fusion.service';
 import { MultiPassVlmClassifier } from './multi-pass-vlm.classifier';
+import { HybridPipelineService } from './hybrid-pipeline.service';
 import { withSpan } from '../telemetry/pipeline-tracer';
 import { StepResult, isOk, isFail } from '../telemetry/step-result';
 import { injectTraceHeaders } from '../telemetry/trace-context';
@@ -39,6 +40,8 @@ interface PipelineOptions {
   multiPassVlm: MultiPassVlmClassifier;
   classifiers: ObjectClassifier[];
   detectors: ObjectDetector[];
+  hybrid?: HybridPipelineService;
+  hybridEnabled?: boolean;
 }
 
 export class DetectionPipelineService {
@@ -47,11 +50,15 @@ export class DetectionPipelineService {
   private fusionService: EnsembleFusionService;
   private detectors: { provider: ObjectDetector; breaker: CircuitBreaker }[];
   private classifiers: { provider: ObjectClassifier; breaker: CircuitBreaker }[];
+  private hybrid?: HybridPipelineService;
+  private hybridEnabled: boolean;
 
   constructor(options: PipelineOptions) {
     this.fastDetectorUrl = options.fastDetectorUrl;
     this.multiPassVlm = options.multiPassVlm;
     this.fusionService = new EnsembleFusionService();
+    this.hybrid = options.hybrid;
+    this.hybridEnabled = !!options.hybridEnabled;
 
     const breakerOptions = { failureThreshold: 3, resetTimeout: 30000, halfOpenRequests: 2 };
     this.detectors = options.detectors.map((d) => ({ provider: d, breaker: new CircuitBreaker(d.name, breakerOptions) }));
@@ -142,13 +149,15 @@ export class DetectionPipelineService {
   }
 
   private async runDeepPass(image: Buffer, photoId: string): Promise<StepResult<DeepPassResult>> {
-    return withSpan('detection.deep_pass', { 'detection.photo_id': photoId }, async () => {
+    return withSpan('detection.deep_pass', { 'detection.photo_id': photoId, 'detection.hybrid': this.hybridEnabled }, async () => {
       const start = Date.now();
-      const detections = await this.multiPassVlm.detect(image);
+      const detections = this.hybridEnabled && this.hybrid
+        ? await this.hybrid.detect(image)
+        : await this.multiPassVlm.detect(image);
       return {
         detections,
         processingTimeMs: Date.now() - start,
-        provider: 'multi-pass-vlm',
+        provider: this.hybridEnabled ? 'hybrid-owlv2-qwen' : 'multi-pass-vlm',
       };
     });
   }

@@ -17,6 +17,8 @@ import { OllamaClassifier } from './providers/ollama.classifier';
 import { MockClassifier } from './providers/mock.classifier';
 import { ClaudeClassifier } from './providers/claude.classifier';
 import { MultiPassVlmClassifier } from './services/multi-pass-vlm.classifier';
+import { Owlv2Detector } from './providers/owlv2.detector';
+import { HybridPipelineService } from './services/hybrid-pipeline.service';
 import { advertiseService } from './utils/bonjour-advertiser';
 
 process.on('uncaughtException', (err) => {
@@ -91,17 +93,25 @@ function createDefaultPipeline(): DetectionPipelineService {
   if (envConfig.claudeApiKey) {
     classifiers.push(new ClaudeClassifier(envConfig));
   }
+  let ollamaClassifier: OllamaClassifier | undefined;
   if (envConfig.ollamaEnabled) {
-    classifiers.push(new OllamaClassifier(envConfig));
+    ollamaClassifier = new OllamaClassifier(envConfig);
+    classifiers.push(ollamaClassifier);
   }
 
   const multiPassVlm = new MultiPassVlmClassifier(classifiers, envConfig);
+
+  const owlv2 = new Owlv2Detector(envConfig.owlv2Url, 0.15);
+  const hybridClassifier = ollamaClassifier ?? classifiers[0];
+  const hybrid = hybridClassifier ? new HybridPipelineService(owlv2, hybridClassifier) : undefined;
 
   return new DetectionPipelineService({
     fastDetectorUrl: envConfig.detectionServiceUrl,
     multiPassVlm,
     classifiers,
     detectors,
+    hybrid,
+    hybridEnabled: envConfig.hybridEnabled,
   });
 }
 
