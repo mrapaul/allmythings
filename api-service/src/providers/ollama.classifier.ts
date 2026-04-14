@@ -20,29 +20,59 @@ export class OllamaClassifier implements ObjectClassifier {
       ? this.buildDetectionPrompt(detections)
       : this.buildFullImagePrompt();
 
-    const response = await fetch(`${this.baseUrl}/api/generate`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        model: this.ollamaModel,
-        prompt,
-        images: [image.toString('base64')],
-        stream: false,
-        options: {
-          // Default qwen2.5vl context is 128K → allocates 30GB+ VRAM. One image + JSON output
-          // fits comfortably in 4096 tokens and keeps the model under 6GB VRAM.
-          num_ctx: 4096,
-          temperature: 0.2,
-        },
-      }),
-      signal: AbortSignal.timeout(this.timeoutMs),
-    });
+    // Retry transient Ollama errors (500s from GGML_ASSERT happen under memory pressure)
+    const MAX_ATTEMPTS = 3;
+    let response: Response | null = null;
+    for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
+      if (attempt > 1) {
+        // GGML_ASSERT crashes the runner — force a warmup to make Ollama respawn it
+        logger.info({ attempt }, 'Warming up Ollama runner before retry');
+        await fetch(`${this.baseUrl}/api/generate`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            model: this.ollamaModel,
+            prompt: 'hi',
+            stream: false,
+            options: { num_ctx: 4096, num_predict: 1 },
+          }),
+          signal: AbortSignal.timeout(30000),
+        }).catch(() => undefined);
+      }
+      response = await fetch(`${this.baseUrl}/api/generate`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          model: this.ollamaModel,
+          prompt,
+          images: [image.toString('base64')],
+          stream: false,
+          options: {
+            // Default qwen2.5vl context is 128K → allocates 30GB+ VRAM. One image + JSON output
+            // fits comfortably in 4096 tokens and keeps the model under 6GB VRAM.
+            num_ctx: 4096,
+            temperature: 0.2,
+          },
+        }),
+        signal: AbortSignal.timeout(this.timeoutMs),
+      });
 
-    if (!response.ok) {
-      throw new Error(`Ollama returned ${response.status}`);
+      if (response.ok) break;
+
+      const body = await response.text().catch(() => '<unreadable>');
+      logger.warn({ status: response.status, attempt, body: body.slice(0, 300) },
+        `Ollama returned ${response.status}, ${attempt < MAX_ATTEMPTS ? 'retrying' : 'giving up'}`);
+      if (attempt === MAX_ATTEMPTS) {
+        throw new Error(`Ollama returned ${response.status}: ${body.slice(0, 200)}`);
+      }
     }
 
-    const data: any = await response.json();
+    if (!response!.ok) {
+      // Unreachable because of the throw above; kept for the type system.
+      throw new Error('Ollama response was not ok after retries');
+    }
+
+    const data: any = await response!.json();
     const text = data.response || '';
 
     try {
