@@ -171,3 +171,15 @@ db-new:
 	$(DBMATE) new $(NAME)
 
 .PHONY: help setup install install-api install-mobile dev dev-api dev-mobile build build-api build-mobile test test-api test-mobile lint lint-api lint-mobile format format-api format-mobile generate clean clean-api clean-mobile build-api-raw build-mobile-raw verify guarantee test-ios release-ios test-iphone db-up db-down db-new
+
+.PHONY: eval eval-ci eval-baseline
+
+eval: ## Run eval harness on all configured candidate models
+	node eval/harness.mjs qwen2.5vl:7b qwen2.5vl:3b llava:latest moondream:latest
+
+eval-ci: ## Run eval gated by eval/baseline.json
+	node eval/harness.mjs qwen2.5vl:7b qwen2.5vl:3b llava:latest moondream:latest --ci
+
+eval-baseline: ## Re-snapshot current results as new baseline (commit after)
+	node eval/harness.mjs qwen2.5vl:7b qwen2.5vl:3b llava:latest moondream:latest
+	@latest=$$(ls -t eval/report-*.json | head -1); cp "$$latest" eval/baseline.json; echo "Baseline = $$latest"
