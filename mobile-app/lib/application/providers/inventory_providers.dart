@@ -6,8 +6,10 @@ import 'package:all_my_things/application/providers/database_provider.dart';
 import 'package:all_my_things/application/providers/detection_providers.dart';
 import 'package:all_my_things/application/providers/service_providers.dart';
 import 'package:all_my_things/data/database/app_database.dart';
+import 'package:all_my_things/data/repositories/detection_repository.dart';
 import 'package:all_my_things/data/repositories/inventory_repository.dart';
 import 'package:all_my_things/domain/models/detected_object.dart';
+import 'package:all_my_things/native/coreml_detector.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:riverpod/src/providers/future_provider.dart';
@@ -55,47 +57,92 @@ class InventoryListNotifier extends AsyncNotifier<List<InventoryItem>> {
   }
 
   Future<void> _runBackgroundDetection(int itemId, File imageFile) async {
-    try {
-      final repository = await ref.read(inventoryRepositoryProvider.future);
-      final detectionRepository = ref.read(detectionRepositoryProvider);
-      final imageService = ref.read(imageProcessingServiceProvider);
+    final repository = await ref.read(inventoryRepositoryProvider.future);
+    final imageService = ref.read(imageProcessingServiceProvider);
 
-      // Trigger detection
+    // Tier 1: CoreML on-device — always runs, used as fallback if Mac fails
+    final coreMLBoxes = await CoreMLDetector.detect(imageFile);
+    debugPrint('[DETECT] CoreML returned ${coreMLBoxes.length} boxes for item $itemId');
+
+    List<DetectedObject>? detections;
+    String classifier = 'none';
+    String detector = 'coreml';
+    int processingTimeMs = 0;
+
+    // Tier 2: Mac deep pass — tries for rich attributes
+    try {
+      final detectionRepository = ref.read(detectionRepositoryProvider);
+      debugPrint('[DETECT] Calling Mac API for item $itemId');
       final result = await detectionRepository.detectObjects(imageFile);
-      
-      if (result.detections.isEmpty) {
+      debugPrint('[DETECT] Mac returned ${result.detections.length} detections in ${result.processingTimeMs}ms');
+
+      if (result.detections.isNotEmpty) {
+        detections = result.detections;
+        detector = result.detector;
+        classifier = result.classifier;
+        processingTimeMs = result.processingTimeMs;
+      }
+    } catch (e) {
+      debugPrint('[DETECT] Mac call failed for item $itemId: $e');
+    }
+
+    // Fallback: use CoreML boxes if Mac gave nothing
+    if (detections == null && coreMLBoxes.isNotEmpty) {
+      detections = coreMLBoxes.map(_coreMLBoxToDetectedObject).toList();
+      classifier = 'offline';
+      debugPrint('[DETECT] Using ${detections.length} CoreML boxes as fallback');
+    }
+
+    try {
+      if (detections == null || detections.isEmpty) {
         await repository.updateItemStatus(itemId: itemId, status: 'failed');
       } else {
-        // Use the first detection for the final thumbnail
-        final bestDetection = result.detections.first;
+        final bestDetection = detections.first;
         final finalThumbnail = await imageService.generateThumbnail(
           imageFile,
           bestDetection.boundingBox,
         );
 
-        // Update item with results - set to 'unconfirmed' for user review
         await repository.updateItemStatus(
           itemId: itemId,
           status: 'unconfirmed',
-          detectionData: jsonEncode(result.detections.map((d) => d.toJson()).toList()),
+          detectionData: jsonEncode(detections.map((d) => d.toJson()).toList()),
         );
 
-        // Also save the labels to the labels table for FTS
+        final result = DetectionResult(
+          detections: detections,
+          detector: detector,
+          classifier: classifier,
+          processingTimeMs: processingTimeMs,
+        );
         final labels = repository.extractLabelsFromResult(result);
         await repository.updateItemLabels(itemId, labels);
-        
-        // Update thumbnail path to the specific object
+
         await repository.updateThumbnail(itemId, finalThumbnail.path);
       }
     } catch (e) {
-      final repository = await ref.read(inventoryRepositoryProvider.future);
       await repository.updateItemStatus(itemId: itemId, status: 'failed');
-      debugPrint('Background detection failed for item $itemId: $e');
+      debugPrint('[DETECT] DB update failed for item $itemId: $e');
     } finally {
       ref.invalidateSelf();
       ref.invalidate(inventoryStatsProvider);
       ref.invalidate(itemLabelsProvider(itemId));
     }
+  }
+
+  DetectedObject _coreMLBoxToDetectedObject(CoreMLBox box) {
+    return DetectedObject(
+      boxIndex: box.boxIndex,
+      label: box.label,
+      category: 'object',
+      confidence: box.confidence,
+      boundingBox: BoundingBox(
+        x: box.x,
+        y: box.y,
+        width: box.width,
+        height: box.height,
+      ),
+    );
   }
 
   /// Confirm an unconfirmed item after user review

@@ -37,7 +37,9 @@ class CoreMLDetector: NSObject {
     }
 
     private func modelURL() -> URL? {
-        Bundle.main.url(forResource: "yolo11n", withExtension: "mlpackage")
+        // Xcode compiles .mlpackage → .mlmodelc at build time; fall back to .mlpackage for dev builds
+        Bundle.main.url(forResource: "yolo11n", withExtension: "mlmodelc")
+            ?? Bundle.main.url(forResource: "yolo11n", withExtension: "mlpackage")
     }
 
     private func detect(imageData: Data, result: @escaping FlutterResult) {

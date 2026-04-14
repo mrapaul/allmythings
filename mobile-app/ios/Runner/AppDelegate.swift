@@ -16,7 +16,10 @@ import UIKit
         // Register native MethodChannels after the engine is ready.
         // Using pluginRegistry.registrar gives a stable messenger guaranteed available at this point,
         // avoiding the scene-lifecycle race where window?.rootViewController is nil at didFinishLaunching.
-        let messenger = engineBridge.pluginRegistry.registrar(forPlugin: "com.allmythings.channels").messenger
+        guard let registrar = engineBridge.pluginRegistry.registrar(forPlugin: "com.allmythings.channels") else {
+            return
+        }
+        let messenger = registrar.messenger()
         CoreMLDetector.register(messenger: messenger)
         MacServerDiscovery.register(messenger: messenger)
     }

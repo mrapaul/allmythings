@@ -5,6 +5,7 @@ import 'package:all_my_things/data/remote/api_client.dart';
 import 'package:all_my_things/data/repositories/detection_repository.dart';
 import 'package:all_my_things/domain/models/detected_object.dart';
 import 'package:all_my_things/native/coreml_detector.dart';
+import 'package:flutter/foundation.dart' show debugPrint;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 /// Provider for detection repository
@@ -26,7 +27,10 @@ class DetectionNotifier extends Notifier<DetectionState> {
     state = const DetectionState.loading();
 
     // Tier 1: CoreML on-device — instant, no network
+    final coreMLAvailable = await CoreMLDetector.isAvailable();
+    debugPrint('[DETECT] CoreML available: $coreMLAvailable');
     final fastBoxes = await CoreMLDetector.detect(imageFile);
+    debugPrint('[DETECT] CoreML returned ${fastBoxes.length} boxes');
     if (fastBoxes.isNotEmpty) {
       state = DetectionState.success(
         detections: fastBoxes.map(_coreMLBoxToDetectedObject).toList(),
@@ -40,7 +44,9 @@ class DetectionNotifier extends Notifier<DetectionState> {
     // Tier 2: Mac deep pass (enriched attributes)
     try {
       final repository = ref.read(detectionRepositoryProvider);
+      debugPrint('[DETECT] Calling Mac deep pass API...');
       final result = await repository.detectObjects(imageFile);
+      debugPrint('[DETECT] Mac returned ${result.detections.length} detections in ${result.processingTimeMs}ms');
 
       if (result.detections.isEmpty && fastBoxes.isNotEmpty) {
         // Deep pass found nothing — keep CoreML boxes but use deep pass metadata
@@ -70,7 +76,8 @@ class DetectionNotifier extends Notifier<DetectionState> {
         isEnriching: false,
       );
       return result;
-    } catch (e) {
+    } catch (e, st) {
+      debugPrint('[DETECT] Mac call failed: $e\n$st');
       if (fastBoxes.isNotEmpty) {
         // Mac unreachable — show CoreML results with offline indicator
         state = DetectionState.success(

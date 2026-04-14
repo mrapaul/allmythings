@@ -28,6 +28,12 @@ export class OllamaClassifier implements ObjectClassifier {
         prompt,
         images: [image.toString('base64')],
         stream: false,
+        options: {
+          // Default qwen2.5vl context is 128K → allocates 30GB+ VRAM. One image + JSON output
+          // fits comfortably in 4096 tokens and keeps the model under 6GB VRAM.
+          num_ctx: 4096,
+          temperature: 0.2,
+        },
       }),
       signal: AbortSignal.timeout(this.timeoutMs),
     });
@@ -38,7 +44,7 @@ export class OllamaClassifier implements ObjectClassifier {
 
     const data: any = await response.json();
     const text = data.response || '';
-    
+
     try {
       const json = this.extractJson(text);
       const parsed = JSON.parse(json);
@@ -94,7 +100,7 @@ ${JSON.stringify(boxes, null, 2)}
 
 For each object, return a JSON array. Each element must have exactly these keys:
 - "box_index": number (match the index above)
-- "label": string (specific name, e.g. "Eames lounge chair", not just "chair")
+- "label": string (specific identifiable name, e.g. "snake plant", "mid-century armchair", "ceramic planter")
 - "category": string (e.g. "Furniture", "Electronics")
 - "brand": string or null (manufacturer/brand if identifiable, else null)
 - "model": string or null (specific model name if identifiable, else null)
@@ -110,20 +116,21 @@ Return valid JSON array only. No markdown, no explanation.`;
   }
 
   private buildFullImagePrompt(): string {
-    return `You are analyzing a photo for a home inventory application.
-Identify all household objects visible in the image. Return a JSON array where each element has:
+    return `You are cataloging a photo for a home inventory. Identify EVERY distinct physical item visible — furniture, appliances, electronics, decor, plants, lighting, wall art, rugs, curtains, and any other discrete objects. Aim for 6-15 items. Do not include the room itself, walls, ceiling, or floor as items (but DO include rugs, carpets, flooring decorations).
+
+For each item, return a JSON array where each element has:
 - "box_index": number (sequential, starting at 0)
-- "label": string (specific name, e.g. "Eames lounge chair", not just "chair")
-- "category": string (e.g. "Furniture", "Electronics")
-- "brand": string or null
-- "model": string or null
+- "label": string — the most specific identifiable name (e.g. "snake plant", "mid-century office chair", "ceramic planter", "sheer linen curtain"). Avoid generic labels like "object", "item", "thing".
+- "category": string (e.g. "Furniture", "Plants", "Lighting", "Decor", "Textiles", "Electronics")
+- "brand": string or null (only if visibly identifiable)
+- "model": string or null (only if visibly identifiable)
 - "primary_color": string (dominant color)
-- "material": string (primary material)
-- "condition": string — one of: "excellent", "good", "fair", "poor"
-- "estimated_value_low": number or null (USD)
-- "estimated_value_high": number or null (USD)
+- "material": string (e.g. "oak wood", "brass", "fabric", "ceramic")
+- "condition": string — one of: "excellent", "good", "fair", "poor" (assess realistically based on visible wear)
+- "estimated_value_low": number or null (USD, second-hand market)
+- "estimated_value_high": number or null (USD, second-hand market)
 - "confidence": number (0.0–1.0)
-- "bounding_box": [y1, x1, y2, x2] normalized 0–1
+- "bounding_box": [y1, x1, y2, x2] normalized 0–1 — tight box around the item
 
 Return valid JSON array only. No markdown, no explanation.`;
   }

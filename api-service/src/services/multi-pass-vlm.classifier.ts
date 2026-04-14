@@ -35,6 +35,32 @@ export function cropQuadrant(
   }
 }
 
+/**
+ * Normalize pixel-space bounding boxes to [0,1]. VLMs return bbox coordinates in
+ * the model's internal pixel grid (varies by model and input image size). The
+ * mobile client expects normalized coordinates so it can multiply by its own
+ * display size. Values already in [0,1] pass through unchanged.
+ */
+function normalizeBoundingBox(
+  obj: ClassifiedObject,
+  imageWidth: number,
+  imageHeight: number,
+): ClassifiedObject {
+  const bb = obj.boundingBox;
+  // Already normalized: all values ≤ 1.0
+  if (bb.x <= 1 && bb.y <= 1 && bb.width <= 1 && bb.height <= 1) return obj;
+  if (imageWidth <= 0 || imageHeight <= 0) return obj;
+  return {
+    ...obj,
+    boundingBox: {
+      x: Math.max(0, Math.min(1, bb.x / imageWidth)),
+      y: Math.max(0, Math.min(1, bb.y / imageHeight)),
+      width: Math.max(0, Math.min(1, bb.width / imageWidth)),
+      height: Math.max(0, Math.min(1, bb.height / imageHeight)),
+    },
+  };
+}
+
 function boxCenterDistance(a: ClassifiedObject, b: ClassifiedObject): number {
   const acx = a.boundingBox.x + a.boundingBox.width / 2;
   const acy = a.boundingBox.y + a.boundingBox.height / 2;
@@ -91,30 +117,44 @@ export class MultiPassVlmClassifier {
   }
 
   async detect(image: Buffer): Promise<ClassifiedObject[]> {
+    const multiPassEnabled = process.env.MULTI_PASS_ENABLED === 'true';
+
+    // Always measure image dimensions — needed to normalize VLM-returned pixel bboxes
     const metadata = await sharp(image).metadata();
     const imageWidth = metadata.width!;
     const imageHeight = metadata.height!;
-    const overlap = this.config.multiPassQuadrantOverlap;
 
-    const quadrants: Quadrant[] = ['top-left', 'top-right', 'bottom-left', 'bottom-right'];
-    const crops = quadrants.map((q) => ({
-      quadrant: q,
-      ...cropQuadrant(q, imageWidth, imageHeight, overlap),
-    }));
+    let crops: Array<{ quadrant: Quadrant; x: number; y: number; width: number; height: number }> = [];
+    let cropBuffers: Buffer[] = [];
 
-    const cropBuffers = await Promise.all(
-      crops.map((c) =>
-        sharp(image).extract({ left: c.x, top: c.y, width: c.width, height: c.height }).toBuffer(),
-      ),
-    );
+    if (multiPassEnabled) {
+      const overlap = this.config.multiPassQuadrantOverlap;
+
+      const quadrants: Quadrant[] = ['top-left', 'top-right', 'bottom-left', 'bottom-right'];
+      crops = quadrants.map((q) => ({
+        quadrant: q,
+        ...cropQuadrant(q, imageWidth, imageHeight, overlap),
+      }));
+
+      cropBuffers = await Promise.all(
+        crops.map((c) =>
+          sharp(image).extract({ left: c.x, top: c.y, width: c.width, height: c.height }).toBuffer(),
+        ),
+      );
+    }
 
     // Try primary classifier (Ollama; fallback to Gemini)
     const primary = this.findClassifier('ollama') ?? this.findClassifier('gemini');
+    const normalize = (objs: ClassifiedObject[]): ClassifiedObject[] =>
+      objs.map((o) => normalizeBoundingBox(o, imageWidth, imageHeight));
+
     if (primary) {
       try {
-        const results = await this.runMultiPass(primary, image, cropBuffers, crops, imageWidth, imageHeight);
+        const results = multiPassEnabled
+          ? await this.runMultiPass(primary, image, cropBuffers, crops, imageWidth, imageHeight)
+          : await this.callClassifier(primary, image);
         if (results.length >= this.config.multiPassRetryThreshold) {
-          return results;
+          return normalize(results);
         }
 
         logger.info({ count: results.length, threshold: this.config.multiPassRetryThreshold }, 'Below retry threshold, trying secondary');
@@ -122,10 +162,10 @@ export class MultiPassVlmClassifier {
         if (secondary) {
           const overviewRetry = await this.callClassifier(secondary, image);
           const combined = deduplicateObjects([...results, ...overviewRetry]);
-          return combined;
+          return normalize(combined);
         }
 
-        return results;
+        return normalize(results);
       } catch (error) {
         logger.warn({ error: (error as Error).message }, 'Primary VLM failed, trying fallback');
       }
@@ -135,7 +175,10 @@ export class MultiPassVlmClassifier {
     for (const classifier of this.classifiers) {
       if (classifier === primary) continue;
       try {
-        return await this.runMultiPass(classifier, image, cropBuffers, crops, imageWidth, imageHeight);
+        const results = multiPassEnabled
+          ? await this.runMultiPass(classifier, image, cropBuffers, crops, imageWidth, imageHeight)
+          : await this.callClassifier(classifier, image);
+        return normalize(results);
       } catch (error) {
         logger.warn({ provider: classifier.name, error: (error as Error).message }, 'Fallback VLM failed');
       }

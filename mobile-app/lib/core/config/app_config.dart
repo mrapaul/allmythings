@@ -29,7 +29,7 @@ class AppConfig {
   /// Resolved API base URL. Returns localhost fallback if initialize() hasn't run.
   static String get apiBaseUrl => _resolvedApiBaseUrl ?? 'http://localhost:14000';
 
-  static const int apiTimeout = 30000; // 30 seconds (was 5 minutes — tiered timeouts used instead)
+  static const int apiTimeout = 120000; // 120 seconds — VLM deep pass can take 30–60s with Ollama multi-pass
 
   static const String apiKey = String.fromEnvironment('API_KEY');
 

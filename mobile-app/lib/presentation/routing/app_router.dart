@@ -19,7 +19,7 @@ import 'package:path_provider/path_provider.dart';
 /// Application routing configuration with transitions
 final routerProvider = Provider<GoRouter>((ref) {
   return GoRouter(
-    initialLocation: '/verification_flow',
+    initialLocation: '/items',
     routes: [
       // For verification purposes - auto loads ai_interior.jpg
       GoRoute(

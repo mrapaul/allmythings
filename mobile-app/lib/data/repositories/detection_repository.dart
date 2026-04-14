@@ -37,10 +37,11 @@ class DetectionRepository {
         ),
       });
 
-      // Call detection API endpoint
+      // Call detection API endpoint in blocking mode (single JSON response)
       final response = await _apiClient.dio.post<Map<String, dynamic>>(
         '/v1/detect',
         data: formData,
+        queryParameters: {'mode': 'full'},
         options: Options(
           contentType: 'multipart/form-data',
         ),
@@ -62,20 +63,25 @@ class DetectionRepository {
         );
       }
 
-      // Parse detections from response
-      final detectionsJson = data['detections'] as List<dynamic>?;
-      final detections = detectionsJson
+      // New blocking-mode response shape: { fastPass, deepPass, fused, totalProcessingMs, imageQuality }
+      final fusedJson = data['fused'] as List<dynamic>?;
+      final detections = fusedJson
               ?.map(
                 (d) => DetectedObject.fromJson(d as Map<String, dynamic>),
               )
               .toList() ??
           [];
 
-      // Parse metadata
-      final detector = data['detector'] as String? ?? 'unknown';
-      final classifier = data['classifier'] as String? ?? 'unknown';
-      final processingTimeMs = data['processingTimeMs'] as int? ?? 0;
-      final corroborationCount = data['corroborationCount'] as int?;
+      final fastPass = data['fastPass'] as Map<String, dynamic>?;
+      final deepPass = data['deepPass'] as Map<String, dynamic>?;
+      final detector = fastPass != null ? 'yoloe' : 'none';
+      final classifier = (deepPass?['provider'] as String?) ?? 'none';
+      final processingTimeMs = (data['totalProcessingMs'] as num?)?.toInt() ?? 0;
+      final matched = (fusedJson ?? [])
+          .whereType<Map<String, dynamic>>()
+          .where((d) => d['source'] == 'matched')
+          .length;
+      final corroborationCount = matched > 0 ? matched : null;
 
       return DetectionResult(
         detections: detections,
