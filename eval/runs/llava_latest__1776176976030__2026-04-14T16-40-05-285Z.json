@@ -1,0 +1,98 @@
+{
+  "model": "llava:latest",
+  "fixture": "1776176976030",
+  "extracted": [
+    {
+      "label": "Snake plant",
+      "category": "Plants",
+      "primary_color": "Green",
+      "material": "Leaves",
+      "count": 1
+    },
+    {
+      "label": "Office chair",
+      "category": "Furniture",
+      "primary_color": "Black",
+      "material": "Leather",
+      "count": 1
+    },
+    {
+      "label": "Desk",
+      "category": "Furniture",
+      "primary_color": "Brown",
+      "material": "Wood",
+      "count": 1
+    },
+    {
+      "label": "Coffee table",
+      "category": "Furniture",
+      "primary_color": "Black",
+      "material": "Glass",
+      "count": 1
+    },
+    {
+      "label": "Vase",
+      "category": "Decor",
+      "primary_color": "White",
+      "material": "Ceramic",
+      "count": 1
+    },
+    {
+      "label": "Leather ottoman",
+      "category": "Furniture",
+      "primary_color": "Black",
+      "material": "Leather",
+      "count": 1
+    },
+    {
+      "label": "Curtains",
+      "category": "Window Treatments",
+      "primary_color": "White",
+      "material": "Cloth",
+      "count": 2
+    },
+    {
+      "label": "Office chair cushion",
+      "category": "Textiles",
+      "primary_color": "Black",
+      "material": "Fabric",
+      "count": 1
+    },
+    {
+      "label": "Desk lamp",
+      "category": "Lighting",
+      "primary_color": "White",
+      "material": "Metal",
+      "count": 1
+    },
+    {
+      "label": "Filing cabinet",
+      "category": "Furniture",
+      "primary_color": "Brown",
+      "material": "Wood",
+      "count": 1
+    }
+  ],
+  "raw": " ```json\n[    {        \"label\": \"Snake plant\",        \"category\": \"Plants\",        \"primary_color\": \"Green\",        \"material\": \"Leaves\",        \"count\": 1    },    {        \"label\": \"Office chair\",        \"category\": \"Furniture\",        \"primary_color\": \"Black\",        \"material\": \"Leather\",        \"count\": 1    },    {        \"label\": \"Desk\",        \"category\": \"Furniture\",        \"primary_color\": \"Brown\",        \"material\": \"Wood\",        \"count\": 1    },    {        \"label\": \"Coffee table\",        \"category\": \"Furniture\",        \"primary_color\": \"Black\",        \"material\": \"Glass\",        \"count\": 1    },    {        \"label\": \"Vase\",        \"category\": \"Decor\",        \"primary_color\": \"White\",        \"material\": \"Ceramic\",        \"count\": 1    },    {        \"label\": \"Leather ottoman\",        \"category\": \"Furniture\",        \"primary_color\": \"Black\",        \"material\": \"Leather\",        \"count\": 1    },    {        \"label\": \"Curtains\",        \"category\": \"Window Treatments\",        \"primary_color\": \"White\",        \"material\": \"Cloth\",        \"count\": 2    },    {        \"label\": \"Office chair cushion\",        \"category\": \"Textiles\",        \"primary_color\": \"Black\",        \"material\": \"Fabric\",        \"count\": 1    },    {        \"label\": \"Desk lamp\",        \"category\": \"Lighting\",        \"primary_color\": \"White\",        \"material\": \"Metal\",        \"count\": 1    },    {        \"label\": \"Filing cabinet\",        \"category\": \"Furniture\",        \"primary_color\": \"Brown\",        \"material\": \"Wood\",        \"count\": 1    }]\n``` ",
+  "score": {
+    "recall": 30.8,
+    "itemCount": 10,
+    "expectedMin": 8,
+    "expectedMax": 14,
+    "countWithinRange": true,
+    "matchedCount": 4,
+    "missed": [
+      "black throw blanket",
+      "snake plant small",
+      "two-tone ceramic planter",
+      "gold wire plant stand",
+      "wooden stool",
+      "gold candle holder",
+      "white venetian window blinds",
+      "dark navy couch / sofa",
+      "framed painting"
+    ]
+  },
+  "elapsedMs": 11098,
+  "attempts": 1
+}

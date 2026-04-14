@@ -1,0 +1,22 @@
+{
+  "fixture": "1776175427607.jpg",
+  "description": "Mid-range view of same room with black blanket on chair, decorative plate on wall, candle holder on wooden stool",
+  "expected_items": [
+    { "label": "tan leather cane-back office chair", "category": "Furniture", "colors": ["tan"], "materials": ["leather", "rattan cane", "chrome"] },
+    { "label": "black throw blanket", "category": "Textiles", "colors": ["black"], "materials": ["fabric"] },
+    { "label": "snake plant (sansevieria) large", "category": "Plants", "colors": ["green"], "materials": ["plant"] },
+    { "label": "snake plant small", "category": "Plants", "colors": ["green"], "materials": ["plant"] },
+    { "label": "two-tone ceramic planter", "category": "Decor", "colors": ["black", "cream"], "materials": ["ceramic"] },
+    { "label": "gold wire plant stand", "category": "Furniture", "colors": ["gold"], "materials": ["metal"] },
+    { "label": "wooden stool", "category": "Furniture", "colors": ["brown"], "materials": ["wood"] },
+    { "label": "gold candle holder", "category": "Decor", "colors": ["gold"], "materials": ["metal"] },
+    { "label": "wooden side table", "category": "Furniture", "colors": ["brown"], "materials": ["wood"] },
+    { "label": "sheer white linen curtains", "category": "Textiles", "colors": ["white"], "materials": ["linen"] },
+    { "label": "white venetian window blinds", "category": "Window Treatments", "colors": ["white"], "materials": ["PVC"] },
+    { "label": "dark navy couch / sofa", "category": "Furniture", "colors": ["navy"], "materials": ["fabric"] },
+    { "label": "framed painting of figures", "category": "Decor", "colors": ["dark", "gold"], "materials": ["wood frame"] },
+    { "label": "decorative wall plate", "category": "Decor", "colors": ["white", "blue"], "materials": ["ceramic"] }
+  ],
+  "min_item_count": 10,
+  "max_item_count": 16
+}

@@ -1,0 +1,21 @@
+{
+  "fixture": "1776173015803.jpg",
+  "description": "Wide room view: tan leather cane-back office chair, large snake plant on gold wire stand, small snake plant on wooden stool, sheer curtains, blinds, dark couch partial, framed artworks on wall",
+  "expected_items": [
+    { "label": "tan leather cane-back office chair", "category": "Furniture", "colors": ["tan", "brown"], "materials": ["leather", "rattan cane", "chrome"] },
+    { "label": "snake plant (sansevieria) large", "category": "Plants", "colors": ["green"], "materials": ["plant"] },
+    { "label": "snake plant (sansevieria) small", "category": "Plants", "colors": ["green"], "materials": ["plant"] },
+    { "label": "two-tone ceramic planter", "category": "Decor", "colors": ["black", "cream"], "materials": ["ceramic"] },
+    { "label": "gold wire plant stand", "category": "Furniture", "colors": ["gold", "brass"], "materials": ["metal"] },
+    { "label": "wooden stool (plant support)", "category": "Furniture", "colors": ["brown"], "materials": ["wood"] },
+    { "label": "sheer white linen curtains", "category": "Textiles", "colors": ["white"], "materials": ["linen"] },
+    { "label": "white venetian window blinds", "category": "Window Treatments", "colors": ["white"], "materials": ["PVC", "wood"] },
+    { "label": "dark navy couch / sofa", "category": "Furniture", "colors": ["navy", "dark blue"], "materials": ["fabric"] },
+    { "label": "framed painting / artwork", "category": "Decor", "colors": ["various"], "materials": ["wood frame"] },
+    { "label": "decorative wall plate", "category": "Decor", "colors": ["white", "blue"], "materials": ["ceramic"] },
+    { "label": "white area rug", "category": "Textiles", "colors": ["white", "cream"], "materials": ["wool"] }
+  ],
+  "min_item_count": 8,
+  "max_item_count": 15,
+  "notes": "Parquet wooden flooring is architectural, not counted as an item."
+}

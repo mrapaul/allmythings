@@ -1,0 +1,21 @@
+{
+  "fixture": "1776176976030.jpg",
+  "description": "Floor-emphasized view of same room: chair with black blanket, snake plant on gold stand, wooden sideboard partial right, parquet floor dominant",
+  "expected_items": [
+    { "label": "tan leather cane-back office chair", "category": "Furniture", "colors": ["tan"], "materials": ["leather", "chrome"] },
+    { "label": "black throw blanket", "category": "Textiles", "colors": ["black"], "materials": ["fabric"] },
+    { "label": "snake plant (sansevieria) large", "category": "Plants", "colors": ["green"], "materials": ["plant"] },
+    { "label": "snake plant small", "category": "Plants", "colors": ["green"], "materials": ["plant"] },
+    { "label": "two-tone ceramic planter", "category": "Decor", "colors": ["black", "cream"], "materials": ["ceramic"] },
+    { "label": "gold wire plant stand", "category": "Furniture", "colors": ["gold"], "materials": ["metal"] },
+    { "label": "wooden stool", "category": "Furniture", "colors": ["brown"], "materials": ["wood"] },
+    { "label": "gold candle holder", "category": "Decor", "colors": ["gold"], "materials": ["metal"] },
+    { "label": "wooden sideboard / cabinet", "category": "Furniture", "colors": ["brown"], "materials": ["wood"] },
+    { "label": "sheer white curtains", "category": "Textiles", "colors": ["white"], "materials": ["linen"] },
+    { "label": "white venetian window blinds", "category": "Window Treatments", "colors": ["white"], "materials": ["PVC"] },
+    { "label": "dark navy couch / sofa", "category": "Furniture", "colors": ["navy"], "materials": ["fabric"] },
+    { "label": "framed painting", "category": "Decor", "colors": ["dark"], "materials": ["wood frame"] }
+  ],
+  "min_item_count": 8,
+  "max_item_count": 14
+}

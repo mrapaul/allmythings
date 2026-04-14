@@ -1,0 +1,84 @@
+{
+  "model": "llava:latest",
+  "fixture": "1776174188547",
+  "extracted": [
+    {
+      "label": "tan leather office chair",
+      "category": "Furniture",
+      "primary_color": "brown",
+      "material": "leather"
+    },
+    {
+      "label": "wooden desk",
+      "category": "Furniture",
+      "primary_color": "light brown",
+      "material": "wood"
+    },
+    {
+      "label": "plant",
+      "category": "Plants",
+      "primary_color": "green",
+      "material": "plastic"
+    },
+    {
+      "label": "potted plant",
+      "category": "Plants",
+      "primary_color": "green",
+      "material": "plastic"
+    },
+    {
+      "label": "white vase",
+      "category": "Decor",
+      "primary_color": "white",
+      "material": "glass"
+    },
+    {
+      "label": "wooden chair with wicker seat",
+      "category": "Furniture",
+      "primary_color": "brown",
+      "material": "wood and wicker"
+    },
+    {
+      "label": "office desk lamp",
+      "category": "Lighting",
+      "primary_color": "white",
+      "material": "metal"
+    },
+    {
+      "label": "potted plant on the floor",
+      "category": "Plants",
+      "primary_color": "green",
+      "material": "plastic"
+    },
+    {
+      "label": "wooden side table",
+      "category": "Furniture",
+      "primary_color": "light brown",
+      "material": "wood"
+    },
+    {
+      "label": "office desk chair",
+      "category": "Furniture",
+      "primary_color": "brown",
+      "material": "leather"
+    }
+  ],
+  "raw": " ```json\n[    {        \"label\": \"tan leather office chair\",        \"category\": \"Furniture\",        \"primary_color\": \"brown\",        \"material\": \"leather\"    },    {        \"label\": \"wooden desk\",        \"category\": \"Furniture\",        \"primary_color\": \"light brown\",        \"material\": \"wood\"    },    {        \"label\": \"plant\",        \"category\": \"Plants\",        \"primary_color\": \"green\",        \"material\": \"plastic\"    },    {        \"label\": \"potted plant\",        \"category\": \"Plants\",        \"primary_color\": \"green\",        \"material\": \"plastic\"    },    {        \"label\": \"white vase\",        \"category\": \"Decor\",        \"primary_color\": \"white\",        \"material\": \"glass\"    },    {        \"label\": \"wooden chair with wicker seat\",        \"category\": \"Furniture\",        \"primary_color\": \"brown\",        \"material\": \"wood and wicker\"    },    {        \"label\": \"office desk lamp\",        \"category\": \"Lighting\",        \"primary_color\": \"white\",        \"material\": \"metal\"    },    {        \"label\": \"potted plant on the floor\",        \"category\": \"Plants\",        \"primary_color\": \"green\",        \"material\": \"plastic\"    },    {        \"label\": \"wooden side table\",        \"category\": \"Furniture\",        \"primary_color\": \"light brown\",        \"material\": \"wood\"    },    {        \"label\": \"office desk chair\",        \"category\": \"Furniture\",        \"primary_color\": \"brown\",        \"material\": \"leather\"    }]\n``` ",
+  "score": {
+    "recall": 54.5,
+    "itemCount": 10,
+    "expectedMin": 7,
+    "expectedMax": 13,
+    "countWithinRange": true,
+    "matchedCount": 6,
+    "missed": [
+      "two-tone ceramic planter",
+      "white venetian window blinds",
+      "dark navy couch / sofa",
+      "framed painting / artwork",
+      "white area rug"
+    ]
+  },
+  "elapsedMs": 10117,
+  "attempts": 1
+}

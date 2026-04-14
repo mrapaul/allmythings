@@ -1,0 +1,95 @@
+{
+  "model": "llava:latest",
+  "fixture": "1776173015803",
+  "extracted": [
+    {
+      "label": "Snake plant",
+      "category": "Plants",
+      "primary_color": "green",
+      "material": "plant",
+      "count": 1
+    },
+    {
+      "label": "Tan leather office chair",
+      "category": "Furniture",
+      "primary_color": "tan",
+      "material": "leather",
+      "count": 1
+    },
+    {
+      "label": "Wooden desk",
+      "category": "Furniture",
+      "primary_color": "brown",
+      "material": "wood",
+      "count": 1
+    },
+    {
+      "label": "Leather ottoman",
+      "category": "Furniture",
+      "primary_color": "black",
+      "material": "leather",
+      "count": 1
+    },
+    {
+      "label": "White vase with plant",
+      "category": "Decor",
+      "primary_color": "white",
+      "material": "ceramic",
+      "count": 1
+    },
+    {
+      "label": "Cactus plant",
+      "category": "Plants",
+      "primary_color": "green",
+      "material": "plant",
+      "count": 1
+    },
+    {
+      "label": "Wooden chair with wicker seat",
+      "category": "Furniture",
+      "primary_color": "brown",
+      "material": "wood and wicker",
+      "count": 1
+    },
+    {
+      "label": "White desk lamp",
+      "category": "Lighting",
+      "primary_color": "white",
+      "material": "plastic",
+      "count": 1
+    },
+    {
+      "label": "Curtain",
+      "category": "Window Treatments",
+      "primary_color": "white",
+      "material": "cloth",
+      "count": 1
+    },
+    {
+      "label": "Potted plant on desk",
+      "category": "Plants",
+      "primary_color": "green",
+      "material": "plant",
+      "count": 1
+    }
+  ],
+  "raw": " ```json\n[  {    \"label\": \"Snake plant\",    \"category\": \"Plants\",    \"primary_color\": \"green\",    \"material\": \"plant\",    \"count\": 1  },  {    \"label\": \"Tan leather office chair\",    \"category\": \"Furniture\",    \"primary_color\": \"tan\",    \"material\": \"leather\",    \"count\": 1  },  {    \"label\": \"Wooden desk\",    \"category\": \"Furniture\",    \"primary_color\": \"brown\",    \"material\": \"wood\",    \"count\": 1  },  {    \"label\": \"Leather ottoman\",    \"category\": \"Furniture\",    \"primary_color\": \"black\",    \"material\": \"leather\",    \"count\": 1  },  {    \"label\": \"White vase with plant\",    \"category\": \"Decor\",    \"primary_color\": \"white\",    \"material\": \"ceramic\",    \"count\": 1  },  {    \"label\": \"Cactus plant\",    \"category\": \"Plants\",    \"primary_color\": \"green\",    \"material\": \"plant\",    \"count\": 1  },  {    \"label\": \"Wooden chair with wicker seat\",    \"category\": \"Furniture\",    \"primary_color\": \"brown\",    \"material\": \"wood and wicker\",    \"count\": 1  },  {    \"label\": \"White desk lamp\",    \"category\": \"Lighting\",    \"primary_color\": \"white\",    \"material\": \"plastic\",    \"count\": 1  },  {    \"label\": \"Curtain\",    \"category\": \"Window Treatments\",    \"primary_color\": \"white\",    \"material\": \"cloth\",    \"count\": 1  },  {    \"label\": \"Potted plant on desk\",    \"category\": \"Plants\",    \"primary_color\": \"green\",    \"material\": \"plant\",    \"count\": 1  }]\n``` ",
+  "score": {
+    "recall": 50,
+    "itemCount": 10,
+    "expectedMin": 8,
+    "expectedMax": 15,
+    "countWithinRange": true,
+    "matchedCount": 6,
+    "missed": [
+      "two-tone ceramic planter",
+      "white venetian window blinds",
+      "dark navy couch / sofa",
+      "framed painting / artwork",
+      "decorative wall plate",
+      "white area rug"
+    ]
+  },
+  "elapsedMs": 13606,
+  "attempts": 1
+}

@@ -1,0 +1,97 @@
+{
+  "model": "llava:latest",
+  "fixture": "1776175427607",
+  "extracted": [
+    {
+      "label": "Snake plant",
+      "category": "Plants",
+      "primary_color": "green",
+      "material": "plant",
+      "count": 1
+    },
+    {
+      "label": "Office chair",
+      "category": "Furniture",
+      "primary_color": "brown",
+      "material": "leather",
+      "count": 1
+    },
+    {
+      "label": "Desk",
+      "category": "Furniture",
+      "primary_color": "wood",
+      "material": "wood",
+      "count": 1
+    },
+    {
+      "label": "Plant pot",
+      "category": "Decor",
+      "primary_color": "white",
+      "material": "plastic",
+      "count": 1
+    },
+    {
+      "label": "Curtains",
+      "category": "Window Treatments",
+      "primary_color": "white",
+      "material": "fabric",
+      "count": 0
+    },
+    {
+      "label": "Vase",
+      "category": "Decor",
+      "primary_color": "white",
+      "material": "ceramic",
+      "count": 1
+    },
+    {
+      "label": "Coffee table",
+      "category": "Furniture",
+      "primary_color": "wood",
+      "material": "wood",
+      "count": 0
+    },
+    {
+      "label": "Office chair wheels",
+      "category": "Electronics",
+      "primary_color": "black",
+      "material": "plastic",
+      "count": 4
+    },
+    {
+      "label": "Desk lamp",
+      "category": "Lighting",
+      "primary_color": "white",
+      "material": "metal",
+      "count": 0
+    },
+    {
+      "label": "Artwork on the wall",
+      "category": "Art",
+      "primary_color": "various",
+      "material": "paint",
+      "count": 1
+    }
+  ],
+  "raw": " ```json\n[    {        \"label\": \"Snake plant\",        \"category\": \"Plants\",        \"primary_color\": \"green\",        \"material\": \"plant\",        \"count\": 1    },    {        \"label\": \"Office chair\",        \"category\": \"Furniture\",        \"primary_color\": \"brown\",        \"material\": \"leather\",        \"count\": 1    },    {        \"label\": \"Desk\",        \"category\": \"Furniture\",        \"primary_color\": \"wood\",        \"material\": \"wood\",        \"count\": 1    },    {        \"label\": \"Plant pot\",        \"category\": \"Decor\",        \"primary_color\": \"white\",        \"material\": \"plastic\",        \"count\": 1    },    {        \"label\": \"Curtains\",        \"category\": \"Window Treatments\",        \"primary_color\": \"white\",        \"material\": \"fabric\",        \"count\": 0    },    {        \"label\": \"Vase\",        \"category\": \"Decor\",        \"primary_color\": \"white\",        \"material\": \"ceramic\",        \"count\": 1    },    {        \"label\": \"Coffee table\",        \"category\": \"Furniture\",        \"primary_color\": \"wood\",        \"material\": \"wood\",        \"count\": 0    },    {        \"label\": \"Office chair wheels\",        \"category\": \"Electronics\",        \"primary_color\": \"black\",        \"material\": \"plastic\",        \"count\": 4    },    {        \"label\": \"Desk lamp\",        \"category\": \"Lighting\",        \"primary_color\": \"white\",        \"material\": \"metal\",        \"count\": 0    },    {        \"label\": \"Artwork on the wall\",        \"category\": \"Art\",        \"primary_color\": \"various\",        \"material\": \"paint\",        \"count\": 1    }]\n``` ",
+  "score": {
+    "recall": 42.9,
+    "itemCount": 10,
+    "expectedMin": 10,
+    "expectedMax": 16,
+    "countWithinRange": true,
+    "matchedCount": 6,
+    "missed": [
+      "black throw blanket",
+      "two-tone ceramic planter",
+      "gold wire plant stand",
+      "wooden stool",
+      "gold candle holder",
+      "white venetian window blinds",
+      "dark navy couch / sofa",
+      "framed painting of figures"
+    ]
+  },
+  "elapsedMs": 10938,
+  "attempts": 1
+}

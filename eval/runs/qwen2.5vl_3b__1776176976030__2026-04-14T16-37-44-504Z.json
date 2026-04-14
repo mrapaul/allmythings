@@ -1,0 +1,107 @@
+{
+  "model": "qwen2.5vl:3b",
+  "fixture": "1776176976030",
+  "extracted": [
+    {
+      "label": "snake plant",
+      "category": "Plants",
+      "primary_color": "green",
+      "material": "Plastic",
+      "count": 1
+    },
+    {
+      "label": "tan leather office chair",
+      "category": "Furniture",
+      "primary_color": "tan",
+      "material": "Leather",
+      "count": 1
+    },
+    {
+      "label": "white planter",
+      "category": "Plants",
+      "primary_color": "white",
+      "material": "Plastic",
+      "count": 1
+    },
+    {
+      "label": "black planter",
+      "category": "Plants",
+      "primary_color": "black",
+      "material": "Plastic",
+      "count": 1
+    },
+    {
+      "label": "wooden floor",
+      "category": "Floor",
+      "primary_color": "brown",
+      "material": "Wood",
+      "count": 1
+    },
+    {
+      "label": "wooden cabinet",
+      "category": "Furniture",
+      "primary_color": "brown",
+      "material": "Wood",
+      "count": 1
+    },
+    {
+      "label": "curtains",
+      "category": "Window Treatments",
+      "primary_color": "white",
+      "material": "Curtain",
+      "count": 1
+    },
+    {
+      "label": "picture frame",
+      "category": "Decor",
+      "primary_color": "gold",
+      "material": "Wood",
+      "count": 1
+    },
+    {
+      "label": "couch",
+      "category": "Furniture",
+      "primary_color": "black",
+      "material": "Fabric",
+      "count": 1
+    },
+    {
+      "label": "cushion",
+      "category": "Textiles",
+      "primary_color": "white",
+      "material": "Textile",
+      "count": 1
+    },
+    {
+      "label": "candle holder",
+      "category": "Decor",
+      "primary_color": "gold",
+      "material": "Metal",
+      "count": 1
+    },
+    {
+      "label": "candle",
+      "category": "Decor",
+      "primary_color": "gold",
+      "material": "Candle",
+      "count": 1
+    }
+  ],
+  "raw": "```json\n[\n  {\n    \"label\": \"snake plant\",\n    \"category\": \"Plants\",\n    \"primary_color\": \"green\",\n    \"material\": \"Plastic\",\n    \"count\": 1\n  },\n  {\n    \"label\": \"tan leather office chair\",\n    \"category\": \"Furniture\",\n    \"primary_color\": \"tan\",\n    \"material\": \"Leather\",\n    \"count\": 1\n  },\n  {\n    \"label\": \"white planter\",\n    \"category\": \"Plants\",\n    \"primary_color\": \"white\",\n    \"material\": \"Plastic\",\n    \"count\": 1\n  },\n  {\n    \"label\": \"black planter\",\n    \"category\": \"Plants\",\n    \"primary_color\": \"black\",\n    \"material\": \"Plastic\",\n    \"count\": 1\n  },\n  {\n    \"label\": \"wooden floor\",\n    \"category\": \"Floor\",\n    \"primary_color\": \"brown\",\n    \"material\": \"Wood\",\n    \"count\": 1\n  },\n  {\n    \"label\": \"wooden cabinet\",\n    \"category\": \"Furniture\",\n    \"primary_color\": \"brown\",\n    \"material\": \"Wood\",\n    \"count\": 1\n  },\n  {\n    \"label\": \"curtains\",\n    \"category\": \"Window Treatments\",\n    \"primary_color\": \"white\",\n    \"material\": \"Curtain\",\n    \"count\": 1\n  },\n  {\n    \"label\": \"picture frame\",\n    \"category\": \"Decor\",\n    \"primary_color\": \"gold\",\n    \"material\": \"Wood\",\n    \"count\": 1\n  },\n  {\n    \"label\": \"couch\",\n    \"category\": \"Furniture\",\n    \"primary_color\": \"black\",\n    \"material\": \"Fabric\",\n    \"count\": 1\n  },\n  {\n    \"label\": \"cushion\",\n    \"category\": \"Textiles\",\n    \"primary_color\": \"white\",\n    \"material\": \"Textile\",\n    \"count\": 1\n  },\n  {\n    \"label\": \"candle holder\",\n    \"category\": \"Decor\",\n    \"primary_color\": \"gold\",\n    \"material\": \"Metal\",\n    \"count\": 1\n  },\n  {\n    \"label\": \"candle\",\n    \"category\": \"Decor\",\n    \"primary_color\": \"gold\",\n    \"material\": \"Candle\",\n    \"count\": 1\n  }\n]\n```",
+  "score": {
+    "recall": 69.2,
+    "itemCount": 12,
+    "expectedMin": 8,
+    "expectedMax": 14,
+    "countWithinRange": true,
+    "matchedCount": 9,
+    "missed": [
+      "snake plant small",
+      "gold wire plant stand",
+      "white venetian window blinds",
+      "framed painting"
+    ]
+  },
+  "elapsedMs": 59037,
+  "attempts": 2
+}

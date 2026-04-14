@@ -1,0 +1,101 @@
+{
+  "model": "qwen2.5vl:3b",
+  "fixture": "1776173015803",
+  "extracted": [
+    {
+      "label": "snake plant",
+      "category": "Plants",
+      "primary_color": "green",
+      "material": "plant",
+      "count": 1
+    },
+    {
+      "label": "tan leather office chair",
+      "category": "Furniture",
+      "primary_color": "tan",
+      "material": "leather",
+      "count": 1
+    },
+    {
+      "label": "wooden stool",
+      "category": "Furniture",
+      "primary_color": "brown",
+      "material": "wood",
+      "count": 1
+    },
+    {
+      "label": "white and gold wire frame",
+      "category": "Furniture",
+      "primary_color": "white",
+      "material": "wire",
+      "count": 1
+    },
+    {
+      "label": "blue cushion",
+      "category": "Textiles",
+      "primary_color": "blue",
+      "material": "cotton",
+      "count": 1
+    },
+    {
+      "label": "gold-framed painting",
+      "category": "Decor",
+      "primary_color": "gold",
+      "material": "painting",
+      "count": 1
+    },
+    {
+      "label": "blue cushion",
+      "category": "Textiles",
+      "primary_color": "blue",
+      "material": "cotton",
+      "count": 1
+    },
+    {
+      "label": "white curtains",
+      "category": "Window Treatments",
+      "primary_color": "white",
+      "material": "cloth",
+      "count": 1
+    },
+    {
+      "label": "wooden floor",
+      "category": "Floor",
+      "primary_color": "brown",
+      "material": "wood",
+      "count": 1
+    },
+    {
+      "label": "white rug",
+      "category": "Textiles",
+      "primary_color": "white",
+      "material": "cotton",
+      "count": 1
+    },
+    {
+      "label": "wooden floor",
+      "category": "Floor",
+      "primary_color": "brown",
+      "material": "wood",
+      "count": 1
+    }
+  ],
+  "raw": "```json\n[\n  {\n    \"label\": \"snake plant\",\n    \"category\": \"Plants\",\n    \"primary_color\": \"green\",\n    \"material\": \"plant\",\n    \"count\": 1\n  },\n  {\n    \"label\": \"tan leather office chair\",\n    \"category\": \"Furniture\",\n    \"primary_color\": \"tan\",\n    \"material\": \"leather\",\n    \"count\": 1\n  },\n  {\n    \"label\": \"wooden stool\",\n    \"category\": \"Furniture\",\n    \"primary_color\": \"brown\",\n    \"material\": \"wood\",\n    \"count\": 1\n  },\n  {\n    \"label\": \"white and gold wire frame\",\n    \"category\": \"Furniture\",\n    \"primary_color\": \"white\",\n    \"material\": \"wire\",\n    \"count\": 1\n  },\n  {\n    \"label\": \"blue cushion\",\n    \"category\": \"Textiles\",\n    \"primary_color\": \"blue\",\n    \"material\": \"cotton\",\n    \"count\": 1\n  },\n  {\n    \"label\": \"gold-framed painting\",\n    \"category\": \"Decor\",\n    \"primary_color\": \"gold\",\n    \"material\": \"painting\",\n    \"count\": 1\n  },\n  {\n    \"label\": \"blue cushion\",\n    \"category\": \"Textiles\",\n    \"primary_color\": \"blue\",\n    \"material\": \"cotton\",\n    \"count\": 1\n  },\n  {\n    \"label\": \"white curtains\",\n    \"category\": \"Window Treatments\",\n    \"primary_color\": \"white\",\n    \"material\": \"cloth\",\n    \"count\": 1\n  },\n  {\n    \"label\": \"wooden floor\",\n    \"category\": \"Floor\",\n    \"primary_color\": \"brown\",\n    \"material\": \"wood\",\n    \"count\": 1\n  },\n  {\n    \"label\": \"white rug\",\n    \"category\": \"Textiles\",\n    \"primary_color\": \"white\",\n    \"material\": \"cotton\",\n    \"count\": 1\n  },\n  {\n    \"label\": \"wooden floor\",\n    \"category\": \"Floor\",\n    \"primary_color\": \"brown\",\n    \"material\": \"wood\",\n    \"count\": 1\n  }\n]\n```",
+  "score": {
+    "recall": 58.3,
+    "itemCount": 11,
+    "expectedMin": 8,
+    "expectedMax": 15,
+    "countWithinRange": true,
+    "matchedCount": 7,
+    "missed": [
+      "snake plant (sansevieria) small",
+      "two-tone ceramic planter",
+      "dark navy couch / sofa",
+      "decorative wall plate",
+      "white area rug"
+    ]
+  },
+  "elapsedMs": 13502,
+  "attempts": 1
+}

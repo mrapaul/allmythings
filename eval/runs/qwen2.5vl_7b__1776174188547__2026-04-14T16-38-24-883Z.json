@@ -1,0 +1,92 @@
+{
+  "model": "qwen2.5vl:7b",
+  "fixture": "1776174188547",
+  "extracted": [
+    {
+      "label": "tan leather office chair",
+      "category": "Furniture",
+      "primary_color": "tan",
+      "material": "leather",
+      "count": 1
+    },
+    {
+      "label": "snake plant",
+      "category": "Plants",
+      "primary_color": "green",
+      "material": "plant",
+      "count": 1
+    },
+    {
+      "label": "white sheer curtains",
+      "category": "Window Treatments",
+      "primary_color": "white",
+      "material": "fabric",
+      "count": 1
+    },
+    {
+      "label": "blue throw blanket",
+      "category": "Textiles",
+      "primary_color": "blue",
+      "material": "fabric",
+      "count": 1
+    },
+    {
+      "label": "gold-framed artwork",
+      "category": "Decor",
+      "primary_color": "gold",
+      "material": "metal",
+      "count": 2
+    },
+    {
+      "label": "wooden floor",
+      "category": "Furniture",
+      "primary_color": "brown",
+      "material": "wood",
+      "count": 1
+    },
+    {
+      "label": "white rug",
+      "category": "Textiles",
+      "primary_color": "white",
+      "material": "fabric",
+      "count": 1
+    },
+    {
+      "label": "gold-framed vase",
+      "category": "Decor",
+      "primary_color": "gold",
+      "material": "metal",
+      "count": 1
+    },
+    {
+      "label": "black pot",
+      "category": "Furniture",
+      "primary_color": "black",
+      "material": "plastic",
+      "count": 1
+    },
+    {
+      "label": "gold-framed planter",
+      "category": "Decor",
+      "primary_color": "gold",
+      "material": "metal",
+      "count": 1
+    }
+  ],
+  "raw": "```json\n[\n    {\n        \"label\": \"tan leather office chair\",\n        \"category\": \"Furniture\",\n        \"primary_color\": \"tan\",\n        \"material\": \"leather\",\n        \"count\": 1\n    },\n    {\n        \"label\": \"snake plant\",\n        \"category\": \"Plants\",\n        \"primary_color\": \"green\",\n        \"material\": \"plant\",\n        \"count\": 1\n    },\n    {\n        \"label\": \"white sheer curtains\",\n        \"category\": \"Window Treatments\",\n        \"primary_color\": \"white\",\n        \"material\": \"fabric\",\n        \"count\": 1\n    },\n    {\n        \"label\": \"blue throw blanket\",\n        \"category\": \"Textiles\",\n        \"primary_color\": \"blue\",\n        \"material\": \"fabric\",\n        \"count\": 1\n    },\n    {\n        \"label\": \"gold-framed artwork\",\n        \"category\": \"Decor\",\n        \"primary_color\": \"gold\",\n        \"material\": \"metal\",\n        \"count\": 2\n    },\n    {\n        \"label\": \"wooden floor\",\n        \"category\": \"Furniture\",\n        \"primary_color\": \"brown\",\n        \"material\": \"wood\",\n        \"count\": 1\n    },\n    {\n        \"label\": \"white rug\",\n        \"category\": \"Textiles\",\n        \"primary_color\": \"white\",\n        \"material\": \"fabric\",\n        \"count\": 1\n    },\n    {\n        \"label\": \"gold-framed vase\",\n        \"category\": \"Decor\",\n        \"primary_color\": \"gold\",\n        \"material\": \"metal\",\n        \"count\": 1\n    },\n    {\n        \"label\": \"black pot\",\n        \"category\": \"Furniture\",\n        \"primary_color\": \"black\",\n        \"material\": \"plastic\",\n        \"count\": 1\n    },\n    {\n        \"label\": \"gold-framed planter\",\n        \"category\": \"Decor\",\n        \"primary_color\": \"gold\",\n        \"material\": \"metal\",\n        \"count\": 1\n    }\n]\n```",
+  "score": {
+    "recall": 72.7,
+    "itemCount": 10,
+    "expectedMin": 7,
+    "expectedMax": 13,
+    "countWithinRange": true,
+    "matchedCount": 8,
+    "missed": [
+      "small snake plant",
+      "dark navy couch / sofa",
+      "white area rug"
+    ]
+  },
+  "elapsedMs": 18817,
+  "attempts": 1
+}

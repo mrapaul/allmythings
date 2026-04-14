@@ -1,0 +1,19 @@
+{
+  "fixture": "1776174188547.jpg",
+  "description": "Closer view of same room: tan leather cane-back chair in foreground, snake plant on gold wire stand, framed art on wall, sheer curtains, blinds",
+  "expected_items": [
+    { "label": "tan leather cane-back office chair", "category": "Furniture", "colors": ["tan", "brown"], "materials": ["leather", "rattan cane", "chrome"] },
+    { "label": "snake plant (sansevieria)", "category": "Plants", "colors": ["green"], "materials": ["plant"] },
+    { "label": "small snake plant", "category": "Plants", "colors": ["green"], "materials": ["plant"] },
+    { "label": "two-tone ceramic planter", "category": "Decor", "colors": ["black", "cream"], "materials": ["ceramic"] },
+    { "label": "gold wire plant stand", "category": "Furniture", "colors": ["gold", "brass"], "materials": ["metal"] },
+    { "label": "wooden stool (plant support)", "category": "Furniture", "colors": ["brown"], "materials": ["wood"] },
+    { "label": "sheer white linen curtains", "category": "Textiles", "colors": ["white"], "materials": ["linen"] },
+    { "label": "white venetian window blinds", "category": "Window Treatments", "colors": ["white"], "materials": ["PVC", "wood"] },
+    { "label": "dark navy couch / sofa", "category": "Furniture", "colors": ["navy"], "materials": ["fabric"] },
+    { "label": "framed painting / artwork", "category": "Decor", "colors": ["dark", "gold"], "materials": ["wood frame"] },
+    { "label": "white area rug", "category": "Textiles", "colors": ["white"], "materials": ["wool"] }
+  ],
+  "min_item_count": 7,
+  "max_item_count": 13
+}

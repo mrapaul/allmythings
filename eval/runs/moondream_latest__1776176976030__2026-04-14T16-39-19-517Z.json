@@ -1,0 +1,31 @@
+{
+  "model": "moondream:latest",
+  "fixture": "1776176976030",
+  "extracted": [],
+  "raw": "\n [\n  {\"label\": \"snake plant\", \"category\": \"Plants\", \"primary_color\": \"#55b9a0\", \"material\": \"planted in pot\", \"count\": 1},\n  {\"label\": \"orange leather office chair\", \"category\": \"Textiles\", \"primary_color\": \"#56b9a0\", \"material\": \"orange leather\", \"count\": 1},\n  {\"label\": \"white desk drawer\", \"category\": \"Furniture\", \"primary_color\": \"beige\", \"count\": 1, \"material\": \"wooden\", \"style\": \"open\"}, \n  {\"label\": \"brown wooden flooring\", \"category\": \"Textiles\", \"primary_color\": \"#56b9a0\", \"material\": \"wood\", \"style\": \"brown wooden floors\"},\n  {\"label\": \"white wall\", \"category\": \"Textiles\", \"primary_color\": \"#56b9a0\", \"material\": \"white\", \"style\": \"white walls\"}, \n  {\"label\": \"white window treatments\", \"category\": \"Textiles\", \"primary_color\": \"#56b9a0\", \"material\": \"white curtains\", \"style\": \"white window treatments\"}",
+  "score": {
+    "recall": 0,
+    "itemCount": 0,
+    "expectedMin": 8,
+    "expectedMax": 14,
+    "countWithinRange": false,
+    "matchedCount": 0,
+    "missed": [
+      "tan leather cane-back office chair",
+      "black throw blanket",
+      "snake plant (sansevieria) large",
+      "snake plant small",
+      "two-tone ceramic planter",
+      "gold wire plant stand",
+      "wooden stool",
+      "gold candle holder",
+      "wooden sideboard / cabinet",
+      "sheer white curtains",
+      "white venetian window blinds",
+      "dark navy couch / sofa",
+      "framed painting"
+    ]
+  },
+  "elapsedMs": 2029,
+  "attempts": 1
+}
