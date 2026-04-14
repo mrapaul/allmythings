@@ -1,10 +1,10 @@
 {
-  "qwen2.5vl:3b": {
+  "qwen2.5vl:7b": {
     "perFixture": [
       {
         "fixture": "1776173015803",
         "recall": 58.3,
-        "itemCount": 11,
+        "itemCount": 9,
         "expectedMin": 8,
         "expectedMax": 15,
         "countWithinRange": true,
@@ -16,13 +16,81 @@
           "decorative wall plate",
           "white area rug"
         ],
-        "elapsedMs": 13502,
+        "elapsedMs": 9856,
         "attempts": 1
       },
       {
         "fixture": "1776174188547",
+        "recall": 63.6,
+        "itemCount": 9,
+        "expectedMin": 7,
+        "expectedMax": 13,
+        "countWithinRange": true,
+        "matchedCount": 7,
+        "missed": [
+          "small snake plant",
+          "dark navy couch / sofa",
+          "framed painting / artwork",
+          "white area rug"
+        ],
+        "elapsedMs": 16690,
+        "attempts": 1
+      },
+      {
+        "fixture": "1776175427607",
+        "recall": 71.4,
+        "itemCount": 13,
+        "expectedMin": 10,
+        "expectedMax": 16,
+        "countWithinRange": true,
+        "matchedCount": 10,
+        "missed": [
+          "two-tone ceramic planter",
+          "dark navy couch / sofa",
+          "framed painting of figures",
+          "decorative wall plate"
+        ],
+        "elapsedMs": 21353,
+        "attempts": 1
+      },
+      {
+        "fixture": "1776176976030",
+        "recall": 61.5,
+        "itemCount": 12,
+        "expectedMin": 8,
+        "expectedMax": 14,
+        "countWithinRange": true,
+        "matchedCount": 8,
+        "missed": [
+          "snake plant small",
+          "two-tone ceramic planter",
+          "wooden stool",
+          "wooden sideboard / cabinet",
+          "framed painting"
+        ],
+        "elapsedMs": 98056,
+        "attempts": 2
+      }
+    ],
+    "aggregate": {
+      "avgRecall": 63.7,
+      "avgItems": 10.8,
+      "avgLatencyMs": 36489,
+      "failures": 0,
+      "n": 4
+    }
+  },
+  "qwen2.5vl:3b": {
+    "perFixture": [
+      {
+        "fixture": "1776173015803",
+        "error": "Error: 500: {\"error\":\"an error was encountered while running the model: GGML_ASSERT([rsets-\\u003edata count] == 0) failed\\nWARNING: Using native backtrace. Set GGML_BACKTRACE_LLDB for more info.\\nWARNING: GGML_BACKTRACE_LLDB may cause native MacOS Terminal.app to crash.\\nSee: https://github.com/ggml-org/llama.c",
+        "elapsedMs": 145658
+      },
+      {
+        "fixture": "1776174188547",
         "recall": 36.4,
-        "itemCount": 7,
+        "itemCount": 8,
         "expectedMin": 7,
         "expectedMax": 13,
         "countWithinRange": true,
@@ -36,31 +104,30 @@
           "framed painting / artwork",
           "white area rug"
         ],
-        "elapsedMs": 56043,
+        "elapsedMs": 62145,
         "attempts": 2
       },
       {
         "fixture": "1776175427607",
-        "recall": 64.3,
-        "itemCount": 10,
+        "recall": 71.4,
+        "itemCount": 12,
         "expectedMin": 10,
         "expectedMax": 16,
         "countWithinRange": true,
-        "matchedCount": 9,
+        "matchedCount": 10,
         "missed": [
           "snake plant small",
           "gold candle holder",
-          "white venetian window blinds",
           "framed painting of figures",
           "decorative wall plate"
         ],
-        "elapsedMs": 104947,
-        "attempts": 3
+        "elapsedMs": 62596,
+        "attempts": 2
       },
       {
         "fixture": "1776176976030",
         "recall": 69.2,
-        "itemCount": 12,
+        "itemCount": 11,
         "expectedMin": 8,
         "expectedMax": 14,
         "countWithinRange": true,
@@ -68,98 +135,110 @@
         "missed": [
           "snake plant small",
           "gold wire plant stand",
-          "white venetian window blinds",
+          "sheer white curtains",
           "framed painting"
         ],
-        "elapsedMs": 59037,
-        "attempts": 2
+        "elapsedMs": 13021,
+        "attempts": 1
       }
     ],
     "aggregate": {
-      "avgRecall": 57,
-      "avgItems": 10,
-      "avgLatencyMs": 58382,
-      "failures": 0,
+      "avgRecall": 59,
+      "avgItems": 10.3,
+      "avgLatencyMs": 45921,
+      "failures": 1,
       "n": 4
     }
   },
-  "qwen2.5vl:7b": {
+  "llava:latest": {
     "perFixture": [
       {
         "fixture": "1776173015803",
-        "recall": 58.3,
+        "recall": 41.7,
         "itemCount": 10,
         "expectedMin": 8,
         "expectedMax": 15,
         "countWithinRange": true,
-        "matchedCount": 7,
+        "matchedCount": 5,
         "missed": [
-          "snake plant (sansevieria) small",
           "two-tone ceramic planter",
+          "sheer white linen curtains",
+          "white venetian window blinds",
           "dark navy couch / sofa",
           "framed painting / artwork",
-          "decorative wall plate"
+          "decorative wall plate",
+          "white area rug"
         ],
-        "elapsedMs": 21560,
+        "elapsedMs": 12300,
         "attempts": 1
       },
       {
         "fixture": "1776174188547",
-        "recall": 72.7,
+        "recall": 54.5,
         "itemCount": 10,
         "expectedMin": 7,
         "expectedMax": 13,
         "countWithinRange": true,
-        "matchedCount": 8,
+        "matchedCount": 6,
         "missed": [
-          "small snake plant",
+          "two-tone ceramic planter",
+          "white venetian window blinds",
           "dark navy couch / sofa",
+          "framed painting / artwork",
           "white area rug"
         ],
-        "elapsedMs": 18817,
+        "elapsedMs": 10086,
         "attempts": 1
       },
       {
         "fixture": "1776175427607",
-        "recall": 57.1,
-        "itemCount": 10,
+        "recall": 28.6,
+        "itemCount": 7,
         "expectedMin": 10,
         "expectedMax": 16,
-        "countWithinRange": true,
-        "matchedCount": 8,
+        "countWithinRange": false,
+        "matchedCount": 4,
         "missed": [
-          "snake plant small",
+          "black throw blanket",
           "two-tone ceramic planter",
+          "wooden stool",
+          "gold candle holder",
           "wooden side table",
+          "sheer white linen curtains",
+          "white venetian window blinds",
           "dark navy couch / sofa",
           "framed painting of figures",
           "decorative wall plate"
         ],
-        "elapsedMs": 18305,
+        "elapsedMs": 8694,
         "attempts": 1
       },
       {
         "fixture": "1776176976030",
-        "recall": 69.2,
-        "itemCount": 12,
+        "recall": 38.5,
+        "itemCount": 11,
         "expectedMin": 8,
         "expectedMax": 14,
         "countWithinRange": true,
-        "matchedCount": 9,
+        "matchedCount": 5,
         "missed": [
-          "snake plant small",
+          "black throw blanket",
           "two-tone ceramic planter",
+          "gold wire plant stand",
           "wooden stool",
-          "wooden sideboard / cabinet"
+          "gold candle holder",
+          "white venetian window blinds",
+          "dark navy couch / sofa",
+          "framed painting"
         ],
-        "elapsedMs": 20445,
+        "elapsedMs": 12316,
         "attempts": 1
       }
     ],
     "aggregate": {
-      "avgRecall": 64.3,
-      "avgItems": 10.5,
-      "avgLatencyMs": 19782,
+      "avgRecall": 40.8,
+      "avgItems": 9.5,
+      "avgLatencyMs": 10849,
       "failures": 0,
       "n": 4
     }
@@ -188,7 +267,7 @@
           "decorative wall plate",
           "white area rug"
         ],
-        "elapsedMs": 10451,
+        "elapsedMs": 2792,
         "attempts": 1
       },
       {
@@ -210,7 +289,7 @@
           "framed painting / artwork",
           "white area rug"
         ],
-        "elapsedMs": 1239,
+        "elapsedMs": 1231,
         "attempts": 1
       },
       {
@@ -237,7 +316,7 @@
           "framed painting of figures",
           "decorative wall plate"
         ],
-        "elapsedMs": 2156,
+        "elapsedMs": 3284,
         "attempts": 1
       },
       {
@@ -263,105 +342,88 @@
           "dark navy couch / sofa",
           "framed painting"
         ],
-        "elapsedMs": 2029,
+        "elapsedMs": 1350,
         "attempts": 1
       }
     ],
     "aggregate": {
       "avgRecall": 4.5,
       "avgItems": 0.8,
-      "avgLatencyMs": 3969,
+      "avgLatencyMs": 2164,
       "failures": 0,
       "n": 4
     }
   },
-  "llava:latest": {
+  "hybrid:owlv2-qwen7b": {
     "perFixture": [
       {
         "fixture": "1776173015803",
-        "recall": 50,
-        "itemCount": 10,
+        "recall": 75,
+        "itemCount": 30,
         "expectedMin": 8,
         "expectedMax": 15,
-        "countWithinRange": true,
-        "matchedCount": 6,
+        "countWithinRange": false,
+        "matchedCount": 9,
         "missed": [
-          "two-tone ceramic planter",
           "white venetian window blinds",
           "dark navy couch / sofa",
-          "framed painting / artwork",
-          "decorative wall plate",
-          "white area rug"
+          "decorative wall plate"
         ],
-        "elapsedMs": 13606,
+        "elapsedMs": 42026,
         "attempts": 1
       },
       {
         "fixture": "1776174188547",
-        "recall": 54.5,
-        "itemCount": 10,
+        "recall": 63.6,
+        "itemCount": 25,
         "expectedMin": 7,
         "expectedMax": 13,
-        "countWithinRange": true,
-        "matchedCount": 6,
+        "countWithinRange": false,
+        "matchedCount": 7,
         "missed": [
-          "two-tone ceramic planter",
           "white venetian window blinds",
           "dark navy couch / sofa",
           "framed painting / artwork",
           "white area rug"
         ],
-        "elapsedMs": 10117,
+        "elapsedMs": 34701,
         "attempts": 1
       },
       {
         "fixture": "1776175427607",
-        "recall": 42.9,
-        "itemCount": 10,
+        "recall": 85.7,
+        "itemCount": 38,
         "expectedMin": 10,
         "expectedMax": 16,
-        "countWithinRange": true,
-        "matchedCount": 6,
+        "countWithinRange": false,
+        "matchedCount": 12,
         "missed": [
-          "black throw blanket",
-          "two-tone ceramic planter",
-          "gold wire plant stand",
-          "wooden stool",
           "gold candle holder",
-          "white venetian window blinds",
-          "dark navy couch / sofa",
-          "framed painting of figures"
+          "white venetian window blinds"
         ],
-        "elapsedMs": 10938,
+        "elapsedMs": 45867,
         "attempts": 1
       },
       {
         "fixture": "1776176976030",
-        "recall": 30.8,
-        "itemCount": 10,
+        "recall": 84.6,
+        "itemCount": 35,
         "expectedMin": 8,
         "expectedMax": 14,
-        "countWithinRange": true,
-        "matchedCount": 4,
+        "countWithinRange": false,
+        "matchedCount": 11,
         "missed": [
-          "black throw blanket",
-          "snake plant small",
-          "two-tone ceramic planter",
-          "gold wire plant stand",
-          "wooden stool",
           "gold candle holder",
-          "white venetian window blinds",
-          "dark navy couch / sofa",
-          "framed painting"
+          "white venetian window blinds"
         ],
-        "elapsedMs": 11098,
+        "elapsedMs": 40102,
         "attempts": 1
       }
     ],
     "aggregate": {
-      "avgRecall": 44.6,
-      "avgItems": 10,
-      "avgLatencyMs": 11440,
+      "avgRecall": 77.2,
+      "avgItems": 32,
+      "avgLatencyMs": 40674,
       "failures": 0,
       "n": 4
     }
