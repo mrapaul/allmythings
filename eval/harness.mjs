@@ -119,13 +119,18 @@ function scoreRun(extracted, oracle) {
 }
 
 async function main() {
-  const models = process.argv.slice(2);
+  const args = process.argv.slice(2);
+  const ci = args.includes('--ci');
+  const models = args.filter((a) => !a.startsWith('--'));
   if (models.length === 0) {
-    console.error('Usage: node harness.mjs <model1> [model2] ...');
+    console.error('Usage: node harness.mjs <model1> [model2] ... [--ci]');
     process.exit(1);
   }
 
   await fs.mkdir(RUNS, { recursive: true });
+  const baseline = ci
+    ? JSON.parse(await fs.readFile(path.join(EVAL_ROOT, 'baseline.json'), 'utf-8').catch(() => '{}'))
+    : null;
 
   const fixtureFiles = (await fs.readdir(FIXTURES)).filter((f) => f.endsWith('.jpg')).sort();
   const oracles = {};
@@ -175,12 +180,31 @@ async function main() {
   const reportPath = path.join(EVAL_ROOT, `report-${new Date().toISOString().slice(0, 19).replace(/[:T]/g, '-')}.json`);
   await fs.writeFile(reportPath, JSON.stringify(summary, null, 2));
   console.log(`\nReport: ${reportPath}`);
+
   console.log('\n=== LEADERBOARD ===');
   const ranked = Object.entries(summary).sort(([, a], [, b]) => (b.aggregate.avgRecall ?? 0) - (a.aggregate.avgRecall ?? 0));
   console.log('Model                              Recall  Items  Latency  Fail');
   console.log('---------------------------------- ------  -----  -------  ----');
   for (const [m, s] of ranked) {
     console.log(`${m.padEnd(34)} ${String(s.aggregate.avgRecall).padStart(5)}%  ${String(s.aggregate.avgItems).padStart(5)}  ${String(s.aggregate.avgLatencyMs).padStart(6)}ms  ${s.aggregate.failures}/${s.aggregate.n}`);
+  }
+
+  if (ci && baseline) {
+    console.log('\n=== BASELINE GATE ===');
+    let regressed = false;
+    for (const [m, s] of Object.entries(summary)) {
+      const b = baseline[m]?.aggregate?.avgRecall;
+      if (typeof b !== 'number') { console.log(`${m}: no baseline (skipped)`); continue; }
+      const delta = s.aggregate.avgRecall - b;
+      const tag = delta < -1 ? 'REGRESSION' : delta > 1 ? 'IMPROVED' : 'stable';
+      console.log(`${m}: baseline=${b}% current=${s.aggregate.avgRecall}% delta=${delta.toFixed(1)}% [${tag}]`);
+      if (delta < -1) regressed = true;
+    }
+    if (regressed) {
+      console.error('\nCI FAIL: at least one model regressed >1% below baseline');
+      process.exit(2);
+    }
+    console.log('\nCI PASS');
   }
 }
 
