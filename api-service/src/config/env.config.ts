@@ -13,6 +13,8 @@ export interface EnvConfig {
   ollamaBaseUrl: string;
   ollamaModel: string;
   ollamaEnabled: boolean;
+  owlv2Url: string;
+  hybridEnabled: boolean;
   googleProjectId: string;
   googleCredentials: string;
   apiKey: string;
@@ -38,6 +40,8 @@ export const envConfig: EnvConfig = {
   ollamaBaseUrl: process.env.OLLAMA_BASE_URL || 'http://localhost:11434',
   ollamaModel: process.env.OLLAMA_MODEL || 'qwen2.5vl:7b',
   ollamaEnabled: process.env.OLLAMA_ENABLED !== 'false',
+  owlv2Url: process.env.OWLV2_URL || 'http://localhost:14001',
+  hybridEnabled: process.env.HYBRID_ENABLED === 'true',
   googleProjectId: process.env.GOOGLE_CLOUD_PROJECT_ID || '',
   googleCredentials: process.env.GOOGLE_APPLICATION_CREDENTIALS || '',
   apiKey: process.env.API_KEY || '',
