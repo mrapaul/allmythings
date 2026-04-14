@@ -1,9 +1,11 @@
 import { ObjectDetector } from '../providers/detector.interface';
 import { ObjectClassifier, ClassifiedObject } from '../providers/classifier.interface';
 import { CircuitBreaker } from '../utils/circuit-breaker';
-import { logger } from '../utils/logger';
 import { EnsembleFusionService, FastPassDetection, FusedDetection } from './ensemble-fusion.service';
 import { MultiPassVlmClassifier } from './multi-pass-vlm.classifier';
+import { withSpan } from '../telemetry/pipeline-tracer';
+import { StepResult, isOk, isFail } from '../telemetry/step-result';
+import { injectTraceHeaders } from '../telemetry/trace-context';
 
 export interface FastPassResult {
   detections: FastPassDetection[];
@@ -21,6 +23,7 @@ export interface FullPipelineResult {
   deepPass: DeepPassResult | null;
   fused: FusedDetection[];
   totalProcessingMs: number;
+  errors: Array<{ step: string; code: string; message: string; retryable: boolean }>;
 }
 
 export interface PipelineResult {
@@ -55,23 +58,36 @@ export class DetectionPipelineService {
     this.classifiers = options.classifiers.map((c) => ({ provider: c, breaker: new CircuitBreaker(c.name, breakerOptions) }));
   }
 
-  async detectFull(image: Buffer): Promise<FullPipelineResult> {
+  async detectFull(image: Buffer, photoId = 'unknown'): Promise<FullPipelineResult> {
     const start = Date.now();
+    const errors: FullPipelineResult['errors'] = [];
 
-    const [fastPass, deepPass] = await Promise.all([
-      this.runFastPass(image),
-      this.runDeepPass(image),
-    ]);
+    const outer = await withSpan('detection.pipeline', { 'detection.photo_id': photoId }, async () => {
+      const [fastRes, deepRes] = await Promise.all([
+        this.runFastPass(image, photoId),
+        this.runDeepPass(image, photoId),
+      ]);
 
-    const fastDetections = fastPass?.detections || [];
-    const deepDetections = deepPass?.detections || [];
-    const fused = this.fusionService.fuseFastAndDeep(fastDetections, deepDetections);
+      const fastPass = isOk(fastRes) ? fastRes.value : null;
+      if (isFail(fastRes)) errors.push({ step: 'fast_pass', code: fastRes.error.code, message: fastRes.error.message, retryable: fastRes.error.retryable });
 
+      const deepPass = isOk(deepRes) ? deepRes.value : null;
+      if (isFail(deepRes)) errors.push({ step: 'deep_pass', code: deepRes.error.code, message: deepRes.error.message, retryable: deepRes.error.retryable });
+
+      const fastDetections = fastPass?.detections ?? [];
+      const deepDetections = deepPass?.detections ?? [];
+      const fused = this.fusionService.fuseFastAndDeep(fastDetections, deepDetections);
+
+      return { fastPass, deepPass, fused, totalProcessingMs: Date.now() - start, errors };
+    });
+
+    if (isOk(outer)) return outer.value;
     return {
-      fastPass,
-      deepPass,
-      fused,
+      fastPass: null,
+      deepPass: null,
+      fused: [],
       totalProcessingMs: Date.now() - start,
+      errors: [{ step: 'pipeline', code: outer.error.code, message: outer.error.message, retryable: outer.error.retryable }, ...errors],
     };
   }
 
@@ -86,23 +102,24 @@ export class DetectionPipelineService {
     };
   }
 
-  private async runFastPass(image: Buffer): Promise<FastPassResult | null> {
-    const start = Date.now();
-    try {
+  private async runFastPass(image: Buffer, photoId: string): Promise<StepResult<FastPassResult>> {
+    return withSpan('detection.fast_pass', { 'detection.photo_id': photoId }, async () => {
+      const start = Date.now();
       const detections = await this.callFastDetector(image);
       return { detections, processingTimeMs: Date.now() - start };
-    } catch (error) {
-      logger.warn({ error: (error as Error).message }, 'Fast pass failed, continuing with deep pass only');
-      return null;
-    }
+    });
   }
 
   private async callFastDetector(image: Buffer): Promise<FastPassDetection[]> {
+    const headers: Record<string, string> = {};
+    injectTraceHeaders(headers);
+
     const formData = new FormData();
     formData.append('file', new Blob([image], { type: 'image/jpeg' }), 'image.jpg');
 
     const response = await fetch(`${this.fastDetectorUrl}/detect/fast`, {
       method: 'POST',
+      headers,
       body: formData,
       signal: AbortSignal.timeout(5000),
     });
@@ -124,19 +141,16 @@ export class DetectionPipelineService {
     }));
   }
 
-  private async runDeepPass(image: Buffer): Promise<DeepPassResult | null> {
-    const start = Date.now();
-    try {
+  private async runDeepPass(image: Buffer, photoId: string): Promise<StepResult<DeepPassResult>> {
+    return withSpan('detection.deep_pass', { 'detection.photo_id': photoId }, async () => {
+      const start = Date.now();
       const detections = await this.multiPassVlm.detect(image);
       return {
         detections,
         processingTimeMs: Date.now() - start,
         provider: 'multi-pass-vlm',
       };
-    } catch (error) {
-      logger.warn({ error: (error as Error).message }, 'Deep pass failed');
-      return null;
-    }
+    });
   }
 
   async healthCheck(): Promise<Record<string, boolean>> {
