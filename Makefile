@@ -175,11 +175,11 @@ db-new:
 .PHONY: eval eval-ci eval-baseline
 
 eval: ## Run eval harness on all configured candidate models
-	node eval/harness.mjs qwen2.5vl:7b qwen2.5vl:3b llava:latest moondream:latest
+	node eval/harness.mjs qwen2.5vl:7b qwen2.5vl:3b llava:latest moondream:latest hybrid:owlv2-qwen7b
 
 eval-ci: ## Run eval gated by eval/baseline.json
-	node eval/harness.mjs qwen2.5vl:7b qwen2.5vl:3b llava:latest moondream:latest --ci
+	node eval/harness.mjs qwen2.5vl:7b qwen2.5vl:3b llava:latest moondream:latest hybrid:owlv2-qwen7b --ci
 
 eval-baseline: ## Re-snapshot current results as new baseline (commit after)
-	node eval/harness.mjs qwen2.5vl:7b qwen2.5vl:3b llava:latest moondream:latest
+	node eval/harness.mjs qwen2.5vl:7b qwen2.5vl:3b llava:latest moondream:latest hybrid:owlv2-qwen7b
 	@latest=$$(ls -t eval/report-*.json | head -1); cp "$$latest" eval/baseline.json; echo "Baseline = $$latest"
