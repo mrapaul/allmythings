@@ -91,7 +91,7 @@ cmd_start() {
   log_info "Starting detection-service (FastAPI :14001)..."
   (
     cd "$PROJECT_ROOT/detection-service"
-    ./venv/bin/python -m uvicorn detection_service.main:app \
+    PYTHONPATH=src ./venv/bin/python -m uvicorn detection_service.main:app \
       --host 0.0.0.0 --port 14001
   ) >> "$DETECTION_LOG" 2>&1 &
   DETECTION_PID=$!

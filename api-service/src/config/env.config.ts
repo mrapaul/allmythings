@@ -53,5 +53,5 @@ export const envConfig: EnvConfig = {
   multiPassRetryThreshold: parseInt(process.env.MULTI_PASS_RETRY_THRESHOLD || '15', 10),
   multiPassQuadrantOverlap: parseFloat(process.env.MULTI_PASS_QUADRANT_OVERLAP || '0.55'),
   florenceUrl: process.env.FLORENCE_URL ?? process.env.DETECTION_SERVICE_URL ?? 'http://localhost:14001',
-  photoDir: process.env.PHOTO_DIR ?? `${process.env.HOME}/allmythings-data`,
+  photoDir: (process.env.PHOTO_DIR ?? `${process.env.HOME}/allmythings-data`).replace(/^~/, process.env.HOME || ''),
 };
