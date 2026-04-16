@@ -15,7 +15,7 @@ T _$identity<T>(T value) => value;
 /// @nodoc
 mixin _$DetectedObject {
 
- int get boxIndex; String get label; String get category; double get confidence; BoundingBox get boundingBox; String? get brand; String? get model; List<String> get colors; List<String> get materials; String? get condition; ValueRange? get estimatedValue; String? get description;
+ int get boxIndex; String get label; String get category; double get confidence; BoundingBox get boundingBox; String? get brand; String? get model; List<String> get colors; List<String> get materials; String? get condition; ValueRange? get estimatedValue; String? get description; List<String> get searchTags;
 /// Create a copy of DetectedObject
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
@@ -28,16 +28,16 @@ $DetectedObjectCopyWith<DetectedObject> get copyWith => _$DetectedObjectCopyWith
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is DetectedObject&&(identical(other.boxIndex, boxIndex) || other.boxIndex == boxIndex)&&(identical(other.label, label) || other.label == label)&&(identical(other.category, category) || other.category == category)&&(identical(other.confidence, confidence) || other.confidence == confidence)&&(identical(other.boundingBox, boundingBox) || other.boundingBox == boundingBox)&&(identical(other.brand, brand) || other.brand == brand)&&(identical(other.model, model) || other.model == model)&&const DeepCollectionEquality().equals(other.colors, colors)&&const DeepCollectionEquality().equals(other.materials, materials)&&(identical(other.condition, condition) || other.condition == condition)&&(identical(other.estimatedValue, estimatedValue) || other.estimatedValue == estimatedValue)&&(identical(other.description, description) || other.description == description));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is DetectedObject&&(identical(other.boxIndex, boxIndex) || other.boxIndex == boxIndex)&&(identical(other.label, label) || other.label == label)&&(identical(other.category, category) || other.category == category)&&(identical(other.confidence, confidence) || other.confidence == confidence)&&(identical(other.boundingBox, boundingBox) || other.boundingBox == boundingBox)&&(identical(other.brand, brand) || other.brand == brand)&&(identical(other.model, model) || other.model == model)&&const DeepCollectionEquality().equals(other.colors, colors)&&const DeepCollectionEquality().equals(other.materials, materials)&&(identical(other.condition, condition) || other.condition == condition)&&(identical(other.estimatedValue, estimatedValue) || other.estimatedValue == estimatedValue)&&(identical(other.description, description) || other.description == description)&&const DeepCollectionEquality().equals(other.searchTags, searchTags));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
-int get hashCode => Object.hash(runtimeType,boxIndex,label,category,confidence,boundingBox,brand,model,const DeepCollectionEquality().hash(colors),const DeepCollectionEquality().hash(materials),condition,estimatedValue,description);
+int get hashCode => Object.hash(runtimeType,boxIndex,label,category,confidence,boundingBox,brand,model,const DeepCollectionEquality().hash(colors),const DeepCollectionEquality().hash(materials),condition,estimatedValue,description,const DeepCollectionEquality().hash(searchTags));
 
 @override
 String toString() {
-  return 'DetectedObject(boxIndex: $boxIndex, label: $label, category: $category, confidence: $confidence, boundingBox: $boundingBox, brand: $brand, model: $model, colors: $colors, materials: $materials, condition: $condition, estimatedValue: $estimatedValue, description: $description)';
+  return 'DetectedObject(boxIndex: $boxIndex, label: $label, category: $category, confidence: $confidence, boundingBox: $boundingBox, brand: $brand, model: $model, colors: $colors, materials: $materials, condition: $condition, estimatedValue: $estimatedValue, description: $description, searchTags: $searchTags)';
 }
 
 
@@ -48,7 +48,7 @@ abstract mixin class $DetectedObjectCopyWith<$Res>  {
   factory $DetectedObjectCopyWith(DetectedObject value, $Res Function(DetectedObject) _then) = _$DetectedObjectCopyWithImpl;
 @useResult
 $Res call({
- int boxIndex, String label, String category, double confidence, BoundingBox boundingBox, String? brand, String? model, List<String> colors, List<String> materials, String? condition, ValueRange? estimatedValue, String? description
+ int boxIndex, String label, String category, double confidence, BoundingBox boundingBox, String? brand, String? model, List<String> colors, List<String> materials, String? condition, ValueRange? estimatedValue, String? description, List<String> searchTags
 });
 
 
@@ -65,7 +65,7 @@ class _$DetectedObjectCopyWithImpl<$Res>
 
 /// Create a copy of DetectedObject
 /// with the given fields replaced by the non-null parameter values.
-@pragma('vm:prefer-inline') @override $Res call({Object? boxIndex = null,Object? label = null,Object? category = null,Object? confidence = null,Object? boundingBox = null,Object? brand = freezed,Object? model = freezed,Object? colors = null,Object? materials = null,Object? condition = freezed,Object? estimatedValue = freezed,Object? description = freezed,}) {
+@pragma('vm:prefer-inline') @override $Res call({Object? boxIndex = null,Object? label = null,Object? category = null,Object? confidence = null,Object? boundingBox = null,Object? brand = freezed,Object? model = freezed,Object? colors = null,Object? materials = null,Object? condition = freezed,Object? estimatedValue = freezed,Object? description = freezed,Object? searchTags = null,}) {
   return _then(_self.copyWith(
 boxIndex: null == boxIndex ? _self.boxIndex : boxIndex // ignore: cast_nullable_to_non_nullable
 as int,label: null == label ? _self.label : label // ignore: cast_nullable_to_non_nullable
@@ -79,7 +79,8 @@ as List<String>,materials: null == materials ? _self.materials : materials // ig
 as List<String>,condition: freezed == condition ? _self.condition : condition // ignore: cast_nullable_to_non_nullable
 as String?,estimatedValue: freezed == estimatedValue ? _self.estimatedValue : estimatedValue // ignore: cast_nullable_to_non_nullable
 as ValueRange?,description: freezed == description ? _self.description : description // ignore: cast_nullable_to_non_nullable
-as String?,
+as String?,searchTags: null == searchTags ? _self.searchTags : searchTags // ignore: cast_nullable_to_non_nullable
+as List<String>,
   ));
 }
 /// Create a copy of DetectedObject
@@ -185,10 +186,10 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( int boxIndex,  String label,  String category,  double confidence,  BoundingBox boundingBox,  String? brand,  String? model,  List<String> colors,  List<String> materials,  String? condition,  ValueRange? estimatedValue,  String? description)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( int boxIndex,  String label,  String category,  double confidence,  BoundingBox boundingBox,  String? brand,  String? model,  List<String> colors,  List<String> materials,  String? condition,  ValueRange? estimatedValue,  String? description,  List<String> searchTags)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _DetectedObject() when $default != null:
-return $default(_that.boxIndex,_that.label,_that.category,_that.confidence,_that.boundingBox,_that.brand,_that.model,_that.colors,_that.materials,_that.condition,_that.estimatedValue,_that.description);case _:
+return $default(_that.boxIndex,_that.label,_that.category,_that.confidence,_that.boundingBox,_that.brand,_that.model,_that.colors,_that.materials,_that.condition,_that.estimatedValue,_that.description,_that.searchTags);case _:
   return orElse();
 
 }
@@ -206,10 +207,10 @@ return $default(_that.boxIndex,_that.label,_that.category,_that.confidence,_that
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( int boxIndex,  String label,  String category,  double confidence,  BoundingBox boundingBox,  String? brand,  String? model,  List<String> colors,  List<String> materials,  String? condition,  ValueRange? estimatedValue,  String? description)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( int boxIndex,  String label,  String category,  double confidence,  BoundingBox boundingBox,  String? brand,  String? model,  List<String> colors,  List<String> materials,  String? condition,  ValueRange? estimatedValue,  String? description,  List<String> searchTags)  $default,) {final _that = this;
 switch (_that) {
 case _DetectedObject():
-return $default(_that.boxIndex,_that.label,_that.category,_that.confidence,_that.boundingBox,_that.brand,_that.model,_that.colors,_that.materials,_that.condition,_that.estimatedValue,_that.description);case _:
+return $default(_that.boxIndex,_that.label,_that.category,_that.confidence,_that.boundingBox,_that.brand,_that.model,_that.colors,_that.materials,_that.condition,_that.estimatedValue,_that.description,_that.searchTags);case _:
   throw StateError('Unexpected subclass');
 
 }
@@ -226,10 +227,10 @@ return $default(_that.boxIndex,_that.label,_that.category,_that.confidence,_that
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( int boxIndex,  String label,  String category,  double confidence,  BoundingBox boundingBox,  String? brand,  String? model,  List<String> colors,  List<String> materials,  String? condition,  ValueRange? estimatedValue,  String? description)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( int boxIndex,  String label,  String category,  double confidence,  BoundingBox boundingBox,  String? brand,  String? model,  List<String> colors,  List<String> materials,  String? condition,  ValueRange? estimatedValue,  String? description,  List<String> searchTags)?  $default,) {final _that = this;
 switch (_that) {
 case _DetectedObject() when $default != null:
-return $default(_that.boxIndex,_that.label,_that.category,_that.confidence,_that.boundingBox,_that.brand,_that.model,_that.colors,_that.materials,_that.condition,_that.estimatedValue,_that.description);case _:
+return $default(_that.boxIndex,_that.label,_that.category,_that.confidence,_that.boundingBox,_that.brand,_that.model,_that.colors,_that.materials,_that.condition,_that.estimatedValue,_that.description,_that.searchTags);case _:
   return null;
 
 }
@@ -240,8 +241,8 @@ return $default(_that.boxIndex,_that.label,_that.category,_that.confidence,_that
 /// @nodoc
 @JsonSerializable()
 
-class _DetectedObject implements DetectedObject {
-  const _DetectedObject({required this.boxIndex, required this.label, required this.category, required this.confidence, required this.boundingBox, this.brand, this.model, final  List<String> colors = const [], final  List<String> materials = const [], this.condition, this.estimatedValue, this.description}): _colors = colors,_materials = materials;
+class _DetectedObject extends DetectedObject {
+  const _DetectedObject({required this.boxIndex, required this.label, required this.category, required this.confidence, required this.boundingBox, this.brand, this.model, final  List<String> colors = const [], final  List<String> materials = const [], this.condition, this.estimatedValue, this.description, final  List<String> searchTags = const []}): _colors = colors,_materials = materials,_searchTags = searchTags,super._();
   factory _DetectedObject.fromJson(Map<String, dynamic> json) => _$DetectedObjectFromJson(json);
 
 @override final  int boxIndex;
@@ -268,6 +269,13 @@ class _DetectedObject implements DetectedObject {
 @override final  String? condition;
 @override final  ValueRange? estimatedValue;
 @override final  String? description;
+ final  List<String> _searchTags;
+@override@JsonKey() List<String> get searchTags {
+  if (_searchTags is EqualUnmodifiableListView) return _searchTags;
+  // ignore: implicit_dynamic_type
+  return EqualUnmodifiableListView(_searchTags);
+}
+
 
 /// Create a copy of DetectedObject
 /// with the given fields replaced by the non-null parameter values.
@@ -282,16 +290,16 @@ Map<String, dynamic> toJson() {
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is _DetectedObject&&(identical(other.boxIndex, boxIndex) || other.boxIndex == boxIndex)&&(identical(other.label, label) || other.label == label)&&(identical(other.category, category) || other.category == category)&&(identical(other.confidence, confidence) || other.confidence == confidence)&&(identical(other.boundingBox, boundingBox) || other.boundingBox == boundingBox)&&(identical(other.brand, brand) || other.brand == brand)&&(identical(other.model, model) || other.model == model)&&const DeepCollectionEquality().equals(other._colors, _colors)&&const DeepCollectionEquality().equals(other._materials, _materials)&&(identical(other.condition, condition) || other.condition == condition)&&(identical(other.estimatedValue, estimatedValue) || other.estimatedValue == estimatedValue)&&(identical(other.description, description) || other.description == description));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is _DetectedObject&&(identical(other.boxIndex, boxIndex) || other.boxIndex == boxIndex)&&(identical(other.label, label) || other.label == label)&&(identical(other.category, category) || other.category == category)&&(identical(other.confidence, confidence) || other.confidence == confidence)&&(identical(other.boundingBox, boundingBox) || other.boundingBox == boundingBox)&&(identical(other.brand, brand) || other.brand == brand)&&(identical(other.model, model) || other.model == model)&&const DeepCollectionEquality().equals(other._colors, _colors)&&const DeepCollectionEquality().equals(other._materials, _materials)&&(identical(other.condition, condition) || other.condition == condition)&&(identical(other.estimatedValue, estimatedValue) || other.estimatedValue == estimatedValue)&&(identical(other.description, description) || other.description == description)&&const DeepCollectionEquality().equals(other._searchTags, _searchTags));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
-int get hashCode => Object.hash(runtimeType,boxIndex,label,category,confidence,boundingBox,brand,model,const DeepCollectionEquality().hash(_colors),const DeepCollectionEquality().hash(_materials),condition,estimatedValue,description);
+int get hashCode => Object.hash(runtimeType,boxIndex,label,category,confidence,boundingBox,brand,model,const DeepCollectionEquality().hash(_colors),const DeepCollectionEquality().hash(_materials),condition,estimatedValue,description,const DeepCollectionEquality().hash(_searchTags));
 
 @override
 String toString() {
-  return 'DetectedObject(boxIndex: $boxIndex, label: $label, category: $category, confidence: $confidence, boundingBox: $boundingBox, brand: $brand, model: $model, colors: $colors, materials: $materials, condition: $condition, estimatedValue: $estimatedValue, description: $description)';
+  return 'DetectedObject(boxIndex: $boxIndex, label: $label, category: $category, confidence: $confidence, boundingBox: $boundingBox, brand: $brand, model: $model, colors: $colors, materials: $materials, condition: $condition, estimatedValue: $estimatedValue, description: $description, searchTags: $searchTags)';
 }
 
 
@@ -302,7 +310,7 @@ abstract mixin class _$DetectedObjectCopyWith<$Res> implements $DetectedObjectCo
   factory _$DetectedObjectCopyWith(_DetectedObject value, $Res Function(_DetectedObject) _then) = __$DetectedObjectCopyWithImpl;
 @override @useResult
 $Res call({
- int boxIndex, String label, String category, double confidence, BoundingBox boundingBox, String? brand, String? model, List<String> colors, List<String> materials, String? condition, ValueRange? estimatedValue, String? description
+ int boxIndex, String label, String category, double confidence, BoundingBox boundingBox, String? brand, String? model, List<String> colors, List<String> materials, String? condition, ValueRange? estimatedValue, String? description, List<String> searchTags
 });
 
 
@@ -319,7 +327,7 @@ class __$DetectedObjectCopyWithImpl<$Res>
 
 /// Create a copy of DetectedObject
 /// with the given fields replaced by the non-null parameter values.
-@override @pragma('vm:prefer-inline') $Res call({Object? boxIndex = null,Object? label = null,Object? category = null,Object? confidence = null,Object? boundingBox = null,Object? brand = freezed,Object? model = freezed,Object? colors = null,Object? materials = null,Object? condition = freezed,Object? estimatedValue = freezed,Object? description = freezed,}) {
+@override @pragma('vm:prefer-inline') $Res call({Object? boxIndex = null,Object? label = null,Object? category = null,Object? confidence = null,Object? boundingBox = null,Object? brand = freezed,Object? model = freezed,Object? colors = null,Object? materials = null,Object? condition = freezed,Object? estimatedValue = freezed,Object? description = freezed,Object? searchTags = null,}) {
   return _then(_DetectedObject(
 boxIndex: null == boxIndex ? _self.boxIndex : boxIndex // ignore: cast_nullable_to_non_nullable
 as int,label: null == label ? _self.label : label // ignore: cast_nullable_to_non_nullable
@@ -333,7 +341,8 @@ as List<String>,materials: null == materials ? _self._materials : materials // i
 as List<String>,condition: freezed == condition ? _self.condition : condition // ignore: cast_nullable_to_non_nullable
 as String?,estimatedValue: freezed == estimatedValue ? _self.estimatedValue : estimatedValue // ignore: cast_nullable_to_non_nullable
 as ValueRange?,description: freezed == description ? _self.description : description // ignore: cast_nullable_to_non_nullable
-as String?,
+as String?,searchTags: null == searchTags ? _self._searchTags : searchTags // ignore: cast_nullable_to_non_nullable
+as List<String>,
   ));
 }
 

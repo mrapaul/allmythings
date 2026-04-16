@@ -12,6 +12,9 @@ class InventoryItems extends Table {
   /// Absolute path to thumbnail (256x256)
   TextColumn get thumbnailPath => text()();
 
+  /// URL to the photo on the Mac server (e.g., /photos/uuid.jpg)
+  TextColumn get serverPhotoUrl => text().nullable()();
+
   /// JSON: detection metadata (bounding boxes, confidence, etc.)
   TextColumn get detectionData => text()();
 

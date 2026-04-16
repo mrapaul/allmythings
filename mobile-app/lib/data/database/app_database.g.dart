@@ -44,6 +44,17 @@ class $InventoryItemsTable extends InventoryItems
     type: DriftSqlType.string,
     requiredDuringInsert: true,
   );
+  static const VerificationMeta _serverPhotoUrlMeta = const VerificationMeta(
+    'serverPhotoUrl',
+  );
+  @override
+  late final GeneratedColumn<String> serverPhotoUrl = GeneratedColumn<String>(
+    'server_photo_url',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
   static const VerificationMeta _detectionDataMeta = const VerificationMeta(
     'detectionData',
   );
@@ -92,6 +103,7 @@ class $InventoryItemsTable extends InventoryItems
     id,
     photoPath,
     thumbnailPath,
+    serverPhotoUrl,
     detectionData,
     status,
     createdAt,
@@ -130,6 +142,15 @@ class $InventoryItemsTable extends InventoryItems
       );
     } else if (isInserting) {
       context.missing(_thumbnailPathMeta);
+    }
+    if (data.containsKey('server_photo_url')) {
+      context.handle(
+        _serverPhotoUrlMeta,
+        serverPhotoUrl.isAcceptableOrUnknown(
+          data['server_photo_url']!,
+          _serverPhotoUrlMeta,
+        ),
+      );
     }
     if (data.containsKey('detection_data')) {
       context.handle(
@@ -185,6 +206,10 @@ class $InventoryItemsTable extends InventoryItems
         DriftSqlType.string,
         data['${effectivePrefix}thumbnail_path'],
       )!,
+      serverPhotoUrl: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}server_photo_url'],
+      ),
       detectionData: attachedDatabase.typeMapping.read(
         DriftSqlType.string,
         data['${effectivePrefix}detection_data'],
@@ -220,6 +245,9 @@ class InventoryItem extends DataClass implements Insertable<InventoryItem> {
   /// Absolute path to thumbnail (256x256)
   final String thumbnailPath;
 
+  /// URL to the photo on the Mac server (e.g., /photos/uuid.jpg)
+  final String? serverPhotoUrl;
+
   /// JSON: detection metadata (bounding boxes, confidence, etc.)
   final String detectionData;
 
@@ -235,6 +263,7 @@ class InventoryItem extends DataClass implements Insertable<InventoryItem> {
     required this.id,
     required this.photoPath,
     required this.thumbnailPath,
+    this.serverPhotoUrl,
     required this.detectionData,
     required this.status,
     required this.createdAt,
@@ -246,6 +275,9 @@ class InventoryItem extends DataClass implements Insertable<InventoryItem> {
     map['id'] = Variable<int>(id);
     map['photo_path'] = Variable<String>(photoPath);
     map['thumbnail_path'] = Variable<String>(thumbnailPath);
+    if (!nullToAbsent || serverPhotoUrl != null) {
+      map['server_photo_url'] = Variable<String>(serverPhotoUrl);
+    }
     map['detection_data'] = Variable<String>(detectionData);
     map['status'] = Variable<String>(status);
     map['created_at'] = Variable<DateTime>(createdAt);
@@ -258,6 +290,9 @@ class InventoryItem extends DataClass implements Insertable<InventoryItem> {
       id: Value(id),
       photoPath: Value(photoPath),
       thumbnailPath: Value(thumbnailPath),
+      serverPhotoUrl: serverPhotoUrl == null && nullToAbsent
+          ? const Value.absent()
+          : Value(serverPhotoUrl),
       detectionData: Value(detectionData),
       status: Value(status),
       createdAt: Value(createdAt),
@@ -274,6 +309,7 @@ class InventoryItem extends DataClass implements Insertable<InventoryItem> {
       id: serializer.fromJson<int>(json['id']),
       photoPath: serializer.fromJson<String>(json['photoPath']),
       thumbnailPath: serializer.fromJson<String>(json['thumbnailPath']),
+      serverPhotoUrl: serializer.fromJson<String?>(json['serverPhotoUrl']),
       detectionData: serializer.fromJson<String>(json['detectionData']),
       status: serializer.fromJson<String>(json['status']),
       createdAt: serializer.fromJson<DateTime>(json['createdAt']),
@@ -287,6 +323,7 @@ class InventoryItem extends DataClass implements Insertable<InventoryItem> {
       'id': serializer.toJson<int>(id),
       'photoPath': serializer.toJson<String>(photoPath),
       'thumbnailPath': serializer.toJson<String>(thumbnailPath),
+      'serverPhotoUrl': serializer.toJson<String?>(serverPhotoUrl),
       'detectionData': serializer.toJson<String>(detectionData),
       'status': serializer.toJson<String>(status),
       'createdAt': serializer.toJson<DateTime>(createdAt),
@@ -298,6 +335,7 @@ class InventoryItem extends DataClass implements Insertable<InventoryItem> {
     int? id,
     String? photoPath,
     String? thumbnailPath,
+    Value<String?> serverPhotoUrl = const Value.absent(),
     String? detectionData,
     String? status,
     DateTime? createdAt,
@@ -306,6 +344,9 @@ class InventoryItem extends DataClass implements Insertable<InventoryItem> {
     id: id ?? this.id,
     photoPath: photoPath ?? this.photoPath,
     thumbnailPath: thumbnailPath ?? this.thumbnailPath,
+    serverPhotoUrl: serverPhotoUrl.present
+        ? serverPhotoUrl.value
+        : this.serverPhotoUrl,
     detectionData: detectionData ?? this.detectionData,
     status: status ?? this.status,
     createdAt: createdAt ?? this.createdAt,
@@ -318,6 +359,9 @@ class InventoryItem extends DataClass implements Insertable<InventoryItem> {
       thumbnailPath: data.thumbnailPath.present
           ? data.thumbnailPath.value
           : this.thumbnailPath,
+      serverPhotoUrl: data.serverPhotoUrl.present
+          ? data.serverPhotoUrl.value
+          : this.serverPhotoUrl,
       detectionData: data.detectionData.present
           ? data.detectionData.value
           : this.detectionData,
@@ -333,6 +377,7 @@ class InventoryItem extends DataClass implements Insertable<InventoryItem> {
           ..write('id: $id, ')
           ..write('photoPath: $photoPath, ')
           ..write('thumbnailPath: $thumbnailPath, ')
+          ..write('serverPhotoUrl: $serverPhotoUrl, ')
           ..write('detectionData: $detectionData, ')
           ..write('status: $status, ')
           ..write('createdAt: $createdAt, ')
@@ -346,6 +391,7 @@ class InventoryItem extends DataClass implements Insertable<InventoryItem> {
     id,
     photoPath,
     thumbnailPath,
+    serverPhotoUrl,
     detectionData,
     status,
     createdAt,
@@ -358,6 +404,7 @@ class InventoryItem extends DataClass implements Insertable<InventoryItem> {
           other.id == this.id &&
           other.photoPath == this.photoPath &&
           other.thumbnailPath == this.thumbnailPath &&
+          other.serverPhotoUrl == this.serverPhotoUrl &&
           other.detectionData == this.detectionData &&
           other.status == this.status &&
           other.createdAt == this.createdAt &&
@@ -368,6 +415,7 @@ class InventoryItemsCompanion extends UpdateCompanion<InventoryItem> {
   final Value<int> id;
   final Value<String> photoPath;
   final Value<String> thumbnailPath;
+  final Value<String?> serverPhotoUrl;
   final Value<String> detectionData;
   final Value<String> status;
   final Value<DateTime> createdAt;
@@ -376,6 +424,7 @@ class InventoryItemsCompanion extends UpdateCompanion<InventoryItem> {
     this.id = const Value.absent(),
     this.photoPath = const Value.absent(),
     this.thumbnailPath = const Value.absent(),
+    this.serverPhotoUrl = const Value.absent(),
     this.detectionData = const Value.absent(),
     this.status = const Value.absent(),
     this.createdAt = const Value.absent(),
@@ -385,6 +434,7 @@ class InventoryItemsCompanion extends UpdateCompanion<InventoryItem> {
     this.id = const Value.absent(),
     required String photoPath,
     required String thumbnailPath,
+    this.serverPhotoUrl = const Value.absent(),
     required String detectionData,
     this.status = const Value.absent(),
     required DateTime createdAt,
@@ -398,6 +448,7 @@ class InventoryItemsCompanion extends UpdateCompanion<InventoryItem> {
     Expression<int>? id,
     Expression<String>? photoPath,
     Expression<String>? thumbnailPath,
+    Expression<String>? serverPhotoUrl,
     Expression<String>? detectionData,
     Expression<String>? status,
     Expression<DateTime>? createdAt,
@@ -407,6 +458,7 @@ class InventoryItemsCompanion extends UpdateCompanion<InventoryItem> {
       if (id != null) 'id': id,
       if (photoPath != null) 'photo_path': photoPath,
       if (thumbnailPath != null) 'thumbnail_path': thumbnailPath,
+      if (serverPhotoUrl != null) 'server_photo_url': serverPhotoUrl,
       if (detectionData != null) 'detection_data': detectionData,
       if (status != null) 'status': status,
       if (createdAt != null) 'created_at': createdAt,
@@ -418,6 +470,7 @@ class InventoryItemsCompanion extends UpdateCompanion<InventoryItem> {
     Value<int>? id,
     Value<String>? photoPath,
     Value<String>? thumbnailPath,
+    Value<String?>? serverPhotoUrl,
     Value<String>? detectionData,
     Value<String>? status,
     Value<DateTime>? createdAt,
@@ -427,6 +480,7 @@ class InventoryItemsCompanion extends UpdateCompanion<InventoryItem> {
       id: id ?? this.id,
       photoPath: photoPath ?? this.photoPath,
       thumbnailPath: thumbnailPath ?? this.thumbnailPath,
+      serverPhotoUrl: serverPhotoUrl ?? this.serverPhotoUrl,
       detectionData: detectionData ?? this.detectionData,
       status: status ?? this.status,
       createdAt: createdAt ?? this.createdAt,
@@ -445,6 +499,9 @@ class InventoryItemsCompanion extends UpdateCompanion<InventoryItem> {
     }
     if (thumbnailPath.present) {
       map['thumbnail_path'] = Variable<String>(thumbnailPath.value);
+    }
+    if (serverPhotoUrl.present) {
+      map['server_photo_url'] = Variable<String>(serverPhotoUrl.value);
     }
     if (detectionData.present) {
       map['detection_data'] = Variable<String>(detectionData.value);
@@ -467,6 +524,7 @@ class InventoryItemsCompanion extends UpdateCompanion<InventoryItem> {
           ..write('id: $id, ')
           ..write('photoPath: $photoPath, ')
           ..write('thumbnailPath: $thumbnailPath, ')
+          ..write('serverPhotoUrl: $serverPhotoUrl, ')
           ..write('detectionData: $detectionData, ')
           ..write('status: $status, ')
           ..write('createdAt: $createdAt, ')
@@ -1180,6 +1238,7 @@ typedef $$InventoryItemsTableCreateCompanionBuilder =
       Value<int> id,
       required String photoPath,
       required String thumbnailPath,
+      Value<String?> serverPhotoUrl,
       required String detectionData,
       Value<String> status,
       required DateTime createdAt,
@@ -1190,6 +1249,7 @@ typedef $$InventoryItemsTableUpdateCompanionBuilder =
       Value<int> id,
       Value<String> photoPath,
       Value<String> thumbnailPath,
+      Value<String?> serverPhotoUrl,
       Value<String> detectionData,
       Value<String> status,
       Value<DateTime> createdAt,
@@ -1245,6 +1305,11 @@ class $$InventoryItemsTableFilterComposer
 
   ColumnFilters<String> get thumbnailPath => $composableBuilder(
     column: $table.thumbnailPath,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get serverPhotoUrl => $composableBuilder(
+    column: $table.serverPhotoUrl,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -1318,6 +1383,11 @@ class $$InventoryItemsTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<String> get serverPhotoUrl => $composableBuilder(
+    column: $table.serverPhotoUrl,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<String> get detectionData => $composableBuilder(
     column: $table.detectionData,
     builder: (column) => ColumnOrderings(column),
@@ -1356,6 +1426,11 @@ class $$InventoryItemsTableAnnotationComposer
 
   GeneratedColumn<String> get thumbnailPath => $composableBuilder(
     column: $table.thumbnailPath,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get serverPhotoUrl => $composableBuilder(
+    column: $table.serverPhotoUrl,
     builder: (column) => column,
   );
 
@@ -1432,6 +1507,7 @@ class $$InventoryItemsTableTableManager
                 Value<int> id = const Value.absent(),
                 Value<String> photoPath = const Value.absent(),
                 Value<String> thumbnailPath = const Value.absent(),
+                Value<String?> serverPhotoUrl = const Value.absent(),
                 Value<String> detectionData = const Value.absent(),
                 Value<String> status = const Value.absent(),
                 Value<DateTime> createdAt = const Value.absent(),
@@ -1440,6 +1516,7 @@ class $$InventoryItemsTableTableManager
                 id: id,
                 photoPath: photoPath,
                 thumbnailPath: thumbnailPath,
+                serverPhotoUrl: serverPhotoUrl,
                 detectionData: detectionData,
                 status: status,
                 createdAt: createdAt,
@@ -1450,6 +1527,7 @@ class $$InventoryItemsTableTableManager
                 Value<int> id = const Value.absent(),
                 required String photoPath,
                 required String thumbnailPath,
+                Value<String?> serverPhotoUrl = const Value.absent(),
                 required String detectionData,
                 Value<String> status = const Value.absent(),
                 required DateTime createdAt,
@@ -1458,6 +1536,7 @@ class $$InventoryItemsTableTableManager
                 id: id,
                 photoPath: photoPath,
                 thumbnailPath: thumbnailPath,
+                serverPhotoUrl: serverPhotoUrl,
                 detectionData: detectionData,
                 status: status,
                 createdAt: createdAt,

@@ -47,5 +47,58 @@ void main() {
       expect(json['label'], 'test');
       expect((json['boundingBox'] as BoundingBox).x, 0);
     });
+
+    test('fromApiItem should parse Florence pipeline response format', () {
+      final item = {
+        'id': '3',
+        'label': 'IKEA KALLAX shelf',
+        'confidence': 0.88,
+        'bbox': {'x': 0.05, 'y': 0.1, 'width': 0.4, 'height': 0.6},
+        'attributes': {
+          'category': 'storage furniture',
+          'color': 'white',
+          'material': 'particleboard',
+          'condition': 'good',
+          'description': 'Cube shelf unit',
+          'search_tags': ['shelf', 'storage', 'ikea'],
+        },
+      };
+
+      final object = DetectedObject.fromApiItem(item);
+
+      expect(object.boxIndex, 3);
+      expect(object.label, 'IKEA KALLAX shelf');
+      expect(object.confidence, 0.88);
+      expect(object.category, 'storage furniture');
+      expect(object.colors, ['white']);
+      expect(object.materials, ['particleboard']);
+      expect(object.condition, 'good');
+      expect(object.description, 'Cube shelf unit');
+      expect(object.searchTags, ['shelf', 'storage', 'ikea']);
+      expect(object.boundingBox.x, 0.05);
+      expect(object.boundingBox.width, 0.4);
+    });
+
+    test('fromApiItem handles missing optional fields gracefully', () {
+      final item = {
+        'id': '0',
+        'label': 'Unknown object',
+        'confidence': 0.5,
+        'bbox': <String, dynamic>{},
+        'attributes': <String, dynamic>{},
+      };
+
+      final object = DetectedObject.fromApiItem(item);
+
+      expect(object.boxIndex, 0);
+      expect(object.label, 'Unknown object');
+      expect(object.category, '');
+      expect(object.colors, isEmpty);
+      expect(object.materials, isEmpty);
+      expect(object.searchTags, isEmpty);
+      expect(object.condition, isNull);
+      expect(object.description, isNull);
+      expect(object.boundingBox.x, 0.0);
+    });
   });
 }

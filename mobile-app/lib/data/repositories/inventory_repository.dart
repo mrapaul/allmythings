@@ -71,6 +71,9 @@ class InventoryRepository {
       if (detection.description != null) {
         labels.add(LabelEntry('description', detection.description!));
       }
+      for (final tag in detection.searchTags) {
+        labels.add(LabelEntry('tag', tag));
+      }
     }
     return labels;
   }
@@ -154,6 +157,9 @@ class InventoryRepository {
     }
     if (detection.condition != null) labels.add(LabelEntry('condition', detection.condition!));
     if (detection.description != null) labels.add(LabelEntry('description', detection.description!));
+    for (final tag in detection.searchTags) {
+      labels.add(LabelEntry('tag', tag));
+    }
     return labels;
   }
 

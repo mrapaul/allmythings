@@ -29,6 +29,11 @@ _DetectedObject _$DetectedObjectFromJson(
       ? null
       : ValueRange.fromJson(json['estimatedValue'] as Map<String, dynamic>),
   description: json['description'] as String?,
+  searchTags:
+      (json['searchTags'] as List<dynamic>?)
+          ?.map((e) => e as String)
+          .toList() ??
+      const [],
 );
 
 Map<String, dynamic> _$DetectedObjectToJson(_DetectedObject instance) =>
@@ -45,6 +50,7 @@ Map<String, dynamic> _$DetectedObjectToJson(_DetectedObject instance) =>
       'condition': instance.condition,
       'estimatedValue': instance.estimatedValue,
       'description': instance.description,
+      'searchTags': instance.searchTags,
     };
 
 _BoundingBox _$BoundingBoxFromJson(Map<String, dynamic> json) => _BoundingBox(

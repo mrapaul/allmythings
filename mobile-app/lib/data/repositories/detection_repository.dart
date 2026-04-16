@@ -12,12 +12,18 @@ class DetectionResult {
     required this.classifier,
     required this.processingTimeMs,
     this.corroborationCount,
+    this.photoId,
+    this.photoUrl,
+    this.traceId,
   });
   final List<DetectedObject> detections;
   final String detector;
   final String classifier;
   final int processingTimeMs;
   final int? corroborationCount;
+  final String? photoId;
+  final String? photoUrl;
+  final String? traceId;
 }
 
 /// Repository for object detection via API
@@ -63,32 +69,26 @@ class DetectionRepository {
         );
       }
 
-      // New blocking-mode response shape: { fastPass, deepPass, fused, totalProcessingMs, imageQuality }
-      final fusedJson = data['fused'] as List<dynamic>?;
-      final detections = fusedJson
-              ?.map(
-                (d) => DetectedObject.fromJson(d as Map<String, dynamic>),
-              )
+      // Florence pipeline response shape: { photoId, photoUrl, itemCount, items, errors, traceId, processingMs, imageQuality }
+      final items = data['items'] as List<dynamic>?;
+      final detections = items
+              ?.map((d) => DetectedObject.fromApiItem(d as Map<String, dynamic>))
               .toList() ??
           [];
 
-      final fastPass = data['fastPass'] as Map<String, dynamic>?;
-      final deepPass = data['deepPass'] as Map<String, dynamic>?;
-      final detector = fastPass != null ? 'yoloe' : 'none';
-      final classifier = (deepPass?['provider'] as String?) ?? 'none';
-      final processingTimeMs = (data['totalProcessingMs'] as num?)?.toInt() ?? 0;
-      final matched = (fusedJson ?? [])
-          .whereType<Map<String, dynamic>>()
-          .where((d) => d['source'] == 'matched')
-          .length;
-      final corroborationCount = matched > 0 ? matched : null;
+      final photoId = data['photoId'] as String?;
+      final photoUrl = data['photoUrl'] as String?;
+      final traceId = data['traceId'] as String?;
+      final processingTimeMs = (data['processingMs'] as num?)?.toInt() ?? 0;
 
       return DetectionResult(
         detections: detections,
-        detector: detector,
-        classifier: classifier,
+        detector: 'florence-2',
+        classifier: 'qwen2.5vl',
         processingTimeMs: processingTimeMs,
-        corroborationCount: corroborationCount,
+        photoId: photoId,
+        photoUrl: photoUrl,
+        traceId: traceId,
       );
     } catch (e) {
       rethrow;
