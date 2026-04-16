@@ -49,6 +49,19 @@ dev-mobile:
 	@echo "${GREEN}Starting Flutter app...${NC}"
 	@cd $(MOBILE_DIR) && flutter run
 
+## ── Service Management ────────────────────────────────────────────
+start: ## Start all services (detection + ollama + api) with health gates
+	@./scripts/start-all.sh start
+
+stop: ## Stop all services
+	@./scripts/start-all.sh stop
+
+status: ## Show status of all services
+	@./scripts/start-all.sh status
+
+logs: ## Tail combined logs from all services
+	@./scripts/start-all.sh logs
+
 test-ios:
 	@echo "${GREEN}Running automated iOS tests...${NC}"
 	@./scripts/test-ios.sh
@@ -170,7 +183,7 @@ db-down:
 db-new:
 	$(DBMATE) new $(NAME)
 
-.PHONY: help setup install install-api install-mobile dev dev-api dev-mobile build build-api build-mobile test test-api test-mobile lint lint-api lint-mobile format format-api format-mobile generate clean clean-api clean-mobile build-api-raw build-mobile-raw verify guarantee test-ios release-ios test-iphone db-up db-down db-new
+.PHONY: help setup install install-api install-mobile dev dev-api dev-mobile start stop status logs build build-api build-mobile test test-api test-mobile lint lint-api lint-mobile format format-api format-mobile generate clean clean-api clean-mobile build-api-raw build-mobile-raw verify guarantee test-ios release-ios test-iphone db-up db-down db-new
 
 .PHONY: eval eval-ci eval-baseline
 
