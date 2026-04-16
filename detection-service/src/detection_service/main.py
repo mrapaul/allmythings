@@ -10,6 +10,7 @@ from detection_service.config import settings
 from detection_service.telemetry import configure_telemetry, mount_prometheus
 from detection_service.backends.mlx_backend import MLXBackend
 from detection_service.routes.owlv2 import router as owlv2_router
+from detection_service.routes.florence import router as florence_router
 
 log = logging.getLogger(__name__)
 
@@ -36,6 +37,7 @@ configure_telemetry(app=app)
 mount_prometheus(app)
 
 app.include_router(owlv2_router, tags=["detect"])
+app.include_router(florence_router, tags=["detect"])
 
 
 @app.get("/")
