@@ -68,7 +68,7 @@ async function runModel(model, imagePath) {
   return { text: '', elapsedMs: Date.now() - t0, error: String(lastErr), attempt: MAX_ATTEMPTS };
 }
 
-async function runHybrid(imagePath) {
+async function runPipelineEndpoint(imagePath) {
   const t0 = Date.now();
   const form = new FormData();
   const file = new Blob([await fs.readFile(imagePath)], { type: 'image/jpeg' });
@@ -77,7 +77,13 @@ async function runHybrid(imagePath) {
     const res = await fetch(HYBRID_URL, { method: 'POST', body: form, signal: AbortSignal.timeout(180_000) });
     if (!res.ok) return { text: '', elapsedMs: Date.now() - t0, error: `HTTP ${res.status}`, attempt: 1 };
     const data = await res.json();
-    const items = (data.fused ?? []).map((d) => ({ label: d.label, category: d.category, count: 1 }));
+    // Support both old (fused[]) and new (items[]) response formats
+    const raw = data.items ?? data.fused ?? [];
+    const items = raw.map((d) => ({
+      label: d.label ?? d.attributes?.name ?? 'unknown',
+      category: d.attributes?.category ?? d.category ?? 'unknown',
+      count: 1,
+    }));
     return { text: JSON.stringify(items), elapsedMs: Date.now() - t0, attempt: 1 };
   } catch (e) {
     return { text: '', elapsedMs: Date.now() - t0, error: String(e), attempt: 1 };
@@ -165,7 +171,8 @@ async function main() {
       const name = f.replace('.jpg', '');
       const imagePath = path.join(FIXTURES, f);
       process.stdout.write(`  ${name}: `);
-      const runResult = model.startsWith('hybrid:') ? await runHybrid(imagePath) : await runModel(model, imagePath);
+      const useEndpoint = model.startsWith('hybrid:') || model.startsWith('florence:');
+      const runResult = useEndpoint ? await runPipelineEndpoint(imagePath) : await runModel(model, imagePath);
       if (runResult.error) {
         failures++;
         console.log(`ERROR (${runResult.elapsedMs}ms): ${runResult.error.slice(0, 80)}`);
