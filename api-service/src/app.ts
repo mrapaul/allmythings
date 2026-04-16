@@ -4,21 +4,18 @@ import Fastify, { FastifyInstance } from 'fastify';
 import multipart from '@fastify/multipart';
 import cors from '@fastify/cors';
 import rateLimit from '@fastify/rate-limit';
+import fastifyStatic from '@fastify/static';
+import path from 'node:path';
+import fs from 'node:fs';
 import { envConfig } from './config/env.config';
 import { logger } from './utils/logger';
 import { errorHandler, notFoundHandler } from './middleware/error.middleware';
 import { detectRoute } from './routes/detect.route';
 import { healthRoute } from './routes/health.route';
-import { DetectionPipelineService } from './services/detection-pipeline.service';
-import { GroundingDinoDetector } from './providers/grounding-dino.detector';
-import { GoogleVisionDetector } from './providers/google-vision.detector';
-import { GeminiClassifier } from './providers/gemini.classifier';
+import { FlorencePipelineService } from './services/florence-pipeline.service';
+import { FlorenceDetector } from './providers/florence.detector';
 import { OllamaClassifier } from './providers/ollama.classifier';
-import { MockClassifier } from './providers/mock.classifier';
-import { ClaudeClassifier } from './providers/claude.classifier';
-import { MultiPassVlmClassifier } from './services/multi-pass-vlm.classifier';
-import { Owlv2Detector } from './providers/owlv2.detector';
-import { HybridPipelineService } from './services/hybrid-pipeline.service';
+import { PhotoStorageService } from './services/photo-storage.service';
 import { advertiseService } from './utils/bonjour-advertiser';
 
 process.on('uncaughtException', (err) => {
@@ -30,7 +27,7 @@ process.on('unhandledRejection', (reason, promise) => {
   logger.error({ reason, promise }, 'Unhandled Rejection');
 });
 
-export async function buildApp(options?: { disableRateLimit?: boolean; pipeline?: DetectionPipelineService }): Promise<FastifyInstance> {
+export async function buildApp(options?: { disableRateLimit?: boolean; pipeline?: FlorencePipelineService }): Promise<FastifyInstance> {
   const app = Fastify({
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     logger: logger as any,
@@ -49,8 +46,17 @@ export async function buildApp(options?: { disableRateLimit?: boolean; pipeline?
     await app.register(rateLimit, { max: 100, timeWindow: '1 minute' });
   }
 
+  // Serve stored photos as static files
+  const photoDir = path.join(envConfig.photoDir, 'photos');
+  fs.mkdirSync(photoDir, { recursive: true });
+  await app.register(fastifyStatic, {
+    root: photoDir,
+    prefix: '/photos/',
+    decorateReply: false,
+  });
+
   // Create detection pipeline
-  const pipeline = options?.pipeline ?? createDefaultPipeline();
+  const pipeline = options?.pipeline ?? createPipeline();
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   (app as any).pipeline = pipeline;
 
@@ -59,60 +65,22 @@ export async function buildApp(options?: { disableRateLimit?: boolean; pipeline?
 
   app.get('/', () => ({
     service: 'Visual Home Inventory - API Service',
-    version: '2.0.0',
-    endpoints: { detection: 'POST /v1/detect', health: 'GET /v1/health' },
+    version: '3.0.0',
+    endpoints: {
+      detection: 'POST /v1/detect',
+      health: 'GET /v1/health',
+      photos: 'GET /photos/:filename',
+    },
   }));
 
   return app;
 }
 
-function createDefaultPipeline(): DetectionPipelineService {
-  const detectors = [];
-  const classifiers = [];
-
-  if (envConfig.useMockAi) {
-    logger.info('Using Mock AI for detection pipeline');
-    classifiers.push(new MockClassifier());
-    const multiPassVlm = new MultiPassVlmClassifier(classifiers, envConfig);
-    return new DetectionPipelineService({
-      fastDetectorUrl: envConfig.detectionServiceUrl,
-      multiPassVlm,
-      classifiers: [],
-      detectors: [],
-    });
-  }
-
-  detectors.push(new GroundingDinoDetector(envConfig));
-  if (envConfig.googleProjectId) {
-    detectors.push(new GoogleVisionDetector(envConfig));
-  }
-
-  if (envConfig.geminiApiKey) {
-    classifiers.push(new GeminiClassifier(envConfig));
-  }
-  if (envConfig.claudeApiKey) {
-    classifiers.push(new ClaudeClassifier(envConfig));
-  }
-  let ollamaClassifier: OllamaClassifier | undefined;
-  if (envConfig.ollamaEnabled) {
-    ollamaClassifier = new OllamaClassifier(envConfig);
-    classifiers.push(ollamaClassifier);
-  }
-
-  const multiPassVlm = new MultiPassVlmClassifier(classifiers, envConfig);
-
-  const owlv2 = new Owlv2Detector(envConfig.owlv2Url, 0.15);
-  const hybridClassifier = ollamaClassifier ?? classifiers[0];
-  const hybrid = hybridClassifier ? new HybridPipelineService(owlv2, hybridClassifier) : undefined;
-
-  return new DetectionPipelineService({
-    fastDetectorUrl: envConfig.detectionServiceUrl,
-    multiPassVlm,
-    classifiers,
-    detectors,
-    hybrid,
-    hybridEnabled: envConfig.hybridEnabled,
-  });
+function createPipeline(): FlorencePipelineService {
+  const storage = new PhotoStorageService(envConfig.photoDir);
+  const detector = new FlorenceDetector(envConfig.florenceUrl);
+  const classifier = new OllamaClassifier(envConfig);
+  return new FlorencePipelineService(storage, detector, classifier);
 }
 
 async function start(): Promise<void> {

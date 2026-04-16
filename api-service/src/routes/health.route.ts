@@ -1,10 +1,10 @@
 import { FastifyInstance } from 'fastify';
 import os from 'os';
-import { DetectionPipelineService } from '../services/detection-pipeline.service';
+import { FlorencePipelineService } from '../services/florence-pipeline.service';
 
 export async function healthRoute(app: FastifyInstance): Promise<void> {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const pipeline = (app as any).pipeline as DetectionPipelineService;
+  const pipeline = (app as any).pipeline as FlorencePipelineService;
 
   app.get('/v1/health', async (_request, reply) => {
     const providers = await pipeline.healthCheck();

@@ -23,6 +23,8 @@ export interface EnvConfig {
   claudeModel: string;
   multiPassRetryThreshold: number;
   multiPassQuadrantOverlap: number;
+  florenceUrl: string;
+  photoDir: string;
 }
 
 export const envConfig: EnvConfig = {
@@ -50,4 +52,6 @@ export const envConfig: EnvConfig = {
   claudeModel: process.env.CLAUDE_MODEL || 'claude-sonnet-4-20250514',
   multiPassRetryThreshold: parseInt(process.env.MULTI_PASS_RETRY_THRESHOLD || '15', 10),
   multiPassQuadrantOverlap: parseFloat(process.env.MULTI_PASS_QUADRANT_OVERLAP || '0.55'),
+  florenceUrl: process.env.FLORENCE_URL ?? process.env.DETECTION_SERVICE_URL ?? 'http://localhost:14001',
+  photoDir: process.env.PHOTO_DIR ?? `${process.env.HOME}/allmythings-data`,
 };
