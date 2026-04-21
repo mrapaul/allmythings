@@ -83,7 +83,7 @@ jobs:
 
       - name: Run unit tests
         working-directory: detection-service
-        run: python -m pytest test_main.py
+        run: python -m pytest tests/
 
   # ============================================
   # API E2E TESTS

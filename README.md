@@ -41,7 +41,7 @@ make dev-api
 # Term 2: Mobile
 make dev-mobile
 # Term 3: Detection Service
-cd detection-service && venv/bin/python main.py
+cd detection-service && PYTHONPATH=src venv/bin/python -m uvicorn detection_service.main:app --port 14001
 ```
 
 ## 🧪 Testing

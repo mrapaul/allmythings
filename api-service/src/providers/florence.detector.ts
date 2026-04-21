@@ -39,7 +39,7 @@ export class FlorenceDetector implements ObjectDetector {
       throw new Error(`Florence detector returned ${response.status}`);
     }
 
-    const data: FlorenceResponse = await response.json();
+    const data = (await response.json()) as FlorenceResponse;
     logger.info({ count: data.regions.length }, 'Florence-2: regions detected');
 
     return data.regions.map((r) => ({

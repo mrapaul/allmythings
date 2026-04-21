@@ -129,7 +129,7 @@ test-mobile:
 
 test-detection:
 	@echo "${GREEN}Running Detection service tests...${NC}"
-	@cd $(DETECTION_DIR) && ./venv/bin/python -m pytest test_main.py
+	@cd $(DETECTION_DIR) && ./venv/bin/python -m pytest tests/
 
 # Linting
 lint: lint-api lint-mobile

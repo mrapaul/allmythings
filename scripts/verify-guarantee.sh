@@ -26,9 +26,10 @@ lsof -ti :14001 | xargs kill -9 2>/dev/null || true
 
 # 1. Start Detection Service (if using real AI)
 if [ "$USE_REAL_AI" = "true" ]; then
-    log_info "Starting Detection Service (YOLOv11)..."
+    log_info "Starting Detection Service (Florence pipeline)..."
     cd "$PROJECT_ROOT/detection-service"
-    ./venv/bin/python main.py > /tmp/detection_verify.log 2>&1 &
+    PYTHONPATH=src ./venv/bin/python -m uvicorn detection_service.main:app \
+        --host 0.0.0.0 --port 14001 > /tmp/detection_verify.log 2>&1 &
     DETECTION_PID=$!
     
     # Wait for detection health

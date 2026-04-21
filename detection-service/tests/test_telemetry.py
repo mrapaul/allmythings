@@ -1,7 +1,7 @@
 from fastapi.testclient import TestClient
 
 def test_metrics_endpoint_serves_prometheus():
-    from main import app
+    from detection_service.main import app
     client = TestClient(app)
     r = client.get("/metrics")
     assert r.status_code == 200
