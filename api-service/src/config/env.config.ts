@@ -25,6 +25,23 @@ export interface EnvConfig {
   multiPassQuadrantOverlap: number;
   florenceUrl: string;
   photoDir: string;
+
+  // Temporal
+  temporalHost: string;
+  temporalNamespace: string;
+  temporalTaskQueue: string;
+  workflowExecutionTimeoutMs: number;
+  httpResponseTimeoutMs: number;
+
+  // Pipeline discipline
+  pipelineMaxConcurrency: number;
+  enrichmentBudgetMs: number;
+  queueBackpressureThreshold: number;
+
+  // Tier models (env-overrideable)
+  tier1Model: string;
+  tier2Model: string;
+  tier3Model: string;
 }
 
 export const envConfig: EnvConfig = {
@@ -54,4 +71,15 @@ export const envConfig: EnvConfig = {
   multiPassQuadrantOverlap: parseFloat(process.env.MULTI_PASS_QUADRANT_OVERLAP || '0.55'),
   florenceUrl: process.env.FLORENCE_URL ?? process.env.DETECTION_SERVICE_URL ?? 'http://localhost:14001',
   photoDir: (process.env.PHOTO_DIR ?? `${process.env.HOME}/allmythings-data`).replace(/^~/, process.env.HOME || ''),
+  temporalHost: process.env.TEMPORAL_HOST || 'localhost:7233',
+  temporalNamespace: process.env.TEMPORAL_NAMESPACE || 'default',
+  temporalTaskQueue: process.env.TEMPORAL_TASK_QUEUE || 'inventory-pipeline',
+  workflowExecutionTimeoutMs: parseInt(process.env.WORKFLOW_EXECUTION_TIMEOUT_MS || '120000', 10),
+  httpResponseTimeoutMs: parseInt(process.env.HTTP_RESPONSE_TIMEOUT_MS || '90000', 10),
+  pipelineMaxConcurrency: parseInt(process.env.PIPELINE_MAX_CONCURRENCY || '1', 10),
+  enrichmentBudgetMs: parseInt(process.env.ENRICHMENT_BUDGET_MS || '45000', 10),
+  queueBackpressureThreshold: parseInt(process.env.QUEUE_BACKPRESSURE_THRESHOLD || '10', 10),
+  tier1Model: process.env.TIER_1_MODEL || 'qwen2.5vl:7b',
+  tier2Model: process.env.TIER_2_MODEL || 'qwen2.5vl:3b',
+  tier3Model: process.env.TIER_3_MODEL || 'moondream',
 };
