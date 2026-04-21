@@ -16,6 +16,7 @@ from opentelemetry.instrumentation.httpx import HTTPXClientInstrumentor
 from prometheus_client import make_asgi_app
 
 from .config import settings
+from .log_config import configure_logging
 
 log = logging.getLogger(__name__)
 
@@ -26,6 +27,10 @@ def configure_telemetry(app: Optional[FastAPI], service_name: str = None) -> Non
     global _configured
     if _configured:
         return
+
+    # Configure structured JSON logging with OTel trace_id/span_id correlation
+    # BEFORE any OTel tracer setup emits log records.
+    configure_logging()
 
     name = service_name or settings.service_name
     resource = Resource.create({

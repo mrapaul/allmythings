@@ -34,6 +34,7 @@ dependencies = [
   "opentelemetry-instrumentation-psycopg>=0.50b0",
   "opentelemetry-instrumentation-httpx>=0.50b0",
   "prometheus-client>=0.21",
+  "structlog>=24",
 ]
 
 [project.optional-dependencies]
