@@ -1,0 +1,32 @@
+# Local observability + orchestration stack for allmythings.
+# Brought up by `make start-deps`. Fully local, OSS.
+services:
+  temporal:
+    image: temporalio/auto-setup:1.24.2
+    container_name: allmythings-temporal
+    restart: unless-stopped
+    environment:
+      - DB=sqlite
+      - SQLITE_DB_PATH=/etc/temporal/temporal.db
+      - TEMPORAL_ADDRESS=0.0.0.0:7233
+      - LOG_LEVEL=info
+    ports:
+      - "7233:7233"
+      - "7243:7243"  # metrics
+    volumes:
+      - temporal-data:/etc/temporal
+
+  temporal-ui:
+    image: temporalio/ui:2.30.3
+    container_name: allmythings-temporal-ui
+    restart: unless-stopped
+    depends_on:
+      - temporal
+    environment:
+      - TEMPORAL_ADDRESS=temporal:7233
+      - TEMPORAL_CORS_ORIGINS=http://localhost:3000
+    ports:
+      - "8233:8080"
+
+volumes:
+  temporal-data:
