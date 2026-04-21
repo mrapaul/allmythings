@@ -51,7 +51,7 @@ export async function detectRoute(app: FastifyInstance): Promise<void> {
       ],
       workflowId,
       taskQueue: TASK_QUEUES.INVENTORY_PIPELINE,
-      workflowIdReusePolicy: WorkflowIdReusePolicy.WORKFLOW_ID_REUSE_POLICY_ALLOW_DUPLICATE_FAILED_ONLY,
+      workflowIdReusePolicy: WorkflowIdReusePolicy.ALLOW_DUPLICATE_FAILED_ONLY,
       workflowExecutionTimeout: `${envConfig.workflowExecutionTimeoutMs}ms`,
     });
 
