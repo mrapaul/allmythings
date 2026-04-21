@@ -17,6 +17,11 @@
 __pycache__/
 *.pyc
 
+# Python virtualenvs (per-service)
+venv/
+.venv/
+*.egg-info/
+
 # Detection service logs (structured logs go to Loki now)
 detection-service/detection*.log
 
