@@ -1,6 +1,12 @@
+// @ts-nocheck
 /**
  * Smoke assertions — run against a live stack.
- * Usage: npx tsx scripts/smoke-assertions.ts [--fixture path] [--api-url http://localhost:14000]
+ * Usage: cd api-service && npx tsx ../scripts/smoke-assertions.ts [--fixture path] [--api-url http://localhost:14000]
+ *
+ * This file sits at repo root /scripts/ which has no tsconfig of its own.
+ * Running via tsx from api-service picks up @types/node and fetch/FormData
+ * DOM types automatically. Editor LSP outside that context can't see them,
+ * hence @ts-nocheck — this is a script, not compiled library code.
  */
 import fs from 'node:fs';
 import path from 'node:path';
