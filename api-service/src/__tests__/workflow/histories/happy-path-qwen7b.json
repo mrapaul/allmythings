@@ -1,0 +1,1187 @@
+{
+  "events": [
+    {
+      "links": [],
+      "eventId": {
+        "low": 1,
+        "high": 0,
+        "unsigned": false
+      },
+      "eventTime": {
+        "seconds": {
+          "low": 1776803840,
+          "high": 0,
+          "unsigned": false
+        },
+        "nanos": 281000000
+      },
+      "eventType": 1,
+      "workflowExecutionStartedEventAttributes": {
+        "completionCallbacks": [],
+        "workflowType": {
+          "name": "detectInventoryWorkflow"
+        },
+        "taskQueue": {
+          "name": "record-happy-path",
+          "kind": 1
+        },
+        "input": {
+          "payloads": [
+            {
+              "metadata": {
+                "encoding": "anNvbi9wbGFpbg=="
+              },
+              "externalPayloads": [],
+              "data": "eyJpbWFnZUJhc2U2NCI6ImFHVnNiRzg9IiwiaW1hZ2VTaGEyNTYiOiJhYmMiLCJtaW1lVHlwZSI6ImltYWdlL2pwZWciLCJ0cmFjZUlkIjoidCIsInJlcXVlc3RJZCI6InIifQ=="
+            }
+          ]
+        },
+        "workflowExecutionTimeout": {
+          "seconds": {
+            "low": 315360000,
+            "high": 0,
+            "unsigned": false
+          }
+        },
+        "workflowRunTimeout": {
+          "seconds": {
+            "low": 315360000,
+            "high": 0,
+            "unsigned": false
+          }
+        },
+        "workflowTaskTimeout": {
+          "seconds": {
+            "low": 10,
+            "high": 0,
+            "unsigned": false
+          }
+        },
+        "originalExecutionRunId": "9a82dfbb-1291-4082-aa1c-9c59023e8774",
+        "identity": "58077@CloudDominion-173.local",
+        "firstExecutionRunId": "9a82dfbb-1291-4082-aa1c-9c59023e8774",
+        "attempt": 1,
+        "firstWorkflowTaskBackoff": {},
+        "header": {
+          "fields": {}
+        }
+      }
+    },
+    {
+      "links": [],
+      "eventId": {
+        "low": 2,
+        "high": 0,
+        "unsigned": false
+      },
+      "eventTime": {
+        "seconds": {
+          "low": 1776803840,
+          "high": 0,
+          "unsigned": false
+        },
+        "nanos": 281000000
+      },
+      "eventType": 5,
+      "workflowTaskScheduledEventAttributes": {
+        "taskQueue": {
+          "name": "record-happy-path",
+          "kind": 1
+        },
+        "startToCloseTimeout": {
+          "seconds": {
+            "low": 10,
+            "high": 0,
+            "unsigned": false
+          }
+        },
+        "attempt": 1
+      }
+    },
+    {
+      "links": [],
+      "eventId": {
+        "low": 3,
+        "high": 0,
+        "unsigned": false
+      },
+      "eventTime": {
+        "seconds": {
+          "low": 1776803840,
+          "high": 0,
+          "unsigned": false
+        },
+        "nanos": 282000000
+      },
+      "eventType": 6,
+      "workflowTaskStartedEventAttributes": {
+        "suggestContinueAsNewReasons": [],
+        "scheduledEventId": {
+          "low": 2,
+          "high": 0,
+          "unsigned": false
+        },
+        "identity": "58077@CloudDominion-173.local"
+      }
+    },
+    {
+      "links": [],
+      "eventId": {
+        "low": 4,
+        "high": 0,
+        "unsigned": false
+      },
+      "eventTime": {
+        "seconds": {
+          "low": 1776803840,
+          "high": 0,
+          "unsigned": false
+        },
+        "nanos": 301000000
+      },
+      "eventType": 7,
+      "workflowTaskCompletedEventAttributes": {
+        "scheduledEventId": {
+          "low": 2,
+          "high": 0,
+          "unsigned": false
+        },
+        "identity": "58077@CloudDominion-173.local",
+        "binaryChecksum": "@temporalio/worker@1.16.1+35681a30462fe57cbce8dca66949c7f290cefef58a96fed1b092310a1371fc23",
+        "sdkMetadata": {
+          "coreUsedFlags": [
+            1,
+            2,
+            3
+          ],
+          "langUsedFlags": [],
+          "sdkName": "temporal-typescript",
+          "sdkVersion": "1.16.1"
+        },
+        "meteringMetadata": {}
+      }
+    },
+    {
+      "links": [],
+      "eventId": {
+        "low": 5,
+        "high": 0,
+        "unsigned": false
+      },
+      "eventTime": {
+        "seconds": {
+          "low": 1776803840,
+          "high": 0,
+          "unsigned": false
+        },
+        "nanos": 301000000
+      },
+      "eventType": 10,
+      "activityTaskScheduledEventAttributes": {
+        "activityId": "1",
+        "activityType": {
+          "name": "savePhoto"
+        },
+        "taskQueue": {
+          "name": "record-happy-path",
+          "kind": 1
+        },
+        "header": {
+          "fields": {}
+        },
+        "input": {
+          "payloads": [
+            {
+              "metadata": {
+                "encoding": "anNvbi9wbGFpbg=="
+              },
+              "externalPayloads": [],
+              "data": "eyJpbWFnZUJhc2U2NCI6ImFHVnNiRzg9IiwiaW1hZ2VTaGEyNTYiOiJhYmMiLCJtaW1lVHlwZSI6ImltYWdlL2pwZWciLCJ0cmFjZUlkIjoidCIsInJlcXVlc3RJZCI6InIifQ=="
+            }
+          ]
+        },
+        "scheduleToCloseTimeout": {
+          "seconds": {
+            "low": 315360000,
+            "high": 0,
+            "unsigned": false
+          }
+        },
+        "scheduleToStartTimeout": {
+          "seconds": {
+            "low": 315360000,
+            "high": 0,
+            "unsigned": false
+          }
+        },
+        "startToCloseTimeout": {
+          "seconds": {
+            "low": 30,
+            "high": 0,
+            "unsigned": false
+          }
+        },
+        "heartbeatTimeout": {},
+        "workflowTaskCompletedEventId": {
+          "low": 3,
+          "high": 0,
+          "unsigned": false
+        },
+        "retryPolicy": {
+          "nonRetryableErrorTypes": [
+            "UnsupportedMediaType",
+            "FlorenceBadRequestError"
+          ],
+          "initialInterval": {
+            "seconds": {
+              "low": 1,
+              "high": 0,
+              "unsigned": false
+            }
+          },
+          "backoffCoefficient": 3,
+          "maximumInterval": {
+            "seconds": {
+              "low": 100,
+              "high": 0,
+              "unsigned": false
+            }
+          },
+          "maximumAttempts": 3
+        }
+      }
+    },
+    {
+      "links": [],
+      "eventId": {
+        "low": 6,
+        "high": 0,
+        "unsigned": false
+      },
+      "eventTime": {
+        "seconds": {
+          "low": 1776803840,
+          "high": 0,
+          "unsigned": false
+        },
+        "nanos": 301000000
+      },
+      "eventType": 11,
+      "activityTaskStartedEventAttributes": {
+        "scheduledEventId": {
+          "low": 5,
+          "high": 0,
+          "unsigned": false
+        },
+        "identity": "58077@CloudDominion-173.local",
+        "attempt": 1
+      }
+    },
+    {
+      "links": [],
+      "eventId": {
+        "low": 7,
+        "high": 0,
+        "unsigned": false
+      },
+      "eventTime": {
+        "seconds": {
+          "low": 1776803840,
+          "high": 0,
+          "unsigned": false
+        },
+        "nanos": 303000000
+      },
+      "eventType": 12,
+      "activityTaskCompletedEventAttributes": {
+        "result": {
+          "payloads": [
+            {
+              "metadata": {
+                "encoding": "anNvbi9wbGFpbg=="
+              },
+              "externalPayloads": [],
+              "data": "eyJwaG90b0lkIjoicmVjb3JkZWQiLCJwaG90b1BhdGgiOiIvcC5qcGciLCJ0aHVtYm5haWxQYXRoIjoiL3QuanBnIiwiYnl0ZXMiOjEwMH0="
+            }
+          ]
+        },
+        "scheduledEventId": {
+          "low": 5,
+          "high": 0,
+          "unsigned": false
+        },
+        "startedEventId": {
+          "low": 6,
+          "high": 0,
+          "unsigned": false
+        },
+        "identity": "58077@CloudDominion-173.local"
+      }
+    },
+    {
+      "links": [],
+      "eventId": {
+        "low": 8,
+        "high": 0,
+        "unsigned": false
+      },
+      "eventTime": {
+        "seconds": {
+          "low": 1776803840,
+          "high": 0,
+          "unsigned": false
+        },
+        "nanos": 303000000
+      },
+      "eventType": 5,
+      "workflowTaskScheduledEventAttributes": {
+        "taskQueue": {
+          "name": "record-happy-path",
+          "kind": 1
+        },
+        "startToCloseTimeout": {
+          "seconds": {
+            "low": 10,
+            "high": 0,
+            "unsigned": false
+          }
+        },
+        "attempt": 1
+      }
+    },
+    {
+      "links": [],
+      "eventId": {
+        "low": 9,
+        "high": 0,
+        "unsigned": false
+      },
+      "eventTime": {
+        "seconds": {
+          "low": 1776803840,
+          "high": 0,
+          "unsigned": false
+        },
+        "nanos": 303000000
+      },
+      "eventType": 6,
+      "workflowTaskStartedEventAttributes": {
+        "suggestContinueAsNewReasons": [],
+        "scheduledEventId": {
+          "low": 8,
+          "high": 0,
+          "unsigned": false
+        },
+        "identity": "58077@CloudDominion-173.local"
+      }
+    },
+    {
+      "links": [],
+      "eventId": {
+        "low": 10,
+        "high": 0,
+        "unsigned": false
+      },
+      "eventTime": {
+        "seconds": {
+          "low": 1776803840,
+          "high": 0,
+          "unsigned": false
+        },
+        "nanos": 305000000
+      },
+      "eventType": 7,
+      "workflowTaskCompletedEventAttributes": {
+        "scheduledEventId": {
+          "low": 8,
+          "high": 0,
+          "unsigned": false
+        },
+        "identity": "58077@CloudDominion-173.local",
+        "binaryChecksum": "@temporalio/worker@1.16.1+35681a30462fe57cbce8dca66949c7f290cefef58a96fed1b092310a1371fc23",
+        "sdkMetadata": {
+          "coreUsedFlags": [],
+          "langUsedFlags": []
+        },
+        "meteringMetadata": {}
+      }
+    },
+    {
+      "links": [],
+      "eventId": {
+        "low": 11,
+        "high": 0,
+        "unsigned": false
+      },
+      "eventTime": {
+        "seconds": {
+          "low": 1776803840,
+          "high": 0,
+          "unsigned": false
+        },
+        "nanos": 305000000
+      },
+      "eventType": 10,
+      "activityTaskScheduledEventAttributes": {
+        "activityId": "2",
+        "activityType": {
+          "name": "florenceDetect"
+        },
+        "taskQueue": {
+          "name": "record-happy-path",
+          "kind": 1
+        },
+        "header": {
+          "fields": {}
+        },
+        "input": {
+          "payloads": [
+            {
+              "metadata": {
+                "encoding": "anNvbi9wbGFpbg=="
+              },
+              "externalPayloads": [],
+              "data": "eyJpbWFnZUJhc2U2NCI6ImFHVnNiRzg9IiwiaW1hZ2VTaGEyNTYiOiJhYmMiLCJtaW1lVHlwZSI6ImltYWdlL2pwZWciLCJ0cmFjZUlkIjoidCIsInJlcXVlc3RJZCI6InIifQ=="
+            }
+          ]
+        },
+        "scheduleToCloseTimeout": {
+          "seconds": {
+            "low": 315360000,
+            "high": 0,
+            "unsigned": false
+          }
+        },
+        "scheduleToStartTimeout": {
+          "seconds": {
+            "low": 315360000,
+            "high": 0,
+            "unsigned": false
+          }
+        },
+        "startToCloseTimeout": {
+          "seconds": {
+            "low": 30,
+            "high": 0,
+            "unsigned": false
+          }
+        },
+        "heartbeatTimeout": {},
+        "workflowTaskCompletedEventId": {
+          "low": 9,
+          "high": 0,
+          "unsigned": false
+        },
+        "retryPolicy": {
+          "nonRetryableErrorTypes": [
+            "UnsupportedMediaType",
+            "FlorenceBadRequestError"
+          ],
+          "initialInterval": {
+            "seconds": {
+              "low": 1,
+              "high": 0,
+              "unsigned": false
+            }
+          },
+          "backoffCoefficient": 3,
+          "maximumInterval": {
+            "seconds": {
+              "low": 100,
+              "high": 0,
+              "unsigned": false
+            }
+          },
+          "maximumAttempts": 3
+        }
+      }
+    },
+    {
+      "links": [],
+      "eventId": {
+        "low": 12,
+        "high": 0,
+        "unsigned": false
+      },
+      "eventTime": {
+        "seconds": {
+          "low": 1776803840,
+          "high": 0,
+          "unsigned": false
+        },
+        "nanos": 305000000
+      },
+      "eventType": 11,
+      "activityTaskStartedEventAttributes": {
+        "scheduledEventId": {
+          "low": 11,
+          "high": 0,
+          "unsigned": false
+        },
+        "identity": "58077@CloudDominion-173.local",
+        "attempt": 1
+      }
+    },
+    {
+      "links": [],
+      "eventId": {
+        "low": 13,
+        "high": 0,
+        "unsigned": false
+      },
+      "eventTime": {
+        "seconds": {
+          "low": 1776803840,
+          "high": 0,
+          "unsigned": false
+        },
+        "nanos": 306000000
+      },
+      "eventType": 12,
+      "activityTaskCompletedEventAttributes": {
+        "result": {
+          "payloads": [
+            {
+              "metadata": {
+                "encoding": "anNvbi9wbGFpbg=="
+              },
+              "externalPayloads": [],
+              "data": "eyJyZWdpb25zIjpbeyJjYXB0aW9uIjoiY2hhaXIiLCJ4IjowLCJ5IjowLCJ3aWR0aCI6MC41LCJoZWlnaHQiOjAuNSwicmVnaW9uSW5kZXgiOjB9XSwiaW1hZ2VXaWR0aCI6NjQwLCJpbWFnZUhlaWdodCI6NDgwfQ=="
+            }
+          ]
+        },
+        "scheduledEventId": {
+          "low": 11,
+          "high": 0,
+          "unsigned": false
+        },
+        "startedEventId": {
+          "low": 12,
+          "high": 0,
+          "unsigned": false
+        },
+        "identity": "58077@CloudDominion-173.local"
+      }
+    },
+    {
+      "links": [],
+      "eventId": {
+        "low": 14,
+        "high": 0,
+        "unsigned": false
+      },
+      "eventTime": {
+        "seconds": {
+          "low": 1776803840,
+          "high": 0,
+          "unsigned": false
+        },
+        "nanos": 306000000
+      },
+      "eventType": 5,
+      "workflowTaskScheduledEventAttributes": {
+        "taskQueue": {
+          "name": "record-happy-path",
+          "kind": 1
+        },
+        "startToCloseTimeout": {
+          "seconds": {
+            "low": 10,
+            "high": 0,
+            "unsigned": false
+          }
+        },
+        "attempt": 1
+      }
+    },
+    {
+      "links": [],
+      "eventId": {
+        "low": 15,
+        "high": 0,
+        "unsigned": false
+      },
+      "eventTime": {
+        "seconds": {
+          "low": 1776803840,
+          "high": 0,
+          "unsigned": false
+        },
+        "nanos": 306000000
+      },
+      "eventType": 6,
+      "workflowTaskStartedEventAttributes": {
+        "suggestContinueAsNewReasons": [],
+        "scheduledEventId": {
+          "low": 14,
+          "high": 0,
+          "unsigned": false
+        },
+        "identity": "58077@CloudDominion-173.local"
+      }
+    },
+    {
+      "links": [],
+      "eventId": {
+        "low": 16,
+        "high": 0,
+        "unsigned": false
+      },
+      "eventTime": {
+        "seconds": {
+          "low": 1776803840,
+          "high": 0,
+          "unsigned": false
+        },
+        "nanos": 307000000
+      },
+      "eventType": 7,
+      "workflowTaskCompletedEventAttributes": {
+        "scheduledEventId": {
+          "low": 14,
+          "high": 0,
+          "unsigned": false
+        },
+        "identity": "58077@CloudDominion-173.local",
+        "binaryChecksum": "@temporalio/worker@1.16.1+35681a30462fe57cbce8dca66949c7f290cefef58a96fed1b092310a1371fc23",
+        "sdkMetadata": {
+          "coreUsedFlags": [],
+          "langUsedFlags": []
+        },
+        "meteringMetadata": {}
+      }
+    },
+    {
+      "links": [],
+      "eventId": {
+        "low": 17,
+        "high": 0,
+        "unsigned": false
+      },
+      "eventTime": {
+        "seconds": {
+          "low": 1776803840,
+          "high": 0,
+          "unsigned": false
+        },
+        "nanos": 307000000
+      },
+      "eventType": 10,
+      "activityTaskScheduledEventAttributes": {
+        "activityId": "3",
+        "activityType": {
+          "name": "enrichItem"
+        },
+        "taskQueue": {
+          "name": "record-happy-path",
+          "kind": 1
+        },
+        "header": {
+          "fields": {}
+        },
+        "input": {
+          "payloads": [
+            {
+              "metadata": {
+                "encoding": "anNvbi9wbGFpbg=="
+              },
+              "externalPayloads": [],
+              "data": "eyJpbWFnZUJhc2U2NCI6ImFHVnNiRzg9IiwicmVnaW9uIjp7ImNhcHRpb24iOiJjaGFpciIsIngiOjAsInkiOjAsIndpZHRoIjowLjUsImhlaWdodCI6MC41LCJyZWdpb25JbmRleCI6MH0sInRpZXIiOiJxd2VuN2IiLCJtb2RlbCI6InF3ZW4yLjV2bDo3YiJ9"
+            }
+          ]
+        },
+        "scheduleToCloseTimeout": {
+          "seconds": {
+            "low": 315360000,
+            "high": 0,
+            "unsigned": false
+          }
+        },
+        "scheduleToStartTimeout": {
+          "seconds": {
+            "low": 315360000,
+            "high": 0,
+            "unsigned": false
+          }
+        },
+        "startToCloseTimeout": {
+          "seconds": {
+            "low": 20,
+            "high": 0,
+            "unsigned": false
+          }
+        },
+        "heartbeatTimeout": {
+          "seconds": {
+            "low": 10,
+            "high": 0,
+            "unsigned": false
+          }
+        },
+        "workflowTaskCompletedEventId": {
+          "low": 15,
+          "high": 0,
+          "unsigned": false
+        },
+        "retryPolicy": {
+          "nonRetryableErrorTypes": [
+            "InvalidTierConfig",
+            "OllamaJsonParseError",
+            "OllamaBadRequestError"
+          ],
+          "initialInterval": {
+            "seconds": {
+              "low": 1,
+              "high": 0,
+              "unsigned": false
+            }
+          },
+          "backoffCoefficient": 2,
+          "maximumInterval": {
+            "seconds": {
+              "low": 100,
+              "high": 0,
+              "unsigned": false
+            }
+          },
+          "maximumAttempts": 2
+        }
+      }
+    },
+    {
+      "links": [],
+      "eventId": {
+        "low": 18,
+        "high": 0,
+        "unsigned": false
+      },
+      "eventTime": {
+        "seconds": {
+          "low": 1776803840,
+          "high": 0,
+          "unsigned": false
+        },
+        "nanos": 307000000
+      },
+      "eventType": 11,
+      "activityTaskStartedEventAttributes": {
+        "scheduledEventId": {
+          "low": 17,
+          "high": 0,
+          "unsigned": false
+        },
+        "identity": "58077@CloudDominion-173.local",
+        "attempt": 1
+      }
+    },
+    {
+      "links": [],
+      "eventId": {
+        "low": 19,
+        "high": 0,
+        "unsigned": false
+      },
+      "eventTime": {
+        "seconds": {
+          "low": 1776803840,
+          "high": 0,
+          "unsigned": false
+        },
+        "nanos": 307000000
+      },
+      "eventType": 12,
+      "activityTaskCompletedEventAttributes": {
+        "result": {
+          "payloads": [
+            {
+              "metadata": {
+                "encoding": "anNvbi9wbGFpbg=="
+              },
+              "externalPayloads": [],
+              "data": "eyJpZCI6InIiLCJyZWdpb25JbmRleCI6MCwibGFiZWwiOiJjaGFpciIsImNvbmZpZGVuY2UiOjAuOSwiYmJveCI6eyJ4IjowLCJ5IjowLCJ3aWR0aCI6MC41LCJoZWlnaHQiOjAuNX0sImVucmljaG1lbnRUaWVyIjoicXdlbjdiIiwiYXR0cmlidXRlcyI6eyJuYW1lIjoiY2hhaXIiLCJjYXRlZ29yeSI6ImZ1cm5pdHVyZSIsImNvbG9yIjpudWxsLCJtYXRlcmlhbCI6bnVsbCwiY29uZGl0aW9uIjpudWxsLCJlc3RpbWF0ZWRWYWx1ZSI6bnVsbCwiZGVzY3JpcHRpb24iOiJjaGFpciIsInNlYXJjaFRhZ3MiOlsiY2hhaXIiXX19"
+            }
+          ]
+        },
+        "scheduledEventId": {
+          "low": 17,
+          "high": 0,
+          "unsigned": false
+        },
+        "startedEventId": {
+          "low": 18,
+          "high": 0,
+          "unsigned": false
+        },
+        "identity": "58077@CloudDominion-173.local"
+      }
+    },
+    {
+      "links": [],
+      "eventId": {
+        "low": 20,
+        "high": 0,
+        "unsigned": false
+      },
+      "eventTime": {
+        "seconds": {
+          "low": 1776803840,
+          "high": 0,
+          "unsigned": false
+        },
+        "nanos": 307000000
+      },
+      "eventType": 5,
+      "workflowTaskScheduledEventAttributes": {
+        "taskQueue": {
+          "name": "record-happy-path",
+          "kind": 1
+        },
+        "startToCloseTimeout": {
+          "seconds": {
+            "low": 10,
+            "high": 0,
+            "unsigned": false
+          }
+        },
+        "attempt": 1
+      }
+    },
+    {
+      "links": [],
+      "eventId": {
+        "low": 21,
+        "high": 0,
+        "unsigned": false
+      },
+      "eventTime": {
+        "seconds": {
+          "low": 1776803840,
+          "high": 0,
+          "unsigned": false
+        },
+        "nanos": 307000000
+      },
+      "eventType": 6,
+      "workflowTaskStartedEventAttributes": {
+        "suggestContinueAsNewReasons": [],
+        "scheduledEventId": {
+          "low": 20,
+          "high": 0,
+          "unsigned": false
+        },
+        "identity": "58077@CloudDominion-173.local"
+      }
+    },
+    {
+      "links": [],
+      "eventId": {
+        "low": 22,
+        "high": 0,
+        "unsigned": false
+      },
+      "eventTime": {
+        "seconds": {
+          "low": 1776803840,
+          "high": 0,
+          "unsigned": false
+        },
+        "nanos": 309000000
+      },
+      "eventType": 7,
+      "workflowTaskCompletedEventAttributes": {
+        "scheduledEventId": {
+          "low": 20,
+          "high": 0,
+          "unsigned": false
+        },
+        "identity": "58077@CloudDominion-173.local",
+        "binaryChecksum": "@temporalio/worker@1.16.1+35681a30462fe57cbce8dca66949c7f290cefef58a96fed1b092310a1371fc23",
+        "sdkMetadata": {
+          "coreUsedFlags": [],
+          "langUsedFlags": []
+        },
+        "meteringMetadata": {}
+      }
+    },
+    {
+      "links": [],
+      "eventId": {
+        "low": 23,
+        "high": 0,
+        "unsigned": false
+      },
+      "eventTime": {
+        "seconds": {
+          "low": 1776803840,
+          "high": 0,
+          "unsigned": false
+        },
+        "nanos": 309000000
+      },
+      "eventType": 10,
+      "activityTaskScheduledEventAttributes": {
+        "activityId": "4",
+        "activityType": {
+          "name": "assembleResult"
+        },
+        "taskQueue": {
+          "name": "record-happy-path",
+          "kind": 1
+        },
+        "header": {
+          "fields": {}
+        },
+        "input": {
+          "payloads": [
+            {
+              "metadata": {
+                "encoding": "anNvbi9wbGFpbg=="
+              },
+              "externalPayloads": [],
+              "data": "eyJzYXZlZCI6eyJwaG90b0lkIjoicmVjb3JkZWQiLCJwaG90b1BhdGgiOiIvcC5qcGciLCJ0aHVtYm5haWxQYXRoIjoiL3QuanBnIiwiYnl0ZXMiOjEwMH0sIml0ZW1zIjpbeyJpZCI6InIiLCJyZWdpb25JbmRleCI6MCwibGFiZWwiOiJjaGFpciIsImNvbmZpZGVuY2UiOjAuOSwiYmJveCI6eyJ4IjowLCJ5IjowLCJ3aWR0aCI6MC41LCJoZWlnaHQiOjAuNX0sImVucmljaG1lbnRUaWVyIjoicXdlbjdiIiwiYXR0cmlidXRlcyI6eyJuYW1lIjoiY2hhaXIiLCJjYXRlZ29yeSI6ImZ1cm5pdHVyZSIsImNvbG9yIjpudWxsLCJtYXRlcmlhbCI6bnVsbCwiY29uZGl0aW9uIjpudWxsLCJlc3RpbWF0ZWRWYWx1ZSI6bnVsbCwiZGVzY3JpcHRpb24iOiJjaGFpciIsInNlYXJjaFRhZ3MiOlsiY2hhaXIiXX19XSwiZXJyb3JzIjpbXSwidHJhY2VJZCI6InQiLCJzdGFydGVkQXRNcyI6MTc3NjgwMzg0MDI4Mn0="
+            }
+          ]
+        },
+        "scheduleToCloseTimeout": {
+          "seconds": {
+            "low": 315360000,
+            "high": 0,
+            "unsigned": false
+          }
+        },
+        "scheduleToStartTimeout": {
+          "seconds": {
+            "low": 315360000,
+            "high": 0,
+            "unsigned": false
+          }
+        },
+        "startToCloseTimeout": {
+          "seconds": {
+            "low": 30,
+            "high": 0,
+            "unsigned": false
+          }
+        },
+        "heartbeatTimeout": {},
+        "workflowTaskCompletedEventId": {
+          "low": 21,
+          "high": 0,
+          "unsigned": false
+        },
+        "retryPolicy": {
+          "nonRetryableErrorTypes": [
+            "UnsupportedMediaType",
+            "FlorenceBadRequestError"
+          ],
+          "initialInterval": {
+            "seconds": {
+              "low": 1,
+              "high": 0,
+              "unsigned": false
+            }
+          },
+          "backoffCoefficient": 3,
+          "maximumInterval": {
+            "seconds": {
+              "low": 100,
+              "high": 0,
+              "unsigned": false
+            }
+          },
+          "maximumAttempts": 3
+        }
+      }
+    },
+    {
+      "links": [],
+      "eventId": {
+        "low": 24,
+        "high": 0,
+        "unsigned": false
+      },
+      "eventTime": {
+        "seconds": {
+          "low": 1776803840,
+          "high": 0,
+          "unsigned": false
+        },
+        "nanos": 309000000
+      },
+      "eventType": 11,
+      "activityTaskStartedEventAttributes": {
+        "scheduledEventId": {
+          "low": 23,
+          "high": 0,
+          "unsigned": false
+        },
+        "identity": "58077@CloudDominion-173.local",
+        "attempt": 1
+      }
+    },
+    {
+      "links": [],
+      "eventId": {
+        "low": 25,
+        "high": 0,
+        "unsigned": false
+      },
+      "eventTime": {
+        "seconds": {
+          "low": 1776803840,
+          "high": 0,
+          "unsigned": false
+        },
+        "nanos": 309000000
+      },
+      "eventType": 12,
+      "activityTaskCompletedEventAttributes": {
+        "result": {
+          "payloads": [
+            {
+              "metadata": {
+                "encoding": "anNvbi9wbGFpbg=="
+              },
+              "externalPayloads": [],
+              "data": "eyJwaG90b0lkIjoicmVjb3JkZWQiLCJwaG90b1VybCI6Ii9waG90b3MvcmVjb3JkZWQuanBnIiwiaXRlbUNvdW50IjoxLCJpdGVtcyI6W3siaWQiOiJyIiwicmVnaW9uSW5kZXgiOjAsImxhYmVsIjoiY2hhaXIiLCJjb25maWRlbmNlIjowLjksImJib3giOnsieCI6MCwieSI6MCwid2lkdGgiOjAuNSwiaGVpZ2h0IjowLjV9LCJlbnJpY2htZW50VGllciI6InF3ZW43YiIsImF0dHJpYnV0ZXMiOnsibmFtZSI6ImNoYWlyIiwiY2F0ZWdvcnkiOiJmdXJuaXR1cmUiLCJjb2xvciI6bnVsbCwibWF0ZXJpYWwiOm51bGwsImNvbmRpdGlvbiI6bnVsbCwiZXN0aW1hdGVkVmFsdWUiOm51bGwsImRlc2NyaXB0aW9uIjoiY2hhaXIiLCJzZWFyY2hUYWdzIjpbImNoYWlyIl19fV0sImVycm9ycyI6W10sInRyYWNlSWQiOiJ0IiwicHJvY2Vzc2luZ01zIjoyN30="
+            }
+          ]
+        },
+        "scheduledEventId": {
+          "low": 23,
+          "high": 0,
+          "unsigned": false
+        },
+        "startedEventId": {
+          "low": 24,
+          "high": 0,
+          "unsigned": false
+        },
+        "identity": "58077@CloudDominion-173.local"
+      }
+    },
+    {
+      "links": [],
+      "eventId": {
+        "low": 26,
+        "high": 0,
+        "unsigned": false
+      },
+      "eventTime": {
+        "seconds": {
+          "low": 1776803840,
+          "high": 0,
+          "unsigned": false
+        },
+        "nanos": 309000000
+      },
+      "eventType": 5,
+      "workflowTaskScheduledEventAttributes": {
+        "taskQueue": {
+          "name": "record-happy-path",
+          "kind": 1
+        },
+        "startToCloseTimeout": {
+          "seconds": {
+            "low": 10,
+            "high": 0,
+            "unsigned": false
+          }
+        },
+        "attempt": 1
+      }
+    },
+    {
+      "links": [],
+      "eventId": {
+        "low": 27,
+        "high": 0,
+        "unsigned": false
+      },
+      "eventTime": {
+        "seconds": {
+          "low": 1776803840,
+          "high": 0,
+          "unsigned": false
+        },
+        "nanos": 309000000
+      },
+      "eventType": 6,
+      "workflowTaskStartedEventAttributes": {
+        "suggestContinueAsNewReasons": [],
+        "scheduledEventId": {
+          "low": 26,
+          "high": 0,
+          "unsigned": false
+        },
+        "identity": "58077@CloudDominion-173.local"
+      }
+    },
+    {
+      "links": [],
+      "eventId": {
+        "low": 28,
+        "high": 0,
+        "unsigned": false
+      },
+      "eventTime": {
+        "seconds": {
+          "low": 1776803840,
+          "high": 0,
+          "unsigned": false
+        },
+        "nanos": 310000000
+      },
+      "eventType": 7,
+      "workflowTaskCompletedEventAttributes": {
+        "scheduledEventId": {
+          "low": 26,
+          "high": 0,
+          "unsigned": false
+        },
+        "identity": "58077@CloudDominion-173.local",
+        "binaryChecksum": "@temporalio/worker@1.16.1+35681a30462fe57cbce8dca66949c7f290cefef58a96fed1b092310a1371fc23",
+        "sdkMetadata": {
+          "coreUsedFlags": [],
+          "langUsedFlags": []
+        },
+        "meteringMetadata": {}
+      }
+    },
+    {
+      "links": [],
+      "eventId": {
+        "low": 29,
+        "high": 0,
+        "unsigned": false
+      },
+      "eventTime": {
+        "seconds": {
+          "low": 1776803840,
+          "high": 0,
+          "unsigned": false
+        },
+        "nanos": 310000000
+      },
+      "eventType": 2,
+      "workflowExecutionCompletedEventAttributes": {
+        "result": {
+          "payloads": [
+            {
+              "metadata": {
+                "encoding": "anNvbi9wbGFpbg=="
+              },
+              "externalPayloads": [],
+              "data": "eyJwaG90b0lkIjoicmVjb3JkZWQiLCJwaG90b1VybCI6Ii9waG90b3MvcmVjb3JkZWQuanBnIiwiaXRlbUNvdW50IjoxLCJpdGVtcyI6W3siaWQiOiJyIiwicmVnaW9uSW5kZXgiOjAsImxhYmVsIjoiY2hhaXIiLCJjb25maWRlbmNlIjowLjksImJib3giOnsieCI6MCwieSI6MCwid2lkdGgiOjAuNSwiaGVpZ2h0IjowLjV9LCJlbnJpY2htZW50VGllciI6InF3ZW43YiIsImF0dHJpYnV0ZXMiOnsibmFtZSI6ImNoYWlyIiwiY2F0ZWdvcnkiOiJmdXJuaXR1cmUiLCJjb2xvciI6bnVsbCwibWF0ZXJpYWwiOm51bGwsImNvbmRpdGlvbiI6bnVsbCwiZXN0aW1hdGVkVmFsdWUiOm51bGwsImRlc2NyaXB0aW9uIjoiY2hhaXIiLCJzZWFyY2hUYWdzIjpbImNoYWlyIl19fV0sImVycm9ycyI6W10sInRyYWNlSWQiOiJ0IiwicHJvY2Vzc2luZ01zIjoyN30="
+            }
+          ]
+        },
+        "workflowTaskCompletedEventId": {
+          "low": 27,
+          "high": 0,
+          "unsigned": false
+        }
+      }
+    }
+  ]
+}
