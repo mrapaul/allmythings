@@ -10,23 +10,110 @@ services:
       - SQLITE_DB_PATH=/etc/temporal/temporal.db
       - TEMPORAL_ADDRESS=0.0.0.0:7233
       - LOG_LEVEL=info
-    ports:
-      - "7233:7233"
-      - "7243:7243"  # metrics
-    volumes:
-      - temporal-data:/etc/temporal
+      - PROMETHEUS_ENDPOINT=0.0.0.0:9090
+    ports: ["7233:7233", "7243:7243"]
+    volumes: [temporal-data:/etc/temporal]
 
   temporal-ui:
     image: temporalio/ui:2.30.3
     container_name: allmythings-temporal-ui
     restart: unless-stopped
-    depends_on:
-      - temporal
+    depends_on: [temporal]
     environment:
       - TEMPORAL_ADDRESS=temporal:7233
       - TEMPORAL_CORS_ORIGINS=http://localhost:3000
+    ports: ["8233:8080"]
+
+  otel-collector:
+    image: otel/opentelemetry-collector-contrib:0.108.0
+    container_name: allmythings-otel-collector
+    restart: unless-stopped
+    command: ["--config=/etc/otel-collector/config.yaml"]
+    volumes: [./otel-collector:/etc/otel-collector]
     ports:
-      - "8233:8080"
+      - "4317:4317"   # OTLP gRPC
+      - "4318:4318"   # OTLP HTTP
+      - "8888:8888"   # Collector metrics
+    depends_on: [tempo, loki, prometheus]
+
+  tempo:
+    image: grafana/tempo:2.5.0
+    container_name: allmythings-tempo
+    restart: unless-stopped
+    command: ["-config.file=/etc/tempo/tempo.yaml"]
+    volumes:
+      - ./tempo:/etc/tempo
+      - tempo-data:/var/tempo
+    ports: ["3200:3200"]
+
+  loki:
+    image: grafana/loki:3.1.1
+    container_name: allmythings-loki
+    restart: unless-stopped
+    command: ["-config.file=/etc/loki/loki-config.yaml"]
+    volumes:
+      - ./loki:/etc/loki
+      - loki-data:/tmp/loki
+    ports: ["3100:3100"]
+
+  promtail:
+    image: grafana/promtail:3.1.1
+    container_name: allmythings-promtail
+    restart: unless-stopped
+    command: ["-config.file=/etc/promtail/promtail-config.yaml"]
+    volumes:
+      - ./promtail:/etc/promtail
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - ${HOME}/allmythings-data:/host-data:ro
+      - /tmp/allmythings:/tmp/allmythings:ro
+    depends_on: [loki]
+
+  prometheus:
+    image: prom/prometheus:v2.54.1
+    container_name: allmythings-prometheus
+    restart: unless-stopped
+    command:
+      - --config.file=/etc/prometheus/prometheus.yml
+      - --storage.tsdb.path=/prometheus
+      - --web.console.libraries=/etc/prometheus/console_libraries
+      - --web.console.templates=/etc/prometheus/consoles
+    volumes:
+      - ./prometheus:/etc/prometheus
+      - prom-data:/prometheus
+    ports: ["9191:9090"]
+
+  grafana:
+    image: grafana/grafana:11.2.0
+    container_name: allmythings-grafana
+    restart: unless-stopped
+    environment:
+      - GF_SECURITY_ADMIN_USER=admin
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+      - GF_FEATURE_TOGGLES_ENABLE=traceqlEditor
+      - GF_USERS_DEFAULT_THEME=dark
+    volumes:
+      - ./grafana/provisioning:/etc/grafana/provisioning
+      - ./grafana/dashboards:/etc/grafana/dashboards
+      - grafana-data:/var/lib/grafana
+    depends_on: [loki, tempo, prometheus]
+    ports: ["3000:3000"]
+
+  alertmanager:
+    image: prom/alertmanager:v0.27.0
+    container_name: allmythings-alertmanager
+    restart: unless-stopped
+    command:
+      - --config.file=/etc/alertmanager/alertmanager.yml
+      - --storage.path=/alertmanager
+    volumes:
+      - ./alertmanager:/etc/alertmanager
+      - alertmanager-data:/alertmanager
+    ports: ["9093:9093"]
 
 volumes:
-  temporal-data:
+  temporal-data: {}
+  tempo-data: {}
+  loki-data: {}
+  prom-data: {}
+  grafana-data: {}
+  alertmanager-data: {}
