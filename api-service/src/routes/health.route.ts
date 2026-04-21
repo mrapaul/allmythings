@@ -1,23 +1,26 @@
-import { FastifyInstance } from 'fastify';
 import os from 'os';
-import { FlorencePipelineService } from '../services/florence-pipeline.service';
+import { FastifyInstance } from 'fastify';
+import { ProviderHealthService } from '../services/provider-health.service';
 
 export async function healthRoute(app: FastifyInstance): Promise<void> {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const pipeline = (app as any).pipeline as FlorencePipelineService;
+  const health = (app as any).health as ProviderHealthService;
 
   app.get('/v1/health', async (_request, reply) => {
-    const providers = await pipeline.healthCheck();
-    
-    // Check if Gemini is working (our primary production provider)
-    const geminiStatus = providers['gemini'] === true;
-    const anyProviderStatus = Object.values(providers).some(Boolean);
-    
-    const isFunctional = geminiStatus || anyProviderStatus;
+    const snapshot = health.snapshot();
+    const temporalUp = snapshot.temporal.status === 'up';
+    const florenceUp = snapshot.florence.status === 'up';
+    const ollamaUp = snapshot.ollama.status === 'up';
+
+    // Temporal AND Florence are required minimum — florence-only fallback
+    // is still usable when Ollama is down, but not without Florence or Temporal.
+    const isFunctional = temporalUp && florenceUp;
+    const allUp = temporalUp && florenceUp && ollamaUp;
+    const status = allUp ? 'healthy' : isFunctional ? 'degraded' : 'unhealthy';
 
     return reply.code(isFunctional ? 200 : 503).send({
-      status: isFunctional ? (Object.values(providers).every(Boolean) ? 'healthy' : 'degraded') : 'unhealthy',
-      version: '2.0.0',
+      status,
+      version: '3.0.0',
       uptime: process.uptime(),
       system: {
         memory: {
@@ -27,7 +30,7 @@ export async function healthRoute(app: FastifyInstance): Promise<void> {
         },
         load: os.loadavg(),
       },
-      providers,
+      providers: snapshot,
       timestamp: new Date().toISOString(),
     });
   });
