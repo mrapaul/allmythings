@@ -1,0 +1,143 @@
+{
+  "uid": "model-performance",
+  "title": "Model Performance",
+  "schemaVersion": 39,
+  "version": 1,
+  "refresh": "15s",
+  "time": { "from": "now-1h", "to": "now" },
+  "timepicker": {},
+  "editable": true,
+  "tags": ["allmythings", "models", "performance"],
+  "panels": [
+    {
+      "id": 1,
+      "type": "timeseries",
+      "title": "enrichItem Activity p95 (per-tier proxy via attempt)",
+      "description": "Activity duration p95 for enrichItem. Split by attempt label (tier label is not yet present on activity_duration_ms; this is the closest available approximation).",
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "histogram_quantile(0.95, sum(rate(activity_duration_ms_bucket{activity=\"enrichItem\"}[5m])) by (le, attempt))",
+          "legendFormat": "attempt {{attempt}}",
+          "datasource": { "type": "prometheus", "uid": "prometheus" }
+        }
+      ],
+      "fieldConfig": {
+        "defaults": { "unit": "ms" },
+        "overrides": []
+      },
+      "options": {
+        "legend": { "displayMode": "list", "placement": "bottom" },
+        "tooltip": { "mode": "multi" }
+      },
+      "gridPos": { "x": 0, "y": 0, "w": 12, "h": 8 }
+    },
+    {
+      "id": 2,
+      "type": "timeseries",
+      "title": "florenceDetect Activity p95",
+      "description": "Florence-2 detection activity latency. Python-side Florence inference latency is not yet instrumented; this panel measures the full activity duration observed by the Temporal worker.",
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "histogram_quantile(0.95, sum(rate(activity_duration_ms_bucket{activity=\"florenceDetect\"}[5m])) by (le))",
+          "legendFormat": "florenceDetect p95",
+          "datasource": { "type": "prometheus", "uid": "prometheus" }
+        },
+        {
+          "refId": "B",
+          "expr": "histogram_quantile(0.5, sum(rate(activity_duration_ms_bucket{activity=\"florenceDetect\"}[5m])) by (le))",
+          "legendFormat": "florenceDetect p50",
+          "datasource": { "type": "prometheus", "uid": "prometheus" }
+        }
+      ],
+      "fieldConfig": {
+        "defaults": { "unit": "ms" },
+        "overrides": []
+      },
+      "options": {
+        "legend": { "displayMode": "list", "placement": "bottom" },
+        "tooltip": { "mode": "multi" }
+      },
+      "gridPos": { "x": 12, "y": 0, "w": 12, "h": 8 }
+    },
+    {
+      "id": 3,
+      "type": "bargauge",
+      "title": "Tier Downgrades by Reason (1h)",
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum(increase(enrichment_tier_downgrades_total[1h])) by (from_tier, to_tier, reason)",
+          "legendFormat": "{{from_tier}}->{{to_tier}} ({{reason}})",
+          "datasource": { "type": "prometheus", "uid": "prometheus" }
+        }
+      ],
+      "fieldConfig": {
+        "defaults": { "unit": "short", "min": 0 },
+        "overrides": []
+      },
+      "options": {
+        "orientation": "horizontal",
+        "displayMode": "gradient",
+        "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false }
+      },
+      "gridPos": { "x": 0, "y": 8, "w": 12, "h": 8 }
+    },
+    {
+      "id": 4,
+      "type": "heatmap",
+      "title": "Items per Photo Distribution (5m)",
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum(rate(items_per_photo_bucket[5m])) by (le)",
+          "legendFormat": "{{le}}",
+          "format": "heatmap",
+          "datasource": { "type": "prometheus", "uid": "prometheus" }
+        }
+      ],
+      "fieldConfig": {
+        "defaults": { "unit": "short" },
+        "overrides": []
+      },
+      "options": {
+        "calculate": false,
+        "yAxis": { "unit": "short" },
+        "cellGap": 1,
+        "color": { "mode": "scheme", "scheme": "Oranges", "steps": 64 },
+        "tooltip": { "show": true, "yHistogram": false },
+        "legend": { "show": true }
+      },
+      "gridPos": { "x": 12, "y": 8, "w": 12, "h": 8 }
+    },
+    {
+      "id": 5,
+      "type": "timeseries",
+      "title": "Detection Service Process Memory",
+      "description": "Python detection service process metrics (RSS). Florence-2 inference latency is not yet instrumented server-side; placeholder tracks the detection-service process memory as a proxy for load.",
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "process_resident_memory_bytes{job=\"detection-service\"}",
+          "legendFormat": "detection-service RSS",
+          "datasource": { "type": "prometheus", "uid": "prometheus" }
+        }
+      ],
+      "fieldConfig": {
+        "defaults": { "unit": "bytes" },
+        "overrides": []
+      },
+      "options": {
+        "legend": { "displayMode": "list", "placement": "bottom" },
+        "tooltip": { "mode": "multi" }
+      },
+      "gridPos": { "x": 0, "y": 16, "w": 24, "h": 7 }
+    }
+  ]
+}
