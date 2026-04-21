@@ -1,1 +1,30 @@
 .docker-data/
+
+# Scratch debug files — never checked in
+/result.json
+/final_*.json
+/verify_result.json
+/detection_result.json
+/automated_result.json
+/all_detections.log
+/api_latest.log
+
+# Process manager + smoke runs
+/tmp/allmythings/
+*.pid
+
+# Python cache
+__pycache__/
+*.pyc
+
+# Detection service logs (structured logs go to Loki now)
+detection-service/detection*.log
+
+# Node
+node_modules/
+.DS_Store
+
+# Env
+/.env
+/.env.local
+!/.env.example
