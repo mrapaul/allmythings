@@ -11,6 +11,7 @@ import { envConfig } from './config/env.config';
 import { logger } from './utils/logger';
 import { errorHandler, notFoundHandler } from './middleware/error.middleware';
 import { detectRoute } from './routes/detect.route';
+import { detectStatusRoute } from './routes/detect-status.route';
 import { healthRoute } from './routes/health.route';
 import { getTemporalClient, closeTemporalClient } from './temporal/client';
 import { createWorker, runWorker, closeWorker } from './temporal/worker';
@@ -74,6 +75,7 @@ export async function buildApp(options?: { disableRateLimit?: boolean }): Promis
   });
 
   await app.register(detectRoute);
+  await app.register(detectStatusRoute);
   await app.register(healthRoute);
 
   app.get('/', () => ({
