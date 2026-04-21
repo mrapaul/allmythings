@@ -1,227 +1,27 @@
-# Alertmanager Configuration for Visual Home Inventory Manager
-# Handles alert routing, grouping, and notification delivery
-
 global:
   resolve_timeout: 5m
-  # SMTP configuration for email notifications
-  smtp_from: 'alerts@visual-inventory.com'
-  smtp_smarthost: 'smtp.gmail.com:587'
-  smtp_auth_username: 'your-email@gmail.com'
-  smtp_auth_password: 'your-app-password'
-  smtp_require_tls: true
 
-  # Slack webhook URL (configure in Slack workspace)
-  slack_api_url: 'https://hooks.slack.com/services/YOUR/WEBHOOK/URL'
-
-  # PagerDuty integration key
-  pagerduty_url: 'https://events.pagerduty.com/v2/enqueue'
-
-# Define notification templates
-templates:
-  - '/etc/alertmanager/templates/*.tmpl'
-
-# Route configuration
 route:
-  # Default receiver for all alerts
-  receiver: 'default'
-
-  # Group alerts by these labels
-  group_by: ['alertname', 'cluster', 'service', 'severity']
-
-  # Wait before sending initial notification (to group similar alerts)
-  group_wait: 30s
-
-  # Wait before sending notification about new alerts in group
-  group_interval: 5m
-
-  # Wait before sending notification about resolved alerts
-  repeat_interval: 4h
-
-  # Child routes with specific matching rules
+  group_by: ['alertname', 'severity']
+  group_wait: 10s
+  group_interval: 30s
+  repeat_interval: 30m
+  receiver: macos-notifier
   routes:
-    # Critical alerts go to PagerDuty and Slack
-    - match:
-        severity: critical
-      receiver: 'pagerduty-critical'
-      continue: true # Continue to other routes
-      group_wait: 10s
-      repeat_interval: 1h
+    - matchers:
+        - severity="critical"
+      receiver: macos-notifier
+      repeat_interval: 10m
 
-    - match:
-        severity: critical
-      receiver: 'slack-critical'
-      continue: false
-
-    # Warning alerts go to Slack only
-    - match:
-        severity: warning
-      receiver: 'slack-warnings'
-      group_wait: 1m
-      repeat_interval: 6h
-
-    # Info alerts go to email
-    - match:
-        severity: info
-      receiver: 'email-info'
-      group_wait: 5m
-      repeat_interval: 12h
-
-    # Database alerts
-    - match:
-        category: database
-      receiver: 'database-team'
-      continue: true
-
-    # Security alerts
-    - match:
-        category: security
-      receiver: 'security-team'
-      continue: true
-
-    # Business metrics alerts
-    - match:
-        category: business
-      receiver: 'product-team'
-
-    # Vision provider alerts
-    - match:
-        category: vision_providers
-      receiver: 'ml-team'
-
-# Inhibition rules (suppress alerts based on other alerts)
-inhibit_rules:
-  # Inhibit warning if critical alert is firing
-  - source_match:
-      severity: 'critical'
-    target_match:
-      severity: 'warning'
-    equal: ['alertname', 'instance']
-
-  # Inhibit all alerts if service is down
-  - source_match:
-      alertname: 'ServiceDown'
-    target_match_re:
-      alertname: '.*'
-    equal: ['instance']
-
-  # Inhibit database query alerts if database is down
-  - source_match:
-      alertname: 'DatabaseDown'
-    target_match:
-      category: 'database'
-    equal: ['instance']
-
-# Receiver definitions
 receivers:
-  # Default receiver (catch-all)
-  - name: 'default'
-    slack_configs:
-      - channel: '#alerts'
-        title: 'Alert: {{ .GroupLabels.alertname }}'
-        text: '{{ range .Alerts }}{{ .Annotations.description }}{{ end }}'
+  - name: macos-notifier
+    webhook_configs:
+      - url: http://host.docker.internal:18080/notify
         send_resolved: true
 
-  # PagerDuty for critical alerts
-  - name: 'pagerduty-critical'
-    pagerduty_configs:
-      - service_key: 'YOUR_PAGERDUTY_SERVICE_KEY'
-        description: '{{ .GroupLabels.alertname }}: {{ .GroupLabels.instance }}'
-        details:
-          firing: '{{ .Alerts.Firing | len }}'
-          resolved: '{{ .Alerts.Resolved | len }}'
-          summary: '{{ range .Alerts }}{{ .Annotations.summary }}{{ end }}'
-
-  # Slack channel for critical alerts
-  - name: 'slack-critical'
-    slack_configs:
-      - channel: '#critical-alerts'
-        username: 'AlertBot'
-        icon_emoji: ':fire:'
-        title: 'CRITICAL: {{ .GroupLabels.alertname }}'
-        text: |
-          *Severity:* `{{ .GroupLabels.severity }}`
-          *Category:* `{{ .GroupLabels.category }}`
-          {{ range .Alerts }}
-          *Description:* {{ .Annotations.description }}
-          *Runbook:* {{ .Annotations.runbook_url }}
-          {{ end }}
-        color: 'danger'
-        send_resolved: true
-        actions:
-          - type: button
-            text: 'View Runbook'
-            url: '{{ (index .Alerts 0).Annotations.runbook_url }}'
-          - type: button
-            text: 'View in Grafana'
-            url: 'https://grafana.visual-inventory.com/d/system-health'
-
-  # Slack channel for warnings
-  - name: 'slack-warnings'
-    slack_configs:
-      - channel: '#alerts-warnings'
-        username: 'AlertBot'
-        icon_emoji: ':warning:'
-        title: 'WARNING: {{ .GroupLabels.alertname }}'
-        text: |
-          *Severity:* `{{ .GroupLabels.severity }}`
-          {{ range .Alerts }}
-          *Description:* {{ .Annotations.description }}
-          {{ end }}
-        color: 'warning'
-        send_resolved: true
-
-  # Email for info alerts
-  - name: 'email-info'
-    email_configs:
-      - to: 'devops-team@visual-inventory.com'
-        headers:
-          Subject: '[Info] {{ .GroupLabels.alertname }}'
-        html: |
-          <h2>Alert: {{ .GroupLabels.alertname }}</h2>
-          <p><strong>Severity:</strong> {{ .GroupLabels.severity }}</p>
-          {{ range .Alerts }}
-          <p><strong>Description:</strong> {{ .Annotations.description }}</p>
-          <p><strong>Runbook:</strong> <a href="{{ .Annotations.runbook_url }}">{{ .Annotations.runbook_url }}</a></p>
-          {{ end }}
-        send_resolved: true
-
-  # Database team notifications
-  - name: 'database-team'
-    email_configs:
-      - to: 'database-team@visual-inventory.com'
-        headers:
-          Subject: '[Database Alert] {{ .GroupLabels.alertname }}'
-    slack_configs:
-      - channel: '#database-alerts'
-        title: 'Database Alert: {{ .GroupLabels.alertname }}'
-        text: '{{ range .Alerts }}{{ .Annotations.description }}{{ end }}'
-
-  # Security team notifications
-  - name: 'security-team'
-    email_configs:
-      - to: 'security-team@visual-inventory.com'
-        headers:
-          Subject: '[Security Alert] {{ .GroupLabels.alertname }}'
-    slack_configs:
-      - channel: '#security-alerts'
-        title: 'Security Alert: {{ .GroupLabels.alertname }}'
-        text: '{{ range .Alerts }}{{ .Annotations.description }}{{ end }}'
-        color: 'danger'
-
-  # Product team notifications (business metrics)
-  - name: 'product-team'
-    slack_configs:
-      - channel: '#product-metrics'
-        title: 'Business Metric Alert: {{ .GroupLabels.alertname }}'
-        text: '{{ range .Alerts }}{{ .Annotations.description }}{{ end }}'
-
-  # ML team notifications (vision providers)
-  - name: 'ml-team'
-    email_configs:
-      - to: 'ml-team@visual-inventory.com'
-        headers:
-          Subject: '[ML/Vision Alert] {{ .GroupLabels.alertname }}'
-    slack_configs:
-      - channel: '#ml-alerts'
-        title: 'Vision Provider Alert: {{ .GroupLabels.alertname }}'
-        text: '{{ range .Alerts }}{{ .Annotations.description }}{{ end }}'
+inhibit_rules:
+  - source_matchers:
+      - severity="critical"
+    target_matchers:
+      - severity="warning"
+    equal: [alertname]

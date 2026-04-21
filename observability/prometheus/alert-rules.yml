@@ -1,0 +1,58 @@
+groups:
+  - name: allmythings-providers
+    rules:
+      - alert: FlorenceDown
+        expr: provider_up{provider="florence"} == 0
+        for: 30s
+        labels: { severity: warning }
+        annotations:
+          summary: "Florence detection-service is DOWN"
+          description: "provider_up{provider=\"florence\"} has been 0 for >= 30s. Detection pipeline will fail; tier-downgrade cannot help since Florence IS the detector."
+      - alert: OllamaDown
+        expr: provider_up{provider="ollama"} == 0
+        for: 30s
+        labels: { severity: warning }
+        annotations:
+          summary: "Ollama is DOWN"
+          description: "provider_up{provider=\"ollama\"} has been 0 for >= 30s. Enrichment will fall back to florence-only tier."
+      - alert: TemporalDown
+        expr: provider_up{provider="temporal"} == 0
+        for: 30s
+        labels: { severity: critical }
+        annotations:
+          summary: "Temporal server is DOWN — no workflows can run"
+          description: "provider_up{provider=\"temporal\"} has been 0 for >= 30s. The api-service cannot start workflows. Check: docker ps | grep temporal; docker logs allmythings-temporal."
+
+  - name: allmythings-slo
+    rules:
+      - alert: WorkflowP95LatencyBreach
+        expr: histogram_quantile(0.95, sum(rate(workflow_duration_ms_bucket[5m])) by (le)) > 30000
+        for: 2m
+        labels: { severity: warning }
+        annotations:
+          summary: "Workflow p95 > 30s over 2 minutes"
+          description: "detectInventoryWorkflow p95 has exceeded the 30s SLO warning threshold for 2 minutes. The 45s hard-fail SLO may be next."
+      - alert: NonRetryableFailureBurst
+        expr: sum(rate(activity_nonretryable_failures_total[5m])) > 1
+        for: 1m
+        labels: { severity: critical }
+        annotations:
+          summary: "More than 1 non-retryable failure per second — likely code bug"
+          description: "Non-retryable failures are deterministic — retrying won't help. This rate suggests a regression; inspect Temporal UI workflow history."
+      - alert: QueueRejectionSustained
+        expr: sum(rate(queue_rejections_total[5m])) > 0.5
+        for: 2m
+        labels: { severity: warning }
+        annotations:
+          summary: "Queue rejecting > 0.5 req/s sustained 2m"
+          description: "Backpressure is shedding load. Consider increasing PIPELINE_MAX_CONCURRENCY or investigating what's slowing the pipeline."
+
+  - name: allmythings-resources
+    rules:
+      - alert: APIServiceMemoryHigh
+        expr: process_resident_memory_bytes{job="api-service"} / (1024 * 1024 * 1024) > 1.5
+        for: 5m
+        labels: { severity: warning }
+        annotations:
+          summary: "api-service RSS > 1.5GB sustained 5m"
+          description: "Check for memory leaks or unintended model loading in the Node process."
