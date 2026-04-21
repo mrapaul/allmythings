@@ -1,5 +1,6 @@
-// Activities are registered with the worker via the `activities` option.
-// Individual activity implementations live in sibling files and are re-exported here.
-// Populated progressively: savePhoto (Task 8), florenceDetect (Task 9),
-// enrichItem (Task 10), assembleResult (Task 11).
-export {}; // placeholder so the file type-checks as an empty module
+// Activities registered with the Temporal worker via `import * as activities`.
+// Each named export becomes an activity the workflow can invoke.
+export { savePhoto } from './save-photo.activity';
+export { florenceDetect } from './florence-detect.activity';
+export { enrichItem } from './enrich-item.activity';
+export { assembleResult } from './assemble-result.activity';
