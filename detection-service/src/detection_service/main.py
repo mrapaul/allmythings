@@ -13,7 +13,8 @@ log = logging.getLogger(__name__)
 
 
 @asynccontextmanager
-async def lifespan(app: FastAPI):
+async def lifespan(_app: FastAPI):
+    # FastAPI's lifespan protocol requires the app arg; we don't use it here.
     log.info("detection-service starting (Florence-2 lazy-loaded on first request)")
     yield
     log.info("detection-service stopping")

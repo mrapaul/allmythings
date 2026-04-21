@@ -18,10 +18,12 @@ def test_florence_route_registered():
     assert "/detect/florence" in routes
 
 
-def test_no_mlx_backend_in_lifespan(monkeypatch):
+def test_no_mlx_backend_in_lifespan():
     """Startup must not eagerly load the MLX/YOLO backend.
 
-    We patch MLXBackend to raise if instantiated and verify app imports succeed.
+    Installs a meta_path finder that raises ImportError for any module path
+    ending in `mlx_backend`, then imports `detection_service.main`. If main
+    eagerly imports the MLX backend, the finder fires and the test fails.
     """
     import importlib
     import sys
@@ -31,9 +33,10 @@ def test_no_mlx_backend_in_lifespan(monkeypatch):
         if "mlx_backend" in mod_name or "detection_service.main" in mod_name:
             sys.modules.pop(mod_name, None)
 
-    # Force ImportError on mlx_backend — if main.py doesn't import it, this is fine
+    # Force ImportError on mlx_backend — if main.py doesn't import it, this is fine.
+    # `_path`/`_target` are required by importlib.abc.MetaPathFinder but unused here.
     class _Blocker:
-        def find_spec(self, name, path, target=None):
+        def find_spec(self, name, _path, _target=None):
             if name.endswith("mlx_backend"):
                 raise ImportError("mlx_backend must not be imported at startup")
             return None
