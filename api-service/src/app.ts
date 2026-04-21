@@ -1,5 +1,6 @@
 import { initTelemetry } from './telemetry';
 void initTelemetry();
+import { shutdownOtel } from './telemetry/otel-init';
 import Fastify, { FastifyInstance } from 'fastify';
 import multipart from '@fastify/multipart';
 import cors from '@fastify/cors';
@@ -111,6 +112,7 @@ async function start(): Promise<void> {
       await app.close();
       await closeWorker();
       await closeTemporalClient();
+      await shutdownOtel();
       process.exit(0);
     };
     process.on('SIGTERM', () => shutdown('SIGTERM'));
