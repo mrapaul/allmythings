@@ -19,13 +19,10 @@
   },
   "license": "ISC",
   "dependencies": {
-    "@anthropic-ai/sdk": "^0.87.0",
     "@fastify/cors": "^8.5.0",
     "@fastify/multipart": "^8.0.0",
     "@fastify/rate-limit": "^9.1.0",
     "@fastify/static": "^7.0.4",
-    "@google-cloud/vision": "^4.1.0",
-    "@google/generative-ai": "^0.24.1",
     "@opentelemetry/api": "^1.9.0",
     "@opentelemetry/auto-instrumentations-node": "^0.55.1",
     "@opentelemetry/exporter-metrics-otlp-grpc": "^0.57.1",
