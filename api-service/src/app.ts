@@ -12,10 +12,9 @@ import { logger } from './utils/logger';
 import { errorHandler, notFoundHandler } from './middleware/error.middleware';
 import { detectRoute } from './routes/detect.route';
 import { healthRoute } from './routes/health.route';
-import { FlorencePipelineService } from './services/florence-pipeline.service';
-import { FlorenceDetector } from './providers/florence.detector';
-import { OllamaClassifier } from './providers/ollama.classifier';
-import { PhotoStorageService } from './services/photo-storage.service';
+import { getTemporalClient, closeTemporalClient } from './temporal/client';
+import { createWorker, runWorker, closeWorker } from './temporal/worker';
+import { ProviderHealthService } from './services/provider-health.service';
 import { advertiseService } from './utils/bonjour-advertiser';
 
 process.on('uncaughtException', (err) => {
@@ -27,7 +26,7 @@ process.on('unhandledRejection', (reason, promise) => {
   logger.error({ reason, promise }, 'Unhandled Rejection');
 });
 
-export async function buildApp(options?: { disableRateLimit?: boolean; pipeline?: FlorencePipelineService }): Promise<FastifyInstance> {
+export async function buildApp(options?: { disableRateLimit?: boolean }): Promise<FastifyInstance> {
   const app = Fastify({
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     logger: logger as any,
@@ -55,10 +54,24 @@ export async function buildApp(options?: { disableRateLimit?: boolean; pipeline?
     decorateReply: false,
   });
 
-  // Create detection pipeline
-  const pipeline = options?.pipeline ?? createPipeline();
+  // Temporal client (lazy-connects; becomes workflow orchestration surface)
+  const temporal = await getTemporalClient();
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  (app as any).pipeline = pipeline;
+  (app as any).temporal = temporal;
+
+  // Provider health service (periodic probes, independent of workflows)
+  const health = new ProviderHealthService({
+    florenceUrl: envConfig.florenceUrl,
+    ollamaUrl: envConfig.ollamaBaseUrl,
+    temporalHost: envConfig.temporalHost,
+  });
+  health.start();
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  (app as any).health = health;
+
+  app.addHook('onClose', async () => {
+    health.stop();
+  });
 
   await app.register(detectRoute);
   await app.register(healthRoute);
@@ -68,6 +81,7 @@ export async function buildApp(options?: { disableRateLimit?: boolean; pipeline?
     version: '3.0.0',
     endpoints: {
       detection: 'POST /v1/detect',
+      detectionStatus: 'GET /v1/detect/status/:workflowId',
       health: 'GET /v1/health',
       photos: 'GET /photos/:filename',
     },
@@ -76,26 +90,25 @@ export async function buildApp(options?: { disableRateLimit?: boolean; pipeline?
   return app;
 }
 
-function createPipeline(): FlorencePipelineService {
-  const storage = new PhotoStorageService(envConfig.photoDir);
-  const detector = new FlorenceDetector(envConfig.florenceUrl);
-  const classifier = new OllamaClassifier(envConfig);
-  return new FlorencePipelineService(storage, detector, classifier);
-}
-
 async function start(): Promise<void> {
   try {
     const app = await buildApp();
     const address = await app.listen({ port: envConfig.port, host: '0.0.0.0' });
     logger.info({ address, port: envConfig.port, nodeEnv: envConfig.nodeEnv }, 'Server started');
 
+    // Start Temporal worker in-process (same lifecycle as HTTP server)
+    await createWorker();
+    void runWorker();
+
     const stopBonjour = advertiseService(envConfig.port);
     logger.info({ name: 'allmythings-server', port: envConfig.port }, 'Bonjour advertisement started');
 
-    const shutdown = async (signal: string) => {
+    const shutdown = async (signal: string): Promise<void> => {
       logger.info({ signal }, 'Shutting down');
       stopBonjour();
       await app.close();
+      await closeWorker();
+      await closeTemporalClient();
       process.exit(0);
     };
     process.on('SIGTERM', () => shutdown('SIGTERM'));
