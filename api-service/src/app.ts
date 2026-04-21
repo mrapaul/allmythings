@@ -14,6 +14,7 @@ import { errorHandler, notFoundHandler } from './middleware/error.middleware';
 import { detectRoute } from './routes/detect.route';
 import { detectStatusRoute } from './routes/detect-status.route';
 import { healthRoute } from './routes/health.route';
+import { metricsRoute } from './routes/metrics.route';
 import { getTemporalClient, closeTemporalClient } from './temporal/client';
 import { createWorker, runWorker, closeWorker } from './temporal/worker';
 import { ProviderHealthService } from './services/provider-health.service';
@@ -78,6 +79,7 @@ export async function buildApp(options?: { disableRateLimit?: boolean }): Promis
   await app.register(detectRoute);
   await app.register(detectStatusRoute);
   await app.register(healthRoute);
+  await app.register(metricsRoute);
 
   app.get('/', () => ({
     service: 'Visual Home Inventory - API Service',

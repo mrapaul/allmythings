@@ -3,6 +3,7 @@ import { ApplicationFailure } from '@temporalio/activity';
 import { propagation, context } from '@opentelemetry/api';
 import { EnrichedItem, EnrichmentTier, FlorenceRegion } from '../shared-types';
 import { envConfig } from '../../config/env.config';
+import { timed, enrichmentTierUsedTotal } from '../../telemetry/metrics';
 
 export interface EnrichItemInput {
   imageBase64: string;
@@ -26,59 +27,65 @@ Return ONLY a single JSON object with these fields (no markdown, no prose):
 The item in question is labeled by a vision detector as: "{CAPTION}"`;
 
 export async function enrichItem(input: EnrichItemInput): Promise<EnrichedItem> {
-  if (input.tier === 'florence-only') {
-    return buildFlorenceOnly(input.region);
-  }
+  return timed('enrichItem', 1, async () => {
+    if (input.tier === 'florence-only') {
+      const result = buildFlorenceOnly(input.region);
+      enrichmentTierUsedTotal.labels(input.tier).inc();
+      return result;
+    }
 
-  if (!input.model) {
-    throw ApplicationFailure.create({
-      message: 'Model is required for non-florence-only tier',
-      type: 'InvalidTierConfig',
-      nonRetryable: true,
+    if (!input.model) {
+      throw ApplicationFailure.create({
+        message: 'Model is required for non-florence-only tier',
+        type: 'InvalidTierConfig',
+        nonRetryable: true,
+      });
+    }
+
+    const prompt = PROMPT.replace('{CAPTION}', input.region.caption);
+    const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+    propagation.inject(context.active(), headers);
+
+    const res = await fetch(`${envConfig.ollamaBaseUrl}/api/generate`, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify({
+        model: input.model,
+        prompt,
+        images: [input.imageBase64],
+        stream: false,
+        options: { num_ctx: 4096, temperature: 0.2 },
+      }),
+      signal: AbortSignal.timeout(tierTimeoutMs(input.tier)),
     });
-  }
 
-  const prompt = PROMPT.replace('{CAPTION}', input.region.caption);
-  const headers: Record<string, string> = { 'Content-Type': 'application/json' };
-  propagation.inject(context.active(), headers);
+    if (!res.ok) {
+      const body = await res.text().catch(() => '<unreadable>');
+      const retryable = res.status >= 500;
+      throw ApplicationFailure.create({
+        message: `Ollama ${input.model} returned ${res.status}: ${body.slice(0, 200)}`,
+        type: retryable ? 'OllamaTransientError' : 'OllamaBadRequestError',
+        nonRetryable: !retryable,
+      });
+    }
 
-  const res = await fetch(`${envConfig.ollamaBaseUrl}/api/generate`, {
-    method: 'POST',
-    headers,
-    body: JSON.stringify({
-      model: input.model,
-      prompt,
-      images: [input.imageBase64],
-      stream: false,
-      options: { num_ctx: 4096, temperature: 0.2 },
-    }),
-    signal: AbortSignal.timeout(tierTimeoutMs(input.tier)),
+    const data = (await res.json()) as { response?: string };
+    const raw = data.response ?? '';
+    let parsed: unknown;
+    try {
+      parsed = JSON.parse(extractJson(raw));
+    } catch {
+      throw ApplicationFailure.create({
+        message: `Ollama response was not valid JSON: ${raw.slice(0, 200)}`,
+        type: 'OllamaJsonParseError',
+        nonRetryable: true, // parsing is deterministic — retry won't help
+      });
+    }
+
+    const enriched = buildEnrichedItem(input.region, input.tier, parsed as Record<string, unknown>);
+    enrichmentTierUsedTotal.labels(input.tier).inc();
+    return enriched;
   });
-
-  if (!res.ok) {
-    const body = await res.text().catch(() => '<unreadable>');
-    const retryable = res.status >= 500;
-    throw ApplicationFailure.create({
-      message: `Ollama ${input.model} returned ${res.status}: ${body.slice(0, 200)}`,
-      type: retryable ? 'OllamaTransientError' : 'OllamaBadRequestError',
-      nonRetryable: !retryable,
-    });
-  }
-
-  const data = (await res.json()) as { response?: string };
-  const raw = data.response ?? '';
-  let parsed: unknown;
-  try {
-    parsed = JSON.parse(extractJson(raw));
-  } catch {
-    throw ApplicationFailure.create({
-      message: `Ollama response was not valid JSON: ${raw.slice(0, 200)}`,
-      type: 'OllamaJsonParseError',
-      nonRetryable: true, // parsing is deterministic — retry won't help
-    });
-  }
-
-  return buildEnrichedItem(input.region, input.tier, parsed as Record<string, unknown>);
 }
 
 function tierTimeoutMs(tier: EnrichmentTier): number {
