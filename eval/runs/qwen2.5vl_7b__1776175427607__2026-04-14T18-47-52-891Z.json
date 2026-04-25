@@ -1,0 +1,114 @@
+{
+  "model": "qwen2.5vl:7b",
+  "fixture": "1776175427607",
+  "extracted": [
+    {
+      "label": "snake plant",
+      "category": "Plants",
+      "primary_color": "green",
+      "material": "plastic",
+      "count": 1
+    },
+    {
+      "label": "tan leather office chair",
+      "category": "Furniture",
+      "primary_color": "tan",
+      "material": "leather",
+      "count": 1
+    },
+    {
+      "label": "black sofa",
+      "category": "Furniture",
+      "primary_color": "black",
+      "material": "fabric",
+      "count": 1
+    },
+    {
+      "label": "gold-framed picture",
+      "category": "Decor",
+      "primary_color": "gold",
+      "material": "metal",
+      "count": 3
+    },
+    {
+      "label": "white plate",
+      "category": "Decor",
+      "primary_color": "white",
+      "material": "ceramic",
+      "count": 1
+    },
+    {
+      "label": "gold-framed mirror",
+      "category": "Decor",
+      "primary_color": "gold",
+      "material": "metal",
+      "count": 1
+    },
+    {
+      "label": "black pot",
+      "category": "Plants",
+      "primary_color": "black",
+      "material": "plastic",
+      "count": 1
+    },
+    {
+      "label": "white pot",
+      "category": "Plants",
+      "primary_color": "white",
+      "material": "ceramic",
+      "count": 1
+    },
+    {
+      "label": "gold wire stand",
+      "category": "Decor",
+      "primary_color": "gold",
+      "material": "metal",
+      "count": 1
+    },
+    {
+      "label": "black and white curtains",
+      "category": "Window Treatments",
+      "primary_color": "white",
+      "material": "fabric",
+      "count": 2
+    },
+    {
+      "label": "green plant",
+      "category": "Plants",
+      "primary_color": "green",
+      "material": "leaves",
+      "count": 1
+    },
+    {
+      "label": "brown wooden floor",
+      "category": "Furniture",
+      "primary_color": "brown",
+      "material": "wood",
+      "count": 1
+    },
+    {
+      "label": "black and gold side table",
+      "category": "Furniture",
+      "primary_color": "black",
+      "material": "metal",
+      "count": 1
+    }
+  ],
+  "raw": "```json\n[\n    {\n        \"label\": \"snake plant\",\n        \"category\": \"Plants\",\n        \"primary_color\": \"green\",\n        \"material\": \"plastic\",\n        \"count\": 1\n    },\n    {\n        \"label\": \"tan leather office chair\",\n        \"category\": \"Furniture\",\n        \"primary_color\": \"tan\",\n        \"material\": \"leather\",\n        \"count\": 1\n    },\n    {\n        \"label\": \"black sofa\",\n        \"category\": \"Furniture\",\n        \"primary_color\": \"black\",\n        \"material\": \"fabric\",\n        \"count\": 1\n    },\n    {\n        \"label\": \"gold-framed picture\",\n        \"category\": \"Decor\",\n        \"primary_color\": \"gold\",\n        \"material\": \"metal\",\n        \"count\": 3\n    },\n    {\n        \"label\": \"white plate\",\n        \"category\": \"Decor\",\n        \"primary_color\": \"white\",\n        \"material\": \"ceramic\",\n        \"count\": 1\n    },\n    {\n        \"label\": \"gold-framed mirror\",\n        \"category\": \"Decor\",\n        \"primary_color\": \"gold\",\n        \"material\": \"metal\",\n        \"count\": 1\n    },\n    {\n        \"label\": \"black pot\",\n        \"category\": \"Plants\",\n        \"primary_color\": \"black\",\n        \"material\": \"plastic\",\n        \"count\": 1\n    },\n    {\n        \"label\": \"white pot\",\n        \"category\": \"Plants\",\n        \"primary_color\": \"white\",\n        \"material\": \"ceramic\",\n        \"count\": 1\n    },\n    {\n        \"label\": \"gold wire stand\",\n        \"category\": \"Decor\",\n        \"primary_color\": \"gold\",\n        \"material\": \"metal\",\n        \"count\": 1\n    },\n    {\n        \"label\": \"black and white curtains\",\n        \"category\": \"Window Treatments\",\n        \"primary_color\": \"white\",\n        \"material\": \"fabric\",\n        \"count\": 2\n    },\n    {\n        \"label\": \"green plant\",\n        \"category\": \"Plants\",\n        \"primary_color\": \"green\",\n        \"material\": \"leaves\",\n        \"count\": 1\n    },\n    {\n        \"label\": \"brown wooden floor\",\n        \"category\": \"Furniture\",\n        \"primary_color\": \"brown\",\n        \"material\": \"wood\",\n        \"count\": 1\n    },\n    {\n        \"label\": \"black and gold side table\",\n        \"category\": \"Furniture\",\n        \"primary_color\": \"black\",\n        \"material\": \"metal\",\n        \"count\": 1\n    }\n]\n```",
+  "score": {
+    "recall": 71.4,
+    "itemCount": 13,
+    "expectedMin": 10,
+    "expectedMax": 16,
+    "countWithinRange": true,
+    "matchedCount": 10,
+    "missed": [
+      "two-tone ceramic planter",
+      "dark navy couch / sofa",
+      "framed painting of figures",
+      "decorative wall plate"
+    ]
+  },
+  "elapsedMs": 21353,
+  "attempts": 1
+}

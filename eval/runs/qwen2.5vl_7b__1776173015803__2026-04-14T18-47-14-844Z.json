@@ -1,0 +1,87 @@
+{
+  "model": "qwen2.5vl:7b",
+  "fixture": "1776173015803",
+  "extracted": [
+    {
+      "label": "tan leather office chair",
+      "category": "Furniture",
+      "primary_color": "tan",
+      "material": "leather",
+      "count": 1
+    },
+    {
+      "label": "snake plant",
+      "category": "Plants",
+      "primary_color": "green",
+      "material": "plant",
+      "count": 1
+    },
+    {
+      "label": "white pot",
+      "category": "Decor",
+      "primary_color": "white",
+      "material": "ceramic",
+      "count": 1
+    },
+    {
+      "label": "gold wire stand",
+      "category": "Decor",
+      "primary_color": "gold",
+      "material": "metal",
+      "count": 1
+    },
+    {
+      "label": "blue throw blanket",
+      "category": "Textiles",
+      "primary_color": "blue",
+      "material": "cotton",
+      "count": 1
+    },
+    {
+      "label": "gold-framed artwork",
+      "category": "Art",
+      "primary_color": "gold",
+      "material": "frame",
+      "count": 2
+    },
+    {
+      "label": "white sheer curtains",
+      "category": "Window Treatments",
+      "primary_color": "white",
+      "material": "fabric",
+      "count": 1
+    },
+    {
+      "label": "wooden side table",
+      "category": "Furniture",
+      "primary_color": "brown",
+      "material": "wood",
+      "count": 1
+    },
+    {
+      "label": "blue throw pillow",
+      "category": "Textiles",
+      "primary_color": "blue",
+      "material": "cotton",
+      "count": 1
+    }
+  ],
+  "raw": "```json\n[\n    {\n        \"label\": \"tan leather office chair\",\n        \"category\": \"Furniture\",\n        \"primary_color\": \"tan\",\n        \"material\": \"leather\",\n        \"count\": 1\n    },\n    {\n        \"label\": \"snake plant\",\n        \"category\": \"Plants\",\n        \"primary_color\": \"green\",\n        \"material\": \"plant\",\n        \"count\": 1\n    },\n    {\n        \"label\": \"white pot\",\n        \"category\": \"Decor\",\n        \"primary_color\": \"white\",\n        \"material\": \"ceramic\",\n        \"count\": 1\n    },\n    {\n        \"label\": \"gold wire stand\",\n        \"category\": \"Decor\",\n        \"primary_color\": \"gold\",\n        \"material\": \"metal\",\n        \"count\": 1\n    },\n    {\n        \"label\": \"blue throw blanket\",\n        \"category\": \"Textiles\",\n        \"primary_color\": \"blue\",\n        \"material\": \"cotton\",\n        \"count\": 1\n    },\n    {\n        \"label\": \"gold-framed artwork\",\n        \"category\": \"Art\",\n        \"primary_color\": \"gold\",\n        \"material\": \"frame\",\n        \"count\": 2\n    },\n    {\n        \"label\": \"white sheer curtains\",\n        \"category\": \"Window Treatments\",\n        \"primary_color\": \"white\",\n        \"material\": \"fabric\",\n        \"count\": 1\n    },\n    {\n        \"label\": \"wooden side table\",\n        \"category\": \"Furniture\",\n        \"primary_color\": \"brown\",\n        \"material\": \"wood\",\n        \"count\": 1\n    },\n    {\n        \"label\": \"blue throw pillow\",\n        \"category\": \"Textiles\",\n        \"primary_color\": \"blue\",\n        \"material\": \"cotton\",\n        \"count\": 1\n    }\n]\n```",
+  "score": {
+    "recall": 58.3,
+    "itemCount": 9,
+    "expectedMin": 8,
+    "expectedMax": 15,
+    "countWithinRange": true,
+    "matchedCount": 7,
+    "missed": [
+      "snake plant (sansevieria) small",
+      "two-tone ceramic planter",
+      "dark navy couch / sofa",
+      "decorative wall plate",
+      "white area rug"
+    ]
+  },
+  "elapsedMs": 9856,
+  "attempts": 1
+}

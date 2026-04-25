@@ -1,0 +1,84 @@
+{
+  "model": "llava:latest",
+  "fixture": "1776174188547",
+  "extracted": [
+    {
+      "label": "tan leather office chair",
+      "category": "Furniture",
+      "primary_color": "brown",
+      "material": "leather"
+    },
+    {
+      "label": "wooden desk",
+      "category": "Furniture",
+      "primary_color": "light brown",
+      "material": "wood"
+    },
+    {
+      "label": "plant",
+      "category": "Plants",
+      "primary_color": "green",
+      "material": "plastic"
+    },
+    {
+      "label": "snake plant",
+      "category": "Plants",
+      "primary_color": "green",
+      "material": "plastic"
+    },
+    {
+      "label": "white vase",
+      "category": "Decor",
+      "primary_color": "white",
+      "material": "ceramic"
+    },
+    {
+      "label": "potted plant",
+      "category": "Plants",
+      "primary_color": "green",
+      "material": "plastic"
+    },
+    {
+      "label": "office chair",
+      "category": "Furniture",
+      "primary_color": "brown",
+      "material": "leather"
+    },
+    {
+      "label": "wooden desk",
+      "category": "Furniture",
+      "primary_color": "light brown",
+      "material": "wood"
+    },
+    {
+      "label": "plant",
+      "category": "Plants",
+      "primary_color": "green",
+      "material": "plastic"
+    },
+    {
+      "label": "snake plant",
+      "category": "Plants",
+      "primary_color": "green",
+      "material": "plastic"
+    }
+  ],
+  "raw": " ```json\n[    {        \"label\": \"tan leather office chair\",        \"category\": \"Furniture\",        \"primary_color\": \"brown\",        \"material\": \"leather\"    },    {        \"label\": \"wooden desk\",        \"category\": \"Furniture\",        \"primary_color\": \"light brown\",        \"material\": \"wood\"    },    {        \"label\": \"plant\",        \"category\": \"Plants\",        \"primary_color\": \"green\",        \"material\": \"plastic\"    },    {        \"label\": \"snake plant\",        \"category\": \"Plants\",        \"primary_color\": \"green\",        \"material\": \"plastic\"    },    {        \"label\": \"white vase\",        \"category\": \"Decor\",        \"primary_color\": \"white\",        \"material\": \"ceramic\"    },    {        \"label\": \"potted plant\",        \"category\": \"Plants\",        \"primary_color\": \"green\",        \"material\": \"plastic\"    },    {        \"label\": \"office chair\",        \"category\": \"Furniture\",        \"primary_color\": \"brown\",        \"material\": \"leather\"    },    {        \"label\": \"wooden desk\",        \"category\": \"Furniture\",        \"primary_color\": \"light brown\",        \"material\": \"wood\"    },    {        \"label\": \"plant\",        \"category\": \"Plants\",        \"primary_color\": \"green\",        \"material\": \"plastic\"    },    {        \"label\": \"snake plant\",        \"category\": \"Plants\",        \"primary_color\": \"green\",        \"material\": \"plastic\"    }]\n``` ",
+  "score": {
+    "recall": 54.5,
+    "itemCount": 10,
+    "expectedMin": 7,
+    "expectedMax": 13,
+    "countWithinRange": true,
+    "matchedCount": 6,
+    "missed": [
+      "two-tone ceramic planter",
+      "white venetian window blinds",
+      "dark navy couch / sofa",
+      "framed painting / artwork",
+      "white area rug"
+    ]
+  },
+  "elapsedMs": 10086,
+  "attempts": 1
+}

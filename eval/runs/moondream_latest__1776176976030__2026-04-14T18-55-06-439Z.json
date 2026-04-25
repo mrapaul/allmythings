@@ -1,0 +1,31 @@
+{
+  "model": "moondream:latest",
+  "fixture": "1776176976030",
+  "extracted": [],
+  "raw": "\n [\n  { \"label\": \"snake plant\", \"category\": \"Plants\", \"primary_color\": \"green\", \"material\": \"cane\", \"count\": 1 },\n  { \"label\": \"orange leather office chair\", \"category\": \"Textiles\", \"primary_color\": \"brown\", \"material\": \"leather\", \"count\": 0.25 },\n  { \"label\": \"white desk lamp\", \"category\": \"Lighting\", \"primary_color\": \"white\", \"material\": \"metal\", \"count\": 1.0 },\n  ...",
+  "score": {
+    "recall": 0,
+    "itemCount": 0,
+    "expectedMin": 8,
+    "expectedMax": 14,
+    "countWithinRange": false,
+    "matchedCount": 0,
+    "missed": [
+      "tan leather cane-back office chair",
+      "black throw blanket",
+      "snake plant (sansevieria) large",
+      "snake plant small",
+      "two-tone ceramic planter",
+      "gold wire plant stand",
+      "wooden stool",
+      "gold candle holder",
+      "wooden sideboard / cabinet",
+      "sheer white curtains",
+      "white venetian window blinds",
+      "dark navy couch / sofa",
+      "framed painting"
+    ]
+  },
+  "elapsedMs": 1350,
+  "attempts": 1
+}

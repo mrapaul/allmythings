@@ -1,0 +1,211 @@
+{
+  "model": "hybrid:owlv2-qwen7b",
+  "fixture": "1776175427607",
+  "extracted": [
+    {
+      "label": "Snake plant",
+      "category": "Plants",
+      "count": 1
+    },
+    {
+      "label": "Mid-century office chair",
+      "category": "Furniture",
+      "count": 1
+    },
+    {
+      "label": "Black sofa",
+      "category": "Furniture",
+      "count": 1
+    },
+    {
+      "label": "Gold planter",
+      "category": "Decor",
+      "count": 1
+    },
+    {
+      "label": "Sheer linen curtain",
+      "category": "Textiles",
+      "count": 1
+    },
+    {
+      "label": "Ceramic planter",
+      "category": "Decor",
+      "count": 1
+    },
+    {
+      "label": "Wooden side table",
+      "category": "Furniture",
+      "count": 1
+    },
+    {
+      "label": "Ceramic plate",
+      "category": "Decor",
+      "count": 1
+    },
+    {
+      "label": "Painting",
+      "category": "Decor",
+      "count": 1
+    },
+    {
+      "label": "Painting",
+      "category": "Decor",
+      "count": 1
+    },
+    {
+      "label": "Painting",
+      "category": "Decor",
+      "count": 1
+    },
+    {
+      "label": "Green plant",
+      "category": "Plants",
+      "count": 1
+    },
+    {
+      "label": "Green plant",
+      "category": "Plants",
+      "count": 1
+    },
+    {
+      "label": "couch",
+      "category": "uncategorized",
+      "count": 1
+    },
+    {
+      "label": "chair",
+      "category": "uncategorized",
+      "count": 1
+    },
+    {
+      "label": "chair",
+      "category": "uncategorized",
+      "count": 1
+    },
+    {
+      "label": "cup",
+      "category": "uncategorized",
+      "count": 1
+    },
+    {
+      "label": "chair",
+      "category": "uncategorized",
+      "count": 1
+    },
+    {
+      "label": "cup",
+      "category": "uncategorized",
+      "count": 1
+    },
+    {
+      "label": "dining table",
+      "category": "uncategorized",
+      "count": 1
+    },
+    {
+      "label": "potted plant",
+      "category": "uncategorized",
+      "count": 1
+    },
+    {
+      "label": "dining table",
+      "category": "uncategorized",
+      "count": 1
+    },
+    {
+      "label": "potted plant",
+      "category": "uncategorized",
+      "count": 1
+    },
+    {
+      "label": "cup",
+      "category": "uncategorized",
+      "count": 1
+    },
+    {
+      "label": "knife",
+      "category": "uncategorized",
+      "count": 1
+    },
+    {
+      "label": "knife",
+      "category": "uncategorized",
+      "count": 1
+    },
+    {
+      "label": "chair",
+      "category": "uncategorized",
+      "count": 1
+    },
+    {
+      "label": "chair",
+      "category": "uncategorized",
+      "count": 1
+    },
+    {
+      "label": "fork",
+      "category": "uncategorized",
+      "count": 1
+    },
+    {
+      "label": "vase",
+      "category": "uncategorized",
+      "count": 1
+    },
+    {
+      "label": "clock",
+      "category": "uncategorized",
+      "count": 1
+    },
+    {
+      "label": "dining table",
+      "category": "uncategorized",
+      "count": 1
+    },
+    {
+      "label": "fork",
+      "category": "uncategorized",
+      "count": 1
+    },
+    {
+      "label": "chair",
+      "category": "uncategorized",
+      "count": 1
+    },
+    {
+      "label": "bowl",
+      "category": "uncategorized",
+      "count": 1
+    },
+    {
+      "label": "vase",
+      "category": "uncategorized",
+      "count": 1
+    },
+    {
+      "label": "bowl",
+      "category": "uncategorized",
+      "count": 1
+    },
+    {
+      "label": "dining table",
+      "category": "uncategorized",
+      "count": 1
+    }
+  ],
+  "raw": "[{\"label\":\"Snake plant\",\"category\":\"Plants\",\"count\":1},{\"label\":\"Mid-century office chair\",\"category\":\"Furniture\",\"count\":1},{\"label\":\"Black sofa\",\"category\":\"Furniture\",\"count\":1},{\"label\":\"Gold planter\",\"category\":\"Decor\",\"count\":1},{\"label\":\"Sheer linen curtain\",\"category\":\"Textiles\",\"count\":1},{\"label\":\"Ceramic planter\",\"category\":\"Decor\",\"count\":1},{\"label\":\"Wooden side table\",\"category\":\"Furniture\",\"count\":1},{\"label\":\"Ceramic plate\",\"category\":\"Decor\",\"count\":1},{\"label\":\"Painting\",\"category\":\"Decor\",\"count\":1},{\"label\":\"Painting\",\"category\":\"Decor\",\"count\":1},{\"label\":\"Painting\",\"category\":\"Decor\",\"count\":1},{\"label\":\"Green plant\",\"category\":\"Plants\",\"count\":1},{\"label\":\"Green plant\",\"category\":\"Plants\",\"count\":1},{\"label\":\"couch\",\"category\":\"uncategorized\",\"count\":1},{\"label\":\"chair\",\"category\":\"uncategorized\",\"count\":1},{\"label\":\"chair\",\"category\":\"uncategorized\",\"count\":1},{\"label\":\"cup\",\"category\":\"uncategorized\",\"count\":1},{\"label\":\"chair\",\"category\":\"uncategorized\",\"count\":1},{\"label\":\"cup\",\"category\":\"uncategorized\",\"count\":1},{\"label\":\"dining table\",\"category\":\"uncategorized\",\"count\":1},{\"label\":\"potted plant\",\"category\":\"uncategorized\",\"count\":1},{\"label\":\"dining table\",\"category\":\"uncategorized\",\"count\":1},{\"label\":\"potted plant\",\"category\":\"uncategorized\",\"count\":1},{\"label\":\"cup\",\"category\":\"uncategorized\",\"count\":1},{\"label\":\"knife\",\"category\":\"uncategorized\",\"count\":1},{\"label\":\"knife\",\"category\":\"uncategorized\",\"count\":1},{\"label\":\"chair\",\"category\":\"uncategorized\",\"count\":1},{\"label\":\"chair\",\"category\":\"uncategorized\",\"count\":1},{\"label\":\"fork\",\"category\":\"uncategorized\",\"count\":1},{\"label\":\"vase\",\"category\":\"uncategorized\",\"count\":1},{\"label\":\"clock\",\"category\":\"uncategorized\",\"count\":1},{\"label\":\"dining table\",\"category\":\"uncategorized\",\"count\":1},{\"label\":\"fork\",\"category\":\"uncategorized\",\"count\":1},{\"label\":\"chair\",\"category\":\"uncategorized\",\"count\":1},{\"label\":\"bowl\",\"category\":\"uncategorized\",\"count\":1},{\"label\":\"vase\",\"category\":\"uncategorized\",\"count\":1},{\"label\":\"bowl\",\"category\":\"uncategorized\",\"count\":1},{\"label\":\"dining table\",\"category\":\"uncategorized\",\"count\":1}]",
+  "score": {
+    "recall": 85.7,
+    "itemCount": 38,
+    "expectedMin": 10,
+    "expectedMax": 16,
+    "countWithinRange": false,
+    "matchedCount": 12,
+    "missed": [
+      "gold candle holder",
+      "white venetian window blinds"
+    ]
+  },
+  "elapsedMs": 45867,
+  "attempts": 1
+}

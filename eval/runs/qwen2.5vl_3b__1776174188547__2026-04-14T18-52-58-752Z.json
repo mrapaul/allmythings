@@ -1,0 +1,82 @@
+{
+  "model": "qwen2.5vl:3b",
+  "fixture": "1776174188547",
+  "extracted": [
+    {
+      "label": "tan leather office chair",
+      "category": "Furniture",
+      "primary_color": "tan",
+      "material": "leather",
+      "count": 1
+    },
+    {
+      "label": "blue towel",
+      "category": "Textiles",
+      "primary_color": "blue",
+      "material": "fabric",
+      "count": 1
+    },
+    {
+      "label": "wooden stool",
+      "category": "Furniture",
+      "primary_color": "brown",
+      "material": "wood",
+      "count": 1
+    },
+    {
+      "label": "plant",
+      "category": "Plants",
+      "primary_color": "green",
+      "material": "plant",
+      "count": 1
+    },
+    {
+      "label": "curtains",
+      "category": "Window Treatments",
+      "primary_color": "white",
+      "material": "cloth",
+      "count": 1
+    },
+    {
+      "label": "frame",
+      "category": "Art",
+      "primary_color": "gold",
+      "material": "wood",
+      "count": 2
+    },
+    {
+      "label": "floor lamp",
+      "category": "Lighting",
+      "primary_color": "gold",
+      "material": "metal",
+      "count": 1
+    },
+    {
+      "label": "wooden floor",
+      "category": "Floor",
+      "primary_color": "brown",
+      "material": "wood",
+      "count": 1
+    }
+  ],
+  "raw": "```json\n[\n  {\n    \"label\": \"tan leather office chair\",\n    \"category\": \"Furniture\",\n    \"primary_color\": \"tan\",\n    \"material\": \"leather\",\n    \"count\": 1\n  },\n  {\n    \"label\": \"blue towel\",\n    \"category\": \"Textiles\",\n    \"primary_color\": \"blue\",\n    \"material\": \"fabric\",\n    \"count\": 1\n  },\n  {\n    \"label\": \"wooden stool\",\n    \"category\": \"Furniture\",\n    \"primary_color\": \"brown\",\n    \"material\": \"wood\",\n    \"count\": 1\n  },\n  {\n    \"label\": \"plant\",\n    \"category\": \"Plants\",\n    \"primary_color\": \"green\",\n    \"material\": \"plant\",\n    \"count\": 1\n  },\n  {\n    \"label\": \"curtains\",\n    \"category\": \"Window Treatments\",\n    \"primary_color\": \"white\",\n    \"material\": \"cloth\",\n    \"count\": 1\n  },\n  {\n    \"label\": \"frame\",\n    \"category\": \"Art\",\n    \"primary_color\": \"gold\",\n    \"material\": \"wood\",\n    \"count\": 2\n  },\n  {\n    \"label\": \"floor lamp\",\n    \"category\": \"Lighting\",\n    \"primary_color\": \"gold\",\n    \"material\": \"metal\",\n    \"count\": 1\n  },\n  {\n    \"label\": \"wooden floor\",\n    \"category\": \"Floor\",\n    \"primary_color\": \"brown\",\n    \"material\": \"wood\",\n    \"count\": 1\n  }\n]\n```",
+  "score": {
+    "recall": 36.4,
+    "itemCount": 8,
+    "expectedMin": 7,
+    "expectedMax": 13,
+    "countWithinRange": true,
+    "matchedCount": 4,
+    "missed": [
+      "small snake plant",
+      "two-tone ceramic planter",
+      "gold wire plant stand",
+      "white venetian window blinds",
+      "dark navy couch / sofa",
+      "framed painting / artwork",
+      "white area rug"
+    ]
+  },
+  "elapsedMs": 62145,
+  "attempts": 2
+}

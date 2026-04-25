@@ -1,0 +1,32 @@
+{
+  "model": "moondream:latest",
+  "fixture": "1776175427607",
+  "extracted": [],
+  "raw": "\n [\n  {\"label\": \"snake plant\", \"category\": \"Plants\", \"primary_color\": \"green\", \"material\": \"planted in pot\", \"count\": 1},\n  {\"label\": \"orange leather office chair\", \"category\": \"Furniture\", \"primary_color\": \"brown\", \"material\": \"leather\", \"count\": 1},\n  {\"label\": \"white desk lamp\", \"category\": \"Textiles\", \"primary_color\": \"black\", \"material\": \"cathode silver\", \"count\": 0, \"type\": \"lamp\"},\n  {\"label\": \"white floor lamp\", \"category\": \"Textiles\", \"primary_color\": \"black\", \"material\": \"cathode silver\", \"count\": 1, \"type\": \"lamp\"},\n  {\"label\": \"white desk lamp\", \"category\": \"Textiles\", \"primary_color\": \"black\", \"material\": \"cathode silver\", \"count\": 0, \"type\": \"lamp\"},\n  {\"label\": \"white floor lamp\", \"category\": \"Textiles\", \"primary_color\": \"black\", \"material\": \"cathode silver\", \"count\": 1, \"type\": \"lamp\"},\n  {\"label\": \"white desk lamp\", \"category\": \"Textiles\", \"primary_color\": \"black\", \"material\": \"cathode silver\", \"count\": 0, \"type\": \"lamp\"},\n  {\"label\": \"orange leather office chair\", \"category\": \"Furniture\", \"primary_color\": \"brown\", \"material\": \"leather\", \"count\": 1},\n  {\"label\": \"white desk lamp\", \"category\": \"Textiles\", \"primary_color\": \"black\", \"material\": \"cathode silver\", \"count\": 0, \"type\": \"lamp\"},\n  {\"label\": \"orange leather office chair\", \"category\": \"Furniture\", \"primary_color\": \"brown\", \"material\": \"leather\", \"count\": 1},\n  {\"label\": \"white desk lamp\", \"category\": \"Textiles\", \"primary_color\": \"black\", \"material\": \"cathode silver\", \"count\": 0, \"type\": \"lamp\"},",
+  "score": {
+    "recall": 0,
+    "itemCount": 0,
+    "expectedMin": 10,
+    "expectedMax": 16,
+    "countWithinRange": false,
+    "matchedCount": 0,
+    "missed": [
+      "tan leather cane-back office chair",
+      "black throw blanket",
+      "snake plant (sansevieria) large",
+      "snake plant small",
+      "two-tone ceramic planter",
+      "gold wire plant stand",
+      "wooden stool",
+      "gold candle holder",
+      "wooden side table",
+      "sheer white linen curtains",
+      "white venetian window blinds",
+      "dark navy couch / sofa",
+      "framed painting of figures",
+      "decorative wall plate"
+    ]
+  },
+  "elapsedMs": 3284,
+  "attempts": 1
+}

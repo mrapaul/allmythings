@@ -1,0 +1,49 @@
+{
+  "model": "moondream:latest",
+  "fixture": "1776174188547",
+  "extracted": [
+    {
+      "label": "snake plant",
+      "category": "Plants",
+      "primary_color": "green",
+      "material": "Succulent",
+      "count": 1
+    },
+    {
+      "label": "tan leather office chair",
+      "category": "Furniture",
+      "primary_color": "orange",
+      "material": "Leather",
+      "count": 1
+    },
+    {
+      "label": "blue blanket",
+      "category": "Textiles",
+      "primary_color": "blue",
+      "material": "blanket",
+      "count": 1
+    }
+  ],
+  "raw": "\n [\n  {\"label\": \"snake plant\", \"category\": \"Plants\", \"primary_color\": \"green\", \"material\": \"Succulent\", \"count\": 1},\n  {\"label\": \"tan leather office chair\", \"category\": \"Furniture\", \"primary_color\": \"orange\", \"material\": \"Leather\", \"count\": 1},\n  {\"label\": \"blue blanket\", \"category\": \"Textiles\", \"primary_color\": \"blue\", \"material\": \"blanket\", \"count\": 1}\n ]",
+  "score": {
+    "recall": 18.2,
+    "itemCount": 3,
+    "expectedMin": 7,
+    "expectedMax": 13,
+    "countWithinRange": false,
+    "matchedCount": 2,
+    "missed": [
+      "small snake plant",
+      "two-tone ceramic planter",
+      "gold wire plant stand",
+      "wooden stool (plant support)",
+      "sheer white linen curtains",
+      "white venetian window blinds",
+      "dark navy couch / sofa",
+      "framed painting / artwork",
+      "white area rug"
+    ]
+  },
+  "elapsedMs": 1231,
+  "attempts": 1
+}

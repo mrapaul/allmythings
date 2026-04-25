@@ -1,0 +1,107 @@
+{
+  "model": "qwen2.5vl:3b",
+  "fixture": "1776175427607",
+  "extracted": [
+    {
+      "label": "snake plant",
+      "category": "Plants",
+      "primary_color": "green",
+      "material": "Plastic",
+      "count": 1
+    },
+    {
+      "label": "tan leather office chair",
+      "category": "Furniture",
+      "primary_color": "tan",
+      "material": "Leather",
+      "count": 1
+    },
+    {
+      "label": "white planter",
+      "category": "Plants",
+      "primary_color": "white",
+      "material": "Plastic",
+      "count": 1
+    },
+    {
+      "label": "black planter",
+      "category": "Plants",
+      "primary_color": "black",
+      "material": "Plastic",
+      "count": 1
+    },
+    {
+      "label": "wooden side table",
+      "category": "Furniture",
+      "primary_color": "brown",
+      "material": "Wood",
+      "count": 1
+    },
+    {
+      "label": "blue sofa",
+      "category": "Furniture",
+      "primary_color": "blue",
+      "material": "Furniture",
+      "count": 1
+    },
+    {
+      "label": "gold-framed paintings",
+      "category": "Decor",
+      "primary_color": "gold",
+      "material": "Wood",
+      "count": 3
+    },
+    {
+      "label": "white sheer curtains",
+      "category": "Window Treatments",
+      "primary_color": "white",
+      "material": "Curtains",
+      "count": 1
+    },
+    {
+      "label": "wooden floor",
+      "category": "Floor",
+      "primary_color": "brown",
+      "material": "Wood",
+      "count": 1
+    },
+    {
+      "label": "wooden desk",
+      "category": "Furniture",
+      "primary_color": "brown",
+      "material": "Wood",
+      "count": 1
+    },
+    {
+      "label": "blue and white plate",
+      "category": "Decor",
+      "primary_color": "blue",
+      "material": "Porcelain",
+      "count": 1
+    },
+    {
+      "label": "black and white rug",
+      "category": "Rug",
+      "primary_color": "black",
+      "material": "Rug",
+      "count": 1
+    }
+  ],
+  "raw": "```json\n[\n  {\n    \"label\": \"snake plant\",\n    \"category\": \"Plants\",\n    \"primary_color\": \"green\",\n    \"material\": \"Plastic\",\n    \"count\": 1\n  },\n  {\n    \"label\": \"tan leather office chair\",\n    \"category\": \"Furniture\",\n    \"primary_color\": \"tan\",\n    \"material\": \"Leather\",\n    \"count\": 1\n  },\n  {\n    \"label\": \"white planter\",\n    \"category\": \"Plants\",\n    \"primary_color\": \"white\",\n    \"material\": \"Plastic\",\n    \"count\": 1\n  },\n  {\n    \"label\": \"black planter\",\n    \"category\": \"Plants\",\n    \"primary_color\": \"black\",\n    \"material\": \"Plastic\",\n    \"count\": 1\n  },\n  {\n    \"label\": \"wooden side table\",\n    \"category\": \"Furniture\",\n    \"primary_color\": \"brown\",\n    \"material\": \"Wood\",\n    \"count\": 1\n  },\n  {\n    \"label\": \"blue sofa\",\n    \"category\": \"Furniture\",\n    \"primary_color\": \"blue\",\n    \"material\": \"Furniture\",\n    \"count\": 1\n  },\n  {\n    \"label\": \"gold-framed paintings\",\n    \"category\": \"Decor\",\n    \"primary_color\": \"gold\",\n    \"material\": \"Wood\",\n    \"count\": 3\n  },\n  {\n    \"label\": \"white sheer curtains\",\n    \"category\": \"Window Treatments\",\n    \"primary_color\": \"white\",\n    \"material\": \"Curtains\",\n    \"count\": 1\n  },\n  {\n    \"label\": \"wooden floor\",\n    \"category\": \"Floor\",\n    \"primary_color\": \"brown\",\n    \"material\": \"Wood\",\n    \"count\": 1\n  },\n  {\n    \"label\": \"wooden desk\",\n    \"category\": \"Furniture\",\n    \"primary_color\": \"brown\",\n    \"material\": \"Wood\",\n    \"count\": 1\n  },\n  {\n    \"label\": \"blue and white plate\",\n    \"category\": \"Decor\",\n    \"primary_color\": \"blue\",\n    \"material\": \"Porcelain\",\n    \"count\": 1\n  },\n  {\n    \"label\": \"black and white rug\",\n    \"category\": \"Rug\",\n    \"primary_color\": \"black\",\n    \"material\": \"Rug\",\n    \"count\": 1\n  }\n]\n```",
+  "score": {
+    "recall": 71.4,
+    "itemCount": 12,
+    "expectedMin": 10,
+    "expectedMax": 16,
+    "countWithinRange": true,
+    "matchedCount": 10,
+    "missed": [
+      "snake plant small",
+      "gold candle holder",
+      "framed painting of figures",
+      "decorative wall plate"
+    ]
+  },
+  "elapsedMs": 62596,
+  "attempts": 2
+}

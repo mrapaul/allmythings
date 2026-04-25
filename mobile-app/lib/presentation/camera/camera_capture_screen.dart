@@ -98,10 +98,13 @@ class _CameraCaptureScreenState extends ConsumerState<CameraCaptureScreen> {
           _showPreview = true;
         });
       }
-    } catch (e) {
+    } catch (e, st) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed to capture photo: $e')),
+          SnackBar(
+            content: Text('Capture error: $e'),
+            duration: const Duration(seconds: 10),
+          ),
         );
       }
     } finally {
@@ -163,8 +166,13 @@ class _CameraCaptureScreenState extends ConsumerState<CameraCaptureScreen> {
           context.go('/items');
         }
       } catch (e) {
-        debugPrint('Error starting background process: $e');
         if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Process error: $e'),
+              duration: const Duration(seconds: 10),
+            ),
+          );
           context.go('/items');
         }
       } finally {

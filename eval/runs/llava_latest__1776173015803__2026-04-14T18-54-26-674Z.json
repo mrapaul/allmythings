@@ -1,0 +1,86 @@
+{
+  "model": "llava:latest",
+  "fixture": "1776173015803",
+  "extracted": [
+    {
+      "label": "Leather office chair",
+      "category": "Furniture",
+      "primary_color": "brown",
+      "material": "leather"
+    },
+    {
+      "label": "Wooden desk",
+      "category": "Furniture",
+      "primary_color": "brown",
+      "material": "wood"
+    },
+    {
+      "label": "Snake plant",
+      "category": "Plants",
+      "primary_color": "green",
+      "material": "plant"
+    },
+    {
+      "label": "Wicker basket",
+      "category": "Decor",
+      "primary_color": "brown",
+      "material": "wicker"
+    },
+    {
+      "label": "Cactus plant",
+      "category": "Plants",
+      "primary_color": "green",
+      "material": "plant"
+    },
+    {
+      "label": "Wooden chair with woven seat",
+      "category": "Furniture",
+      "primary_color": "brown",
+      "material": "wood, wicker"
+    },
+    {
+      "label": "Coffee table",
+      "category": "Furniture",
+      "primary_color": "white",
+      "material": "glass"
+    },
+    {
+      "label": "Potted plant on coffee table",
+      "category": "Plants",
+      "primary_color": "green",
+      "material": "plant"
+    },
+    {
+      "label": "Leather ottoman",
+      "category": "Furniture",
+      "primary_color": "brown",
+      "material": "leather"
+    },
+    {
+      "label": "Curtain",
+      "category": "Window Treatments",
+      "primary_color": "white",
+      "material": "fabric"
+    }
+  ],
+  "raw": " ```json\n[    {        \"label\": \"Leather office chair\",        \"category\": \"Furniture\",        \"primary_color\": \"brown\",        \"material\": \"leather\"    },    {        \"label\": \"Wooden desk\",        \"category\": \"Furniture\",        \"primary_color\": \"brown\",        \"material\": \"wood\"    },    {        \"label\": \"Snake plant\",        \"category\": \"Plants\",        \"primary_color\": \"green\",        \"material\": \"plant\"    },    {        \"label\": \"Wicker basket\",        \"category\": \"Decor\",        \"primary_color\": \"brown\",        \"material\": \"wicker\"    },    {        \"label\": \"Cactus plant\",        \"category\": \"Plants\",        \"primary_color\": \"green\",        \"material\": \"plant\"    },    {        \"label\": \"Wooden chair with woven seat\",        \"category\": \"Furniture\",        \"primary_color\": \"brown\",        \"material\": \"wood, wicker\"    },    {        \"label\": \"Coffee table\",        \"category\": \"Furniture\",        \"primary_color\": \"white\",        \"material\": \"glass\"    },    {        \"label\": \"Potted plant on coffee table\",        \"category\": \"Plants\",        \"primary_color\": \"green\",        \"material\": \"plant\"    },    {        \"label\": \"Leather ottoman\",        \"category\": \"Furniture\",        \"primary_color\": \"brown\",        \"material\": \"leather\"    },    {        \"label\": \"Curtain\",        \"category\": \"Window Treatments\",        \"primary_color\": \"white\",        \"material\": \"fabric\"    }]\n``` ",
+  "score": {
+    "recall": 41.7,
+    "itemCount": 10,
+    "expectedMin": 8,
+    "expectedMax": 15,
+    "countWithinRange": true,
+    "matchedCount": 5,
+    "missed": [
+      "two-tone ceramic planter",
+      "sheer white linen curtains",
+      "white venetian window blinds",
+      "dark navy couch / sofa",
+      "framed painting / artwork",
+      "decorative wall plate",
+      "white area rug"
+    ]
+  },
+  "elapsedMs": 12300,
+  "attempts": 1
+}

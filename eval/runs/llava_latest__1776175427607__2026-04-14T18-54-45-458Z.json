@@ -1,0 +1,78 @@
+{
+  "model": "llava:latest",
+  "fixture": "1776175427607",
+  "extracted": [
+    {
+      "label": "Snake Plant",
+      "category": "Plants",
+      "primary_color": "Green",
+      "material": "Leaves",
+      "count": 1
+    },
+    {
+      "label": "Office Chair",
+      "category": "Furniture",
+      "primary_color": "Black",
+      "material": "Leather",
+      "count": 1
+    },
+    {
+      "label": "Desk",
+      "category": "Furniture",
+      "primary_color": "Brown",
+      "material": "Wood",
+      "count": 1
+    },
+    {
+      "label": "Potted Plant",
+      "category": "Plants",
+      "primary_color": "Green",
+      "material": "Leaves",
+      "count": 1
+    },
+    {
+      "label": "Office Chair",
+      "category": "Furniture",
+      "primary_color": "Black",
+      "material": "Leather",
+      "count": 1
+    },
+    {
+      "label": "Desk",
+      "category": "Furniture",
+      "primary_color": "Brown",
+      "material": "Wood",
+      "count": 1
+    },
+    {
+      "label": "Potted Plant",
+      "category": "Plants",
+      "primary_color": "Green",
+      "material": "Leaves",
+      "count": 1
+    }
+  ],
+  "raw": " ```json\n[    {        \"label\": \"Snake Plant\",        \"category\": \"Plants\",        \"primary_color\": \"Green\",        \"material\": \"Leaves\",        \"count\": 1    },    {        \"label\": \"Office Chair\",        \"category\": \"Furniture\",        \"primary_color\": \"Black\",        \"material\": \"Leather\",        \"count\": 1    },    {        \"label\": \"Desk\",        \"category\": \"Furniture\",        \"primary_color\": \"Brown\",        \"material\": \"Wood\",        \"count\": 1    },    {        \"label\": \"Potted Plant\",        \"category\": \"Plants\",        \"primary_color\": \"Green\",        \"material\": \"Leaves\",        \"count\": 1    },    {        \"label\": \"Office Chair\",        \"category\": \"Furniture\",        \"primary_color\": \"Black\",        \"material\": \"Leather\",        \"count\": 1    },    {        \"label\": \"Desk\",        \"category\": \"Furniture\",        \"primary_color\": \"Brown\",        \"material\": \"Wood\",        \"count\": 1    },    {        \"label\": \"Potted Plant\",        \"category\": \"Plants\",        \"primary_color\": \"Green\",        \"material\": \"Leaves\",        \"count\": 1    }]\n``` ",
+  "score": {
+    "recall": 28.6,
+    "itemCount": 7,
+    "expectedMin": 10,
+    "expectedMax": 16,
+    "countWithinRange": false,
+    "matchedCount": 4,
+    "missed": [
+      "black throw blanket",
+      "two-tone ceramic planter",
+      "wooden stool",
+      "gold candle holder",
+      "wooden side table",
+      "sheer white linen curtains",
+      "white venetian window blinds",
+      "dark navy couch / sofa",
+      "framed painting of figures",
+      "decorative wall plate"
+    ]
+  },
+  "elapsedMs": 8694,
+  "attempts": 1
+}

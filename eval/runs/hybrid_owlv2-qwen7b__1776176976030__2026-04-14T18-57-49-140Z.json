@@ -1,0 +1,196 @@
+{
+  "model": "hybrid:owlv2-qwen7b",
+  "fixture": "1776176976030",
+  "extracted": [
+    {
+      "label": "Snake plant",
+      "category": "Plants",
+      "count": 1
+    },
+    {
+      "label": "Mid-century office chair",
+      "category": "Furniture",
+      "count": 1
+    },
+    {
+      "label": "Ceramic planter",
+      "category": "Decor",
+      "count": 1
+    },
+    {
+      "label": "Sheer linen curtain",
+      "category": "Textiles",
+      "count": 1
+    },
+    {
+      "label": "Wooden side table",
+      "category": "Furniture",
+      "count": 1
+    },
+    {
+      "label": "Black sofa",
+      "category": "Furniture",
+      "count": 1
+    },
+    {
+      "label": "Wooden coffee table",
+      "category": "Furniture",
+      "count": 1
+    },
+    {
+      "label": "Gold wire planter stand",
+      "category": "Decor",
+      "count": 1
+    },
+    {
+      "label": "Black planter",
+      "category": "Decor",
+      "count": 1
+    },
+    {
+      "label": "Painting",
+      "category": "Decor",
+      "count": 1
+    },
+    {
+      "label": "Painting",
+      "category": "Decor",
+      "count": 1
+    },
+    {
+      "label": "bowl",
+      "category": "uncategorized",
+      "count": 1
+    },
+    {
+      "label": "chair",
+      "category": "uncategorized",
+      "count": 1
+    },
+    {
+      "label": "potted plant",
+      "category": "uncategorized",
+      "count": 1
+    },
+    {
+      "label": "cup",
+      "category": "uncategorized",
+      "count": 1
+    },
+    {
+      "label": "potted plant",
+      "category": "uncategorized",
+      "count": 1
+    },
+    {
+      "label": "dining table",
+      "category": "uncategorized",
+      "count": 1
+    },
+    {
+      "label": "couch",
+      "category": "uncategorized",
+      "count": 1
+    },
+    {
+      "label": "chair",
+      "category": "uncategorized",
+      "count": 1
+    },
+    {
+      "label": "bed",
+      "category": "uncategorized",
+      "count": 1
+    },
+    {
+      "label": "potted plant",
+      "category": "uncategorized",
+      "count": 1
+    },
+    {
+      "label": "chair",
+      "category": "uncategorized",
+      "count": 1
+    },
+    {
+      "label": "potted plant",
+      "category": "uncategorized",
+      "count": 1
+    },
+    {
+      "label": "cup",
+      "category": "uncategorized",
+      "count": 1
+    },
+    {
+      "label": "person",
+      "category": "uncategorized",
+      "count": 1
+    },
+    {
+      "label": "dining table",
+      "category": "uncategorized",
+      "count": 1
+    },
+    {
+      "label": "knife",
+      "category": "uncategorized",
+      "count": 1
+    },
+    {
+      "label": "dining table",
+      "category": "uncategorized",
+      "count": 1
+    },
+    {
+      "label": "person",
+      "category": "uncategorized",
+      "count": 1
+    },
+    {
+      "label": "chair",
+      "category": "uncategorized",
+      "count": 1
+    },
+    {
+      "label": "potted plant",
+      "category": "uncategorized",
+      "count": 1
+    },
+    {
+      "label": "vase",
+      "category": "uncategorized",
+      "count": 1
+    },
+    {
+      "label": "chair",
+      "category": "uncategorized",
+      "count": 1
+    },
+    {
+      "label": "bowl",
+      "category": "uncategorized",
+      "count": 1
+    },
+    {
+      "label": "vase",
+      "category": "uncategorized",
+      "count": 1
+    }
+  ],
+  "raw": "[{\"label\":\"Snake plant\",\"category\":\"Plants\",\"count\":1},{\"label\":\"Mid-century office chair\",\"category\":\"Furniture\",\"count\":1},{\"label\":\"Ceramic planter\",\"category\":\"Decor\",\"count\":1},{\"label\":\"Sheer linen curtain\",\"category\":\"Textiles\",\"count\":1},{\"label\":\"Wooden side table\",\"category\":\"Furniture\",\"count\":1},{\"label\":\"Black sofa\",\"category\":\"Furniture\",\"count\":1},{\"label\":\"Wooden coffee table\",\"category\":\"Furniture\",\"count\":1},{\"label\":\"Gold wire planter stand\",\"category\":\"Decor\",\"count\":1},{\"label\":\"Black planter\",\"category\":\"Decor\",\"count\":1},{\"label\":\"Painting\",\"category\":\"Decor\",\"count\":1},{\"label\":\"Painting\",\"category\":\"Decor\",\"count\":1},{\"label\":\"bowl\",\"category\":\"uncategorized\",\"count\":1},{\"label\":\"chair\",\"category\":\"uncategorized\",\"count\":1},{\"label\":\"potted plant\",\"category\":\"uncategorized\",\"count\":1},{\"label\":\"cup\",\"category\":\"uncategorized\",\"count\":1},{\"label\":\"potted plant\",\"category\":\"uncategorized\",\"count\":1},{\"label\":\"dining table\",\"category\":\"uncategorized\",\"count\":1},{\"label\":\"couch\",\"category\":\"uncategorized\",\"count\":1},{\"label\":\"chair\",\"category\":\"uncategorized\",\"count\":1},{\"label\":\"bed\",\"category\":\"uncategorized\",\"count\":1},{\"label\":\"potted plant\",\"category\":\"uncategorized\",\"count\":1},{\"label\":\"chair\",\"category\":\"uncategorized\",\"count\":1},{\"label\":\"potted plant\",\"category\":\"uncategorized\",\"count\":1},{\"label\":\"cup\",\"category\":\"uncategorized\",\"count\":1},{\"label\":\"person\",\"category\":\"uncategorized\",\"count\":1},{\"label\":\"dining table\",\"category\":\"uncategorized\",\"count\":1},{\"label\":\"knife\",\"category\":\"uncategorized\",\"count\":1},{\"label\":\"dining table\",\"category\":\"uncategorized\",\"count\":1},{\"label\":\"person\",\"category\":\"uncategorized\",\"count\":1},{\"label\":\"chair\",\"category\":\"uncategorized\",\"count\":1},{\"label\":\"potted plant\",\"category\":\"uncategorized\",\"count\":1},{\"label\":\"vase\",\"category\":\"uncategorized\",\"count\":1},{\"label\":\"chair\",\"category\":\"uncategorized\",\"count\":1},{\"label\":\"bowl\",\"category\":\"uncategorized\",\"count\":1},{\"label\":\"vase\",\"category\":\"uncategorized\",\"count\":1}]",
+  "score": {
+    "recall": 84.6,
+    "itemCount": 35,
+    "expectedMin": 8,
+    "expectedMax": 14,
+    "countWithinRange": false,
+    "matchedCount": 11,
+    "missed": [
+      "gold candle holder",
+      "white venetian window blinds"
+    ]
+  },
+  "elapsedMs": 40102,
+  "attempts": 1
+}

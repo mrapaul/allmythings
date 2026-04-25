@@ -1,0 +1,172 @@
+{
+  "model": "hybrid:owlv2-qwen7b",
+  "fixture": "1776173015803",
+  "extracted": [
+    {
+      "label": "Snake plant",
+      "category": "Plants",
+      "count": 1
+    },
+    {
+      "label": "Mid-century office chair",
+      "category": "Furniture",
+      "count": 1
+    },
+    {
+      "label": "Sheer linen curtain",
+      "category": "Textiles",
+      "count": 1
+    },
+    {
+      "label": "Ceramic planter",
+      "category": "Decor",
+      "count": 1
+    },
+    {
+      "label": "Wooden side table",
+      "category": "Furniture",
+      "count": 1
+    },
+    {
+      "label": "Blue throw blanket",
+      "category": "Textiles",
+      "count": 1
+    },
+    {
+      "label": "Framed artwork",
+      "category": "Decor",
+      "count": 1
+    },
+    {
+      "label": "Framed artwork",
+      "category": "Decor",
+      "count": 1
+    },
+    {
+      "label": "Framed artwork",
+      "category": "Decor",
+      "count": 1
+    },
+    {
+      "label": "Wooden floor",
+      "category": "Furniture",
+      "count": 1
+    },
+    {
+      "label": "Rug",
+      "category": "Textiles",
+      "count": 1
+    },
+    {
+      "label": "chair",
+      "category": "uncategorized",
+      "count": 1
+    },
+    {
+      "label": "vase",
+      "category": "uncategorized",
+      "count": 1
+    },
+    {
+      "label": "potted plant",
+      "category": "uncategorized",
+      "count": 1
+    },
+    {
+      "label": "potted plant",
+      "category": "uncategorized",
+      "count": 1
+    },
+    {
+      "label": "vase",
+      "category": "uncategorized",
+      "count": 1
+    },
+    {
+      "label": "chair",
+      "category": "uncategorized",
+      "count": 1
+    },
+    {
+      "label": "chair",
+      "category": "uncategorized",
+      "count": 1
+    },
+    {
+      "label": "knife",
+      "category": "uncategorized",
+      "count": 1
+    },
+    {
+      "label": "vase",
+      "category": "uncategorized",
+      "count": 1
+    },
+    {
+      "label": "chair",
+      "category": "uncategorized",
+      "count": 1
+    },
+    {
+      "label": "chair",
+      "category": "uncategorized",
+      "count": 1
+    },
+    {
+      "label": "chair",
+      "category": "uncategorized",
+      "count": 1
+    },
+    {
+      "label": "bed",
+      "category": "uncategorized",
+      "count": 1
+    },
+    {
+      "label": "vase",
+      "category": "uncategorized",
+      "count": 1
+    },
+    {
+      "label": "vase",
+      "category": "uncategorized",
+      "count": 1
+    },
+    {
+      "label": "clock",
+      "category": "uncategorized",
+      "count": 1
+    },
+    {
+      "label": "dining table",
+      "category": "uncategorized",
+      "count": 1
+    },
+    {
+      "label": "vase",
+      "category": "uncategorized",
+      "count": 1
+    },
+    {
+      "label": "suitcase",
+      "category": "uncategorized",
+      "count": 1
+    }
+  ],
+  "raw": "[{\"label\":\"Snake plant\",\"category\":\"Plants\",\"count\":1},{\"label\":\"Mid-century office chair\",\"category\":\"Furniture\",\"count\":1},{\"label\":\"Sheer linen curtain\",\"category\":\"Textiles\",\"count\":1},{\"label\":\"Ceramic planter\",\"category\":\"Decor\",\"count\":1},{\"label\":\"Wooden side table\",\"category\":\"Furniture\",\"count\":1},{\"label\":\"Blue throw blanket\",\"category\":\"Textiles\",\"count\":1},{\"label\":\"Framed artwork\",\"category\":\"Decor\",\"count\":1},{\"label\":\"Framed artwork\",\"category\":\"Decor\",\"count\":1},{\"label\":\"Framed artwork\",\"category\":\"Decor\",\"count\":1},{\"label\":\"Wooden floor\",\"category\":\"Furniture\",\"count\":1},{\"label\":\"Rug\",\"category\":\"Textiles\",\"count\":1},{\"label\":\"chair\",\"category\":\"uncategorized\",\"count\":1},{\"label\":\"vase\",\"category\":\"uncategorized\",\"count\":1},{\"label\":\"potted plant\",\"category\":\"uncategorized\",\"count\":1},{\"label\":\"potted plant\",\"category\":\"uncategorized\",\"count\":1},{\"label\":\"vase\",\"category\":\"uncategorized\",\"count\":1},{\"label\":\"chair\",\"category\":\"uncategorized\",\"count\":1},{\"label\":\"chair\",\"category\":\"uncategorized\",\"count\":1},{\"label\":\"knife\",\"category\":\"uncategorized\",\"count\":1},{\"label\":\"vase\",\"category\":\"uncategorized\",\"count\":1},{\"label\":\"chair\",\"category\":\"uncategorized\",\"count\":1},{\"label\":\"chair\",\"category\":\"uncategorized\",\"count\":1},{\"label\":\"chair\",\"category\":\"uncategorized\",\"count\":1},{\"label\":\"bed\",\"category\":\"uncategorized\",\"count\":1},{\"label\":\"vase\",\"category\":\"uncategorized\",\"count\":1},{\"label\":\"vase\",\"category\":\"uncategorized\",\"count\":1},{\"label\":\"clock\",\"category\":\"uncategorized\",\"count\":1},{\"label\":\"dining table\",\"category\":\"uncategorized\",\"count\":1},{\"label\":\"vase\",\"category\":\"uncategorized\",\"count\":1},{\"label\":\"suitcase\",\"category\":\"uncategorized\",\"count\":1}]",
+  "score": {
+    "recall": 75,
+    "itemCount": 30,
+    "expectedMin": 8,
+    "expectedMax": 15,
+    "countWithinRange": false,
+    "matchedCount": 9,
+    "missed": [
+      "white venetian window blinds",
+      "dark navy couch / sofa",
+      "decorative wall plate"
+    ]
+  },
+  "elapsedMs": 42026,
+  "attempts": 1
+}

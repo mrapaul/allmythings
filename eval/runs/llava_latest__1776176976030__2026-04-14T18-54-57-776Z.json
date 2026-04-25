@@ -1,0 +1,104 @@
+{
+  "model": "llava:latest",
+  "fixture": "1776176976030",
+  "extracted": [
+    {
+      "label": "Snake Plant",
+      "category": "Plants",
+      "primary_color": "Green",
+      "material": "Leaves",
+      "count": 1
+    },
+    {
+      "label": "Office Chair",
+      "category": "Furniture",
+      "primary_color": "Black",
+      "material": "Leather",
+      "count": 1
+    },
+    {
+      "label": "Desk",
+      "category": "Furniture",
+      "primary_color": "Brown",
+      "material": "Wood",
+      "count": 1
+    },
+    {
+      "label": "Coffee Table",
+      "category": "Furniture",
+      "primary_color": "Black",
+      "material": "Glass",
+      "count": 1
+    },
+    {
+      "label": "Vase",
+      "category": "Decor",
+      "primary_color": "White",
+      "material": "Ceramic",
+      "count": 1
+    },
+    {
+      "label": "Laptop",
+      "category": "Electronics",
+      "primary_color": "Black",
+      "material": "Plastic",
+      "count": 0
+    },
+    {
+      "label": "Potted Plant",
+      "category": "Plants",
+      "primary_color": "Green",
+      "material": "Leaves",
+      "count": 1
+    },
+    {
+      "label": "Desk Lamp",
+      "category": "Lighting",
+      "primary_color": "White",
+      "material": "Metal",
+      "count": 0
+    },
+    {
+      "label": "Curtains",
+      "category": "Window Treatments",
+      "primary_color": "White",
+      "material": "Cloth",
+      "count": 1
+    },
+    {
+      "label": "File Cabinet",
+      "category": "Furniture",
+      "primary_color": "Brown",
+      "material": "Wood",
+      "count": 0
+    },
+    {
+      "label": "Bookshelf",
+      "category": "Furniture",
+      "primary_color": "Black",
+      "material": "Metal",
+      "count": 0
+    }
+  ],
+  "raw": " ```json\n[    {        \"label\": \"Snake Plant\",        \"category\": \"Plants\",        \"primary_color\": \"Green\",        \"material\": \"Leaves\",        \"count\": 1    },    {        \"label\": \"Office Chair\",        \"category\": \"Furniture\",        \"primary_color\": \"Black\",        \"material\": \"Leather\",        \"count\": 1    },    {        \"label\": \"Desk\",        \"category\": \"Furniture\",        \"primary_color\": \"Brown\",        \"material\": \"Wood\",        \"count\": 1    },    {        \"label\": \"Coffee Table\",        \"category\": \"Furniture\",        \"primary_color\": \"Black\",        \"material\": \"Glass\",        \"count\": 1    },    {        \"label\": \"Vase\",        \"category\": \"Decor\",        \"primary_color\": \"White\",        \"material\": \"Ceramic\",        \"count\": 1    },    {        \"label\": \"Laptop\",        \"category\": \"Electronics\",        \"primary_color\": \"Black\",        \"material\": \"Plastic\",        \"count\": 0    },    {        \"label\": \"Potted Plant\",        \"category\": \"Plants\",        \"primary_color\": \"Green\",        \"material\": \"Leaves\",        \"count\": 1    },    {        \"label\": \"Desk Lamp\",        \"category\": \"Lighting\",        \"primary_color\": \"White\",        \"material\": \"Metal\",        \"count\": 0    },    {        \"label\": \"Curtains\",        \"category\": \"Window Treatments\",        \"primary_color\": \"White\",        \"material\": \"Cloth\",        \"count\": 1    },    {        \"label\": \"File Cabinet\",        \"category\": \"Furniture\",        \"primary_color\": \"Brown\",        \"material\": \"Wood\",        \"count\": 0    },    {        \"label\": \"Bookshelf\",        \"category\": \"Furniture\",        \"primary_color\": \"Black\",        \"material\": \"Metal\",        \"count\": 0    }]\n``` ",
+  "score": {
+    "recall": 38.5,
+    "itemCount": 11,
+    "expectedMin": 8,
+    "expectedMax": 14,
+    "countWithinRange": true,
+    "matchedCount": 5,
+    "missed": [
+      "black throw blanket",
+      "two-tone ceramic planter",
+      "gold wire plant stand",
+      "wooden stool",
+      "gold candle holder",
+      "white venetian window blinds",
+      "dark navy couch / sofa",
+      "framed painting"
+    ]
+  },
+  "elapsedMs": 12316,
+  "attempts": 1
+}

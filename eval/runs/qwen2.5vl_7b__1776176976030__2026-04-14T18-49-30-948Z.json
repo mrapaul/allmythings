@@ -1,0 +1,108 @@
+{
+  "model": "qwen2.5vl:7b",
+  "fixture": "1776176976030",
+  "extracted": [
+    {
+      "label": "tan leather office chair",
+      "category": "Furniture",
+      "primary_color": "tan",
+      "material": "leather",
+      "count": 1
+    },
+    {
+      "label": "black office chair",
+      "category": "Furniture",
+      "primary_color": "black",
+      "material": "fabric",
+      "count": 1
+    },
+    {
+      "label": "snake plant",
+      "category": "Plants",
+      "primary_color": "green",
+      "material": "plant",
+      "count": 1
+    },
+    {
+      "label": "white pot",
+      "category": "Decor",
+      "primary_color": "white",
+      "material": "ceramic",
+      "count": 1
+    },
+    {
+      "label": "black pot",
+      "category": "Decor",
+      "primary_color": "black",
+      "material": "plastic",
+      "count": 1
+    },
+    {
+      "label": "gold wire stand",
+      "category": "Decor",
+      "primary_color": "gold",
+      "material": "metal",
+      "count": 1
+    },
+    {
+      "label": "black blanket",
+      "category": "Textiles",
+      "primary_color": "black",
+      "material": "fabric",
+      "count": 1
+    },
+    {
+      "label": "gold vase",
+      "category": "Decor",
+      "primary_color": "gold",
+      "material": "metal",
+      "count": 1
+    },
+    {
+      "label": "black couch",
+      "category": "Furniture",
+      "primary_color": "black",
+      "material": "fabric",
+      "count": 1
+    },
+    {
+      "label": "white curtains",
+      "category": "Window Treatments",
+      "primary_color": "white",
+      "material": "fabric",
+      "count": 1
+    },
+    {
+      "label": "gold frame",
+      "category": "Decor",
+      "primary_color": "gold",
+      "material": "metal",
+      "count": 1
+    },
+    {
+      "label": "black and white portrait",
+      "category": "Art",
+      "primary_color": "black",
+      "material": "paint",
+      "count": 1
+    }
+  ],
+  "raw": "```json\n[\n    {\n        \"label\": \"tan leather office chair\",\n        \"category\": \"Furniture\",\n        \"primary_color\": \"tan\",\n        \"material\": \"leather\",\n        \"count\": 1\n    },\n    {\n        \"label\": \"black office chair\",\n        \"category\": \"Furniture\",\n        \"primary_color\": \"black\",\n        \"material\": \"fabric\",\n        \"count\": 1\n    },\n    {\n        \"label\": \"snake plant\",\n        \"category\": \"Plants\",\n        \"primary_color\": \"green\",\n        \"material\": \"plant\",\n        \"count\": 1\n    },\n    {\n        \"label\": \"white pot\",\n        \"category\": \"Decor\",\n        \"primary_color\": \"white\",\n        \"material\": \"ceramic\",\n        \"count\": 1\n    },\n    {\n        \"label\": \"black pot\",\n        \"category\": \"Decor\",\n        \"primary_color\": \"black\",\n        \"material\": \"plastic\",\n        \"count\": 1\n    },\n    {\n        \"label\": \"gold wire stand\",\n        \"category\": \"Decor\",\n        \"primary_color\": \"gold\",\n        \"material\": \"metal\",\n        \"count\": 1\n    },\n    {\n        \"label\": \"black blanket\",\n        \"category\": \"Textiles\",\n        \"primary_color\": \"black\",\n        \"material\": \"fabric\",\n        \"count\": 1\n    },\n    {\n        \"label\": \"gold vase\",\n        \"category\": \"Decor\",\n        \"primary_color\": \"gold\",\n        \"material\": \"metal\",\n        \"count\": 1\n    },\n    {\n        \"label\": \"black couch\",\n        \"category\": \"Furniture\",\n        \"primary_color\": \"black\",\n        \"material\": \"fabric\",\n        \"count\": 1\n    },\n    {\n        \"label\": \"white curtains\",\n        \"category\": \"Window Treatments\",\n        \"primary_color\": \"white\",\n        \"material\": \"fabric\",\n        \"count\": 1\n    },\n    {\n        \"label\": \"gold frame\",\n        \"category\": \"Decor\",\n        \"primary_color\": \"gold\",\n        \"material\": \"metal\",\n        \"count\": 1\n    },\n    {\n        \"label\": \"black and white portrait\",\n        \"category\": \"Art\",\n        \"primary_color\": \"black\",\n        \"material\": \"paint\",\n        \"count\": 1\n    }\n]\n```",
+  "score": {
+    "recall": 61.5,
+    "itemCount": 12,
+    "expectedMin": 8,
+    "expectedMax": 14,
+    "countWithinRange": true,
+    "matchedCount": 8,
+    "missed": [
+      "snake plant small",
+      "two-tone ceramic planter",
+      "wooden stool",
+      "wooden sideboard / cabinet",
+      "framed painting"
+    ]
+  },
+  "elapsedMs": 98056,
+  "attempts": 2
+}
