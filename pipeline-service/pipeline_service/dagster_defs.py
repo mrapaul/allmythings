@@ -178,17 +178,25 @@ def assemble_result_op(
 
 # ---------- Stub ops (pass-through, op_stubbed=True metadata) -----------------
 
-@op(name="scene_embedding", out=Out(list, description="§3.2 stub"), tags=_STUB_METADATA)
+@op(name="scene_embedding", out=Out(list, description="§3.2 — DINOv2 ViT-B/14"))
 def scene_embedding_op(frames: list[Frame]) -> list[SceneEmbedding]:
     return scene_embedding_impl(frames)
 
 
-@op(name="vlm_prompt_expansion", out=Out(PromptList, description="§3.3 stub"), tags=_STUB_METADATA)
+@op(
+    name="vlm_prompt_expansion",
+    out=Out(PromptList, description="§3.3 — two-seed expansion + cache"),
+)
 def vlm_prompt_expansion_op(
     frames: list[Frame],
     embeddings: list[SceneEmbedding],
+    florence_detections: list[FrameDetections],
 ) -> PromptList:
-    return vlm_prompt_expansion_impl(frames, embeddings)
+    return _run_async(
+        vlm_prompt_expansion_impl(
+            frames, embeddings, florence_detections=florence_detections
+        )
+    )
 
 
 @op(
@@ -236,13 +244,16 @@ def box_fusion_op(
     ]
 
 
-@op(name="crop_embedding", out=Out(list, description="§3.9 stub"), tags=_STUB_METADATA)
+@op(name="crop_embedding", out=Out(list, description="§3.9 — DINOv2 crops"))
 def crop_embedding_op(
     fused_frames: list[FusedFrame],
+    frames: list[Frame],
 ) -> list[EmbeddedFrame]:
+    by_id = {fr.frame_id: fr for fr in frames}
     return [
-        crop_embedding_impl(frame_id=ff.frame_id, fused_frame=ff)
+        crop_embedding_impl(by_id.get(ff.frame_id, frames[0] if frames else None), ff)  # type: ignore[arg-type]
         for ff in sorted(fused_frames, key=lambda f: f.frame_id)
+        if by_id.get(ff.frame_id) is not None
     ]
 
 
@@ -340,15 +351,15 @@ def _concat_detections(
 def pipeline_job() -> None:
     frames = frame_intake_op()
     embeddings = scene_embedding_op(frames)
-    prompts = vlm_prompt_expansion_op(frames, embeddings)
     florence = florence_detect_op(frames)
+    prompts = vlm_prompt_expansion_op(frames, embeddings, florence)
     gdino = grounding_dino_detect_op(frames, prompts)
     first_pass = _concat_first_pass(florence, gdino)
     sahi = sahi_recovery_op(frames, first_pass)
     all_dets = _concat_detections(florence, gdino, sahi)
     fused_frames = box_fusion_op(all_dets)
     effsam_segment_op(frames, fused_frames)
-    embedded_frames = crop_embedding_op(fused_frames)
+    embedded_frames = crop_embedding_op(fused_frames, frames)
     deduped = cross_pass_dedup_op(fused_frames, embedded_frames)
     scene = cross_frame_dedup_op(deduped)
     refined = classification_refine_op(scene, frames)
