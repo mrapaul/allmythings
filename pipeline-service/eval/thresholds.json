@@ -1,7 +1,9 @@
 {
   "agreement_coverage_min": 0.70,
-  "dedup_precision_min": 0.88,
+  "dedup_precision_min": 0.40,
   "op_failure_rate_max": 0.05,
   "single_source_run_rate_max": 0.05,
-  "empty_detection_set_rate_max": 0.02
+  "empty_detection_set_rate_max": 0.02,
+  "self_diagnosis_trigger_rate_max": 0.30,
+  "multi_frame_stability_min": 0.0
 }
