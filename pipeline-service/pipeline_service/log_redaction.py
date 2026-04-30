@@ -20,7 +20,7 @@ import re
 from typing import Iterable
 
 
-_NOUN_HEAD_TOKENS = re.compile(r"[A-Za-z][A-Za-z\-]+")
+_NOUN_HEAD_TOKENS = re.compile(r"[A-Za-z]+")
 
 
 def _noun_heads(items: Iterable[str], limit: int = 3) -> list[str]:
