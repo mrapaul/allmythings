@@ -234,17 +234,11 @@ def effsam_segment_op(
     return effsam_segment_impl(frames, fused_frames)
 
 
-@op(name="box_fusion", out=Out(list, description="§3.8 stub"), tags=_STUB_METADATA)
+@op(name="box_fusion", out=Out(list, description="§3.8 — WBF"))
 def box_fusion_op(
     per_frame_detections: list[FrameDetections],
 ) -> list[FusedFrame]:
-    by_frame: dict[str, list[FrameDetections]] = {}
-    for fd in per_frame_detections:
-        by_frame.setdefault(fd.frame_id, []).append(fd)
-    return [
-        box_fusion_impl(frame_id=fid, per_detector_detections=fds)
-        for fid, fds in sorted(by_frame.items(), key=lambda kv: kv[0])
-    ]
+    return box_fusion_impl(per_frame_detections)
 
 
 @op(name="crop_embedding", out=Out(list, description="§3.9 — DINOv2 crops"))
@@ -260,7 +254,7 @@ def crop_embedding_op(
     ]
 
 
-@op(name="cross_pass_dedup", out=Out(list, description="§3.10 stub"), tags=_STUB_METADATA)
+@op(name="cross_pass_dedup", out=Out(list, description="§3.10 — within-frame dedup"))
 def cross_pass_dedup_op(
     fused_frames: list[FusedFrame],
     embedded_frames: list[EmbeddedFrame],
@@ -269,7 +263,7 @@ def cross_pass_dedup_op(
     return [
         cross_pass_dedup_impl(
             fused_frame=ff,
-            embeddings=embed_by_frame.get(
+            embedded_frame=embed_by_frame.get(
                 ff.frame_id, EmbeddedFrame(frame_id=ff.frame_id)
             ),
         )
@@ -279,16 +273,17 @@ def cross_pass_dedup_op(
 
 @op(
     name="cross_frame_dedup",
-    out=Out(SceneObservation, description="§3.11 stub"),
-    tags=_STUB_METADATA,
+    out=Out(SceneObservation, description="§3.11 — across-burst dedup"),
 )
 def cross_frame_dedup_op(
     context,
     deduped_frames: list[DedupedFrame],
+    embedded_frames: list[EmbeddedFrame],
 ) -> SceneObservation:
     tags = getattr(context.run, "tags", {}) or {}
     return cross_frame_dedup_impl(
         deduped_frames=deduped_frames,
+        embedded_frames=embedded_frames,
         scene_id=tags.get("sceneId", "scene-stub"),
         run_id=tags.get("requestId", context.run.run_id),
     )
@@ -364,7 +359,7 @@ def pipeline_job() -> None:
     effsam_segment_op(frames, fused_frames)
     embedded_frames = crop_embedding_op(fused_frames, frames)
     deduped = cross_pass_dedup_op(fused_frames, embedded_frames)
-    scene = cross_frame_dedup_op(deduped)
+    scene = cross_frame_dedup_op(deduped, embedded_frames)
     refined = classification_refine_op(scene, frames)
     scored = agreement_scoring_op(refined)
     branches = self_diagnosis_op(scored)
