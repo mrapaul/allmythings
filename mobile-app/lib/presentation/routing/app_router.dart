@@ -118,8 +118,12 @@ final routerProvider = Provider<GoRouter>((ref) {
         path: '/item/:id',
         name: 'item',
         pageBuilder: (context, state) {
-          final itemId = int.tryParse(state.pathParameters['id'] ?? '');
-          if (itemId == null) return const MaterialPage(child: Scaffold(body: Center(child: Text('Invalid ID'))));
+          final itemId = state.pathParameters['id'];
+          if (itemId == null || itemId.isEmpty) {
+            return const MaterialPage(
+              child: Scaffold(body: Center(child: Text('Invalid ID'))),
+            );
+          }
           return CustomTransitionPage(
             child: ItemDetailScreen(itemId: itemId),
             transitionsBuilder: _fadeTransition,

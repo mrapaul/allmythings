@@ -12,7 +12,7 @@ import 'package:go_router/go_router.dart';
 class ItemDetailScreen extends ConsumerWidget {
   const ItemDetailScreen({required this.itemId, super.key});
 
-  final int itemId;
+  final String itemId;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -333,7 +333,7 @@ class _MetadataRow extends StatelessWidget {
 
 class _EditLabelsSheet extends StatefulWidget {
   const _EditLabelsSheet({required this.itemId, required this.initialLabels});
-  final int itemId;
+  final String itemId;
   final List<LabelEntry> initialLabels;
 
   @override

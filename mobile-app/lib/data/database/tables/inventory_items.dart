@@ -1,10 +1,14 @@
 import 'package:drift/drift.dart';
 
-/// Table definition for inventory items
+/// Table definition for inventory items.
+///
+/// §5.3 v6: id is the canonical sceneId TEXT primary key (one item ≡ one
+/// scene). The previous int autoincrement id + nullable sceneId column
+/// have been collapsed into a single TEXT PK.
 @DataClassName('InventoryItem')
 class InventoryItems extends Table {
-  /// Primary key
-  IntColumn get id => integer().autoIncrement()();
+  /// Primary key — IS the sceneId from cross_frame_dedup. One row per scene.
+  TextColumn get id => text()();
 
   /// Absolute path to full-resolution photo
   TextColumn get photoPath => text()();
@@ -21,11 +25,6 @@ class InventoryItems extends Table {
   /// Processing status (pending, completed, failed, flagged).
   TextColumn get status => text().withDefault(const Constant('completed'))();
 
-  /// FK to scenes.id when the item belongs to a multi-frame burst (§5.3).
-  /// Nullable so legacy single-frame items continue to work during the
-  /// transition window.
-  TextColumn get sceneId => text().nullable()();
-
   /// True when self_diagnosis flagged the run (empty_detection_set,
   /// single_source_run, or diagnosis_budget_exhausted).
   BoolColumn get isFlagged => boolean().withDefault(const Constant(false))();
@@ -37,9 +36,13 @@ class InventoryItems extends Table {
   DateTimeColumn get updatedAt => dateTime()();
 
   @override
+  Set<Column> get primaryKey => {id};
+
+  @override
   List<String> get customConstraints => [
-    'CHECK(length(trim(photo_path)) > 0)',
-    'CHECK(length(trim(thumbnail_path)) > 0)',
-    'CHECK(length(trim(detection_data)) > 0)',
-  ];
+        'CHECK(length(trim(id)) > 0)',
+        'CHECK(length(trim(photo_path)) > 0)',
+        'CHECK(length(trim(thumbnail_path)) > 0)',
+        'CHECK(length(trim(detection_data)) > 0)',
+      ];
 }

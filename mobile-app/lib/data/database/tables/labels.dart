@@ -7,9 +7,9 @@ class Labels extends Table {
   /// Primary key
   IntColumn get id => integer().autoIncrement()();
 
-  /// Foreign key to inventory_items table
-  IntColumn get itemId =>
-      integer().references(InventoryItems, #id, onDelete: KeyAction.cascade)();
+  /// Foreign key to inventory_items.id (now a TEXT sceneId since v6).
+  TextColumn get itemId =>
+      text().references(InventoryItems, #id, onDelete: KeyAction.cascade)();
 
   /// Category key (type, color, brand, material, etc.)
   TextColumn get key => text()();
