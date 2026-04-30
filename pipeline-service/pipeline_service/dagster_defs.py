@@ -71,6 +71,22 @@ from pipeline_service.types import (
 _STUB_METADATA = {"op_stubbed": True, "section": "01"}
 
 
+def _run_async(coro):
+    """Run an async coroutine from sync context, picking a strategy that
+    works whether or not an event loop is already active.
+    """
+    import asyncio
+
+    try:
+        loop = asyncio.get_running_loop()
+    except RuntimeError:
+        return asyncio.run(coro)
+    # If a loop is already running (e.g., Dagster's async-execution variants
+    # or test harnesses), schedule on it and block on the future.
+    fut = asyncio.run_coroutine_threadsafe(coro, loop)
+    return fut.result()
+
+
 # ---------- Real ops ----------------------------------------------------------
 
 @op(
@@ -175,9 +191,12 @@ def vlm_prompt_expansion_op(
     return vlm_prompt_expansion_impl(frames, embeddings)
 
 
-@op(name="florence_detect", out=Out(list, description="§3.4 stub"), tags=_STUB_METADATA)
+@op(
+    name="florence_detect",
+    out=Out(list, description="§3.4 — Florence HTTP shim"),
+)
 def florence_detect_op(frames: list[Frame]) -> list[FrameDetections]:
-    return florence_detect_impl(frames)
+    return _run_async(florence_detect_impl(frames))
 
 
 @op(name="grounding_dino_detect", out=Out(list, description="§3.5 stub"), tags=_STUB_METADATA)
@@ -263,12 +282,14 @@ def cross_frame_dedup_op(
 
 @op(
     name="classification_refine",
-    ins={"observation": In(SceneObservation)},
-    out=Out(SceneObservation, description="§3.12 stub"),
-    tags=_STUB_METADATA,
+    ins={"observation": In(SceneObservation), "frames": In(list)},
+    out=Out(SceneObservation, description="§3.12 — Qwen-VL tier chain"),
 )
-def classification_refine_op(observation: SceneObservation) -> SceneObservation:
-    return classification_refine_impl(observation)
+def classification_refine_op(
+    observation: SceneObservation,
+    frames: list[Frame],
+) -> SceneObservation:
+    return _run_async(classification_refine_impl(observation, frames=frames))
 
 
 @op(
@@ -330,7 +351,7 @@ def pipeline_job() -> None:
     embedded_frames = crop_embedding_op(fused_frames)
     deduped = cross_pass_dedup_op(fused_frames, embedded_frames)
     scene = cross_frame_dedup_op(deduped)
-    refined = classification_refine_op(scene)
+    refined = classification_refine_op(scene, frames)
     scored = agreement_scoring_op(refined)
     branches = self_diagnosis_op(scored)
     collected = branches.collect()
