@@ -28,10 +28,10 @@ STUB_OPS = [
     # grounding_dino_detect — REAL in section-05
     # sahi_recovery — REAL in section-05
     # effsam_segment — REAL in section-05
-    "box_fusion",
+    # box_fusion — REAL in section-06
     # crop_embedding — REAL in section-04
-    "cross_pass_dedup",
-    "cross_frame_dedup",
+    # cross_pass_dedup — REAL in section-06
+    # cross_frame_dedup — REAL in section-06
     # classification_refine — REAL in section-03
     "agreement_scoring",
     "self_diagnosis",
@@ -128,14 +128,11 @@ def test_agreement_scoring_empty_is_zero_not_nan() -> None:
     assert not math.isnan(out.agreementPrecision)
 
 
-def test_box_fusion_empty_yields_empty_fusedframe() -> None:
+def test_box_fusion_empty_yields_empty_list() -> None:
+    """box_fusion is real in section-06; empty input → []."""
     from pipeline_service.ops.box_fusion import box_fusion_impl
-    from pipeline_service.types import FusedFrame
 
-    out = box_fusion_impl(frame_id="F0", per_detector_detections=[])
-    assert isinstance(out, FusedFrame)
-    assert out.fused == []
-    assert out.frame_id == "F0"
+    assert box_fusion_impl([]) == []
 
 
 def test_self_diagnosis_terminal_branch_yields_input(
