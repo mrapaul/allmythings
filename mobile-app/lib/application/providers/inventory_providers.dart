@@ -9,7 +9,6 @@ import 'package:all_my_things/data/database/app_database.dart';
 import 'package:all_my_things/data/repositories/detection_repository.dart';
 import 'package:all_my_things/data/repositories/inventory_repository.dart';
 import 'package:all_my_things/domain/models/detected_object.dart';
-import 'package:all_my_things/native/coreml_detector.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:riverpod/src/providers/future_provider.dart';
@@ -60,22 +59,22 @@ class InventoryListNotifier extends AsyncNotifier<List<InventoryItem>> {
     final repository = await ref.read(inventoryRepositoryProvider.future);
     final imageService = ref.read(imageProcessingServiceProvider);
 
-    // Tier 1: CoreML on-device — always runs, used as fallback if Mac fails
-    final coreMLBoxes = await CoreMLDetector.detect(imageFile);
-    debugPrint('[DETECT] CoreML returned ${coreMLBoxes.length} boxes for item $itemId');
-
+    // Single path: Mac pipeline-service. CoreML is gone (section-08).
+    // If the pipeline fails, the item is marked failed; the user can
+    // re-trigger from the inventory feed.
     List<DetectedObject>? detections;
     String classifier = 'none';
-    String detector = 'coreml';
+    String detector = 'pipeline';
     int processingTimeMs = 0;
 
-    // Tier 2: Mac deep pass — tries for rich attributes
     try {
       final detectionRepository = ref.read(detectionRepositoryProvider);
-      debugPrint('[DETECT] Calling Mac API for item $itemId');
+      debugPrint('[DETECT] Calling Mac pipeline for item $itemId');
       final result = await detectionRepository.detectObjects(imageFile);
-      debugPrint('[DETECT] Mac returned ${result.detections.length} detections in ${result.processingTimeMs}ms');
-
+      debugPrint(
+        '[DETECT] Pipeline returned ${result.detections.length} detections '
+        'in ${result.processingTimeMs}ms',
+      );
       if (result.detections.isNotEmpty) {
         detections = result.detections;
         detector = result.detector;
@@ -83,14 +82,7 @@ class InventoryListNotifier extends AsyncNotifier<List<InventoryItem>> {
         processingTimeMs = result.processingTimeMs;
       }
     } catch (e) {
-      debugPrint('[DETECT] Mac call failed for item $itemId: $e');
-    }
-
-    // Fallback: use CoreML boxes if Mac gave nothing
-    if (detections == null && coreMLBoxes.isNotEmpty) {
-      detections = coreMLBoxes.map(_coreMLBoxToDetectedObject).toList();
-      classifier = 'offline';
-      debugPrint('[DETECT] Using ${detections.length} CoreML boxes as fallback');
+      debugPrint('[DETECT] pipeline call failed for item $itemId: $e');
     }
 
     try {
@@ -128,21 +120,6 @@ class InventoryListNotifier extends AsyncNotifier<List<InventoryItem>> {
       ref.invalidate(inventoryStatsProvider);
       ref.invalidate(itemLabelsProvider(itemId));
     }
-  }
-
-  DetectedObject _coreMLBoxToDetectedObject(CoreMLBox box) {
-    return DetectedObject(
-      boxIndex: box.boxIndex,
-      label: box.label,
-      category: 'object',
-      confidence: box.confidence,
-      boundingBox: BoundingBox(
-        x: box.x,
-        y: box.y,
-        width: box.width,
-        height: box.height,
-      ),
-    );
   }
 
   /// Confirm an unconfirmed item after user review

@@ -76,6 +76,32 @@ class $InventoryItemsTable extends InventoryItems
     requiredDuringInsert: false,
     defaultValue: const Constant('completed'),
   );
+  static const VerificationMeta _sceneIdMeta = const VerificationMeta(
+    'sceneId',
+  );
+  @override
+  late final GeneratedColumn<String> sceneId = GeneratedColumn<String>(
+    'scene_id',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _isFlaggedMeta = const VerificationMeta(
+    'isFlagged',
+  );
+  @override
+  late final GeneratedColumn<bool> isFlagged = GeneratedColumn<bool>(
+    'is_flagged',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("is_flagged" IN (0, 1))',
+    ),
+    defaultValue: const Constant(false),
+  );
   static const VerificationMeta _createdAtMeta = const VerificationMeta(
     'createdAt',
   );
@@ -106,6 +132,8 @@ class $InventoryItemsTable extends InventoryItems
     serverPhotoUrl,
     detectionData,
     status,
+    sceneId,
+    isFlagged,
     createdAt,
     updatedAt,
   ];
@@ -169,6 +197,18 @@ class $InventoryItemsTable extends InventoryItems
         status.isAcceptableOrUnknown(data['status']!, _statusMeta),
       );
     }
+    if (data.containsKey('scene_id')) {
+      context.handle(
+        _sceneIdMeta,
+        sceneId.isAcceptableOrUnknown(data['scene_id']!, _sceneIdMeta),
+      );
+    }
+    if (data.containsKey('is_flagged')) {
+      context.handle(
+        _isFlaggedMeta,
+        isFlagged.isAcceptableOrUnknown(data['is_flagged']!, _isFlaggedMeta),
+      );
+    }
     if (data.containsKey('created_at')) {
       context.handle(
         _createdAtMeta,
@@ -218,6 +258,14 @@ class $InventoryItemsTable extends InventoryItems
         DriftSqlType.string,
         data['${effectivePrefix}status'],
       )!,
+      sceneId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}scene_id'],
+      ),
+      isFlagged: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}is_flagged'],
+      )!,
       createdAt: attachedDatabase.typeMapping.read(
         DriftSqlType.dateTime,
         data['${effectivePrefix}created_at'],
@@ -251,8 +299,17 @@ class InventoryItem extends DataClass implements Insertable<InventoryItem> {
   /// JSON: detection metadata (bounding boxes, confidence, etc.)
   final String detectionData;
 
-  /// Processing status (pending, completed, failed)
+  /// Processing status (pending, completed, failed, flagged).
   final String status;
+
+  /// FK to scenes.id when the item belongs to a multi-frame burst (§5.3).
+  /// Nullable so legacy single-frame items continue to work during the
+  /// transition window.
+  final String? sceneId;
+
+  /// True when self_diagnosis flagged the run (empty_detection_set,
+  /// single_source_run, or diagnosis_budget_exhausted).
+  final bool isFlagged;
 
   /// Timestamp when item was created
   final DateTime createdAt;
@@ -266,6 +323,8 @@ class InventoryItem extends DataClass implements Insertable<InventoryItem> {
     this.serverPhotoUrl,
     required this.detectionData,
     required this.status,
+    this.sceneId,
+    required this.isFlagged,
     required this.createdAt,
     required this.updatedAt,
   });
@@ -280,6 +339,10 @@ class InventoryItem extends DataClass implements Insertable<InventoryItem> {
     }
     map['detection_data'] = Variable<String>(detectionData);
     map['status'] = Variable<String>(status);
+    if (!nullToAbsent || sceneId != null) {
+      map['scene_id'] = Variable<String>(sceneId);
+    }
+    map['is_flagged'] = Variable<bool>(isFlagged);
     map['created_at'] = Variable<DateTime>(createdAt);
     map['updated_at'] = Variable<DateTime>(updatedAt);
     return map;
@@ -295,6 +358,10 @@ class InventoryItem extends DataClass implements Insertable<InventoryItem> {
           : Value(serverPhotoUrl),
       detectionData: Value(detectionData),
       status: Value(status),
+      sceneId: sceneId == null && nullToAbsent
+          ? const Value.absent()
+          : Value(sceneId),
+      isFlagged: Value(isFlagged),
       createdAt: Value(createdAt),
       updatedAt: Value(updatedAt),
     );
@@ -312,6 +379,8 @@ class InventoryItem extends DataClass implements Insertable<InventoryItem> {
       serverPhotoUrl: serializer.fromJson<String?>(json['serverPhotoUrl']),
       detectionData: serializer.fromJson<String>(json['detectionData']),
       status: serializer.fromJson<String>(json['status']),
+      sceneId: serializer.fromJson<String?>(json['sceneId']),
+      isFlagged: serializer.fromJson<bool>(json['isFlagged']),
       createdAt: serializer.fromJson<DateTime>(json['createdAt']),
       updatedAt: serializer.fromJson<DateTime>(json['updatedAt']),
     );
@@ -326,6 +395,8 @@ class InventoryItem extends DataClass implements Insertable<InventoryItem> {
       'serverPhotoUrl': serializer.toJson<String?>(serverPhotoUrl),
       'detectionData': serializer.toJson<String>(detectionData),
       'status': serializer.toJson<String>(status),
+      'sceneId': serializer.toJson<String?>(sceneId),
+      'isFlagged': serializer.toJson<bool>(isFlagged),
       'createdAt': serializer.toJson<DateTime>(createdAt),
       'updatedAt': serializer.toJson<DateTime>(updatedAt),
     };
@@ -338,6 +409,8 @@ class InventoryItem extends DataClass implements Insertable<InventoryItem> {
     Value<String?> serverPhotoUrl = const Value.absent(),
     String? detectionData,
     String? status,
+    Value<String?> sceneId = const Value.absent(),
+    bool? isFlagged,
     DateTime? createdAt,
     DateTime? updatedAt,
   }) => InventoryItem(
@@ -349,6 +422,8 @@ class InventoryItem extends DataClass implements Insertable<InventoryItem> {
         : this.serverPhotoUrl,
     detectionData: detectionData ?? this.detectionData,
     status: status ?? this.status,
+    sceneId: sceneId.present ? sceneId.value : this.sceneId,
+    isFlagged: isFlagged ?? this.isFlagged,
     createdAt: createdAt ?? this.createdAt,
     updatedAt: updatedAt ?? this.updatedAt,
   );
@@ -366,6 +441,8 @@ class InventoryItem extends DataClass implements Insertable<InventoryItem> {
           ? data.detectionData.value
           : this.detectionData,
       status: data.status.present ? data.status.value : this.status,
+      sceneId: data.sceneId.present ? data.sceneId.value : this.sceneId,
+      isFlagged: data.isFlagged.present ? data.isFlagged.value : this.isFlagged,
       createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
       updatedAt: data.updatedAt.present ? data.updatedAt.value : this.updatedAt,
     );
@@ -380,6 +457,8 @@ class InventoryItem extends DataClass implements Insertable<InventoryItem> {
           ..write('serverPhotoUrl: $serverPhotoUrl, ')
           ..write('detectionData: $detectionData, ')
           ..write('status: $status, ')
+          ..write('sceneId: $sceneId, ')
+          ..write('isFlagged: $isFlagged, ')
           ..write('createdAt: $createdAt, ')
           ..write('updatedAt: $updatedAt')
           ..write(')'))
@@ -394,6 +473,8 @@ class InventoryItem extends DataClass implements Insertable<InventoryItem> {
     serverPhotoUrl,
     detectionData,
     status,
+    sceneId,
+    isFlagged,
     createdAt,
     updatedAt,
   );
@@ -407,6 +488,8 @@ class InventoryItem extends DataClass implements Insertable<InventoryItem> {
           other.serverPhotoUrl == this.serverPhotoUrl &&
           other.detectionData == this.detectionData &&
           other.status == this.status &&
+          other.sceneId == this.sceneId &&
+          other.isFlagged == this.isFlagged &&
           other.createdAt == this.createdAt &&
           other.updatedAt == this.updatedAt);
 }
@@ -418,6 +501,8 @@ class InventoryItemsCompanion extends UpdateCompanion<InventoryItem> {
   final Value<String?> serverPhotoUrl;
   final Value<String> detectionData;
   final Value<String> status;
+  final Value<String?> sceneId;
+  final Value<bool> isFlagged;
   final Value<DateTime> createdAt;
   final Value<DateTime> updatedAt;
   const InventoryItemsCompanion({
@@ -427,6 +512,8 @@ class InventoryItemsCompanion extends UpdateCompanion<InventoryItem> {
     this.serverPhotoUrl = const Value.absent(),
     this.detectionData = const Value.absent(),
     this.status = const Value.absent(),
+    this.sceneId = const Value.absent(),
+    this.isFlagged = const Value.absent(),
     this.createdAt = const Value.absent(),
     this.updatedAt = const Value.absent(),
   });
@@ -437,6 +524,8 @@ class InventoryItemsCompanion extends UpdateCompanion<InventoryItem> {
     this.serverPhotoUrl = const Value.absent(),
     required String detectionData,
     this.status = const Value.absent(),
+    this.sceneId = const Value.absent(),
+    this.isFlagged = const Value.absent(),
     required DateTime createdAt,
     required DateTime updatedAt,
   }) : photoPath = Value(photoPath),
@@ -451,6 +540,8 @@ class InventoryItemsCompanion extends UpdateCompanion<InventoryItem> {
     Expression<String>? serverPhotoUrl,
     Expression<String>? detectionData,
     Expression<String>? status,
+    Expression<String>? sceneId,
+    Expression<bool>? isFlagged,
     Expression<DateTime>? createdAt,
     Expression<DateTime>? updatedAt,
   }) {
@@ -461,6 +552,8 @@ class InventoryItemsCompanion extends UpdateCompanion<InventoryItem> {
       if (serverPhotoUrl != null) 'server_photo_url': serverPhotoUrl,
       if (detectionData != null) 'detection_data': detectionData,
       if (status != null) 'status': status,
+      if (sceneId != null) 'scene_id': sceneId,
+      if (isFlagged != null) 'is_flagged': isFlagged,
       if (createdAt != null) 'created_at': createdAt,
       if (updatedAt != null) 'updated_at': updatedAt,
     });
@@ -473,6 +566,8 @@ class InventoryItemsCompanion extends UpdateCompanion<InventoryItem> {
     Value<String?>? serverPhotoUrl,
     Value<String>? detectionData,
     Value<String>? status,
+    Value<String?>? sceneId,
+    Value<bool>? isFlagged,
     Value<DateTime>? createdAt,
     Value<DateTime>? updatedAt,
   }) {
@@ -483,6 +578,8 @@ class InventoryItemsCompanion extends UpdateCompanion<InventoryItem> {
       serverPhotoUrl: serverPhotoUrl ?? this.serverPhotoUrl,
       detectionData: detectionData ?? this.detectionData,
       status: status ?? this.status,
+      sceneId: sceneId ?? this.sceneId,
+      isFlagged: isFlagged ?? this.isFlagged,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
     );
@@ -509,6 +606,12 @@ class InventoryItemsCompanion extends UpdateCompanion<InventoryItem> {
     if (status.present) {
       map['status'] = Variable<String>(status.value);
     }
+    if (sceneId.present) {
+      map['scene_id'] = Variable<String>(sceneId.value);
+    }
+    if (isFlagged.present) {
+      map['is_flagged'] = Variable<bool>(isFlagged.value);
+    }
     if (createdAt.present) {
       map['created_at'] = Variable<DateTime>(createdAt.value);
     }
@@ -527,6 +630,8 @@ class InventoryItemsCompanion extends UpdateCompanion<InventoryItem> {
           ..write('serverPhotoUrl: $serverPhotoUrl, ')
           ..write('detectionData: $detectionData, ')
           ..write('status: $status, ')
+          ..write('sceneId: $sceneId, ')
+          ..write('isFlagged: $isFlagged, ')
           ..write('createdAt: $createdAt, ')
           ..write('updatedAt: $updatedAt')
           ..write(')'))
@@ -1206,12 +1311,1599 @@ class LabelSearchFtsCompanion extends UpdateCompanion<LabelSearchEntry> {
   }
 }
 
+class $ScenesTable extends Scenes with TableInfo<$ScenesTable, Scene> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $ScenesTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<String> id = GeneratedColumn<String>(
+    'id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _captureSessionIdMeta = const VerificationMeta(
+    'captureSessionId',
+  );
+  @override
+  late final GeneratedColumn<String> captureSessionId = GeneratedColumn<String>(
+    'capture_session_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _agreementCoverageMeta = const VerificationMeta(
+    'agreementCoverage',
+  );
+  @override
+  late final GeneratedColumn<double> agreementCoverage =
+      GeneratedColumn<double>(
+        'agreement_coverage',
+        aliasedName,
+        false,
+        type: DriftSqlType.double,
+        requiredDuringInsert: false,
+        defaultValue: const Constant(0.0),
+      );
+  static const VerificationMeta _agreementPrecisionMeta =
+      const VerificationMeta('agreementPrecision');
+  @override
+  late final GeneratedColumn<double> agreementPrecision =
+      GeneratedColumn<double>(
+        'agreement_precision',
+        aliasedName,
+        false,
+        type: DriftSqlType.double,
+        requiredDuringInsert: false,
+        defaultValue: const Constant(0.0),
+      );
+  static const VerificationMeta _selfDiagnosisTriggeredMeta =
+      const VerificationMeta('selfDiagnosisTriggered');
+  @override
+  late final GeneratedColumn<bool> selfDiagnosisTriggered =
+      GeneratedColumn<bool>(
+        'self_diagnosis_triggered',
+        aliasedName,
+        false,
+        type: DriftSqlType.bool,
+        requiredDuringInsert: false,
+        defaultConstraints: GeneratedColumn.constraintIsAlways(
+          'CHECK ("self_diagnosis_triggered" IN (0, 1))',
+        ),
+        defaultValue: const Constant(false),
+      );
+  static const VerificationMeta _rerunDepthMeta = const VerificationMeta(
+    'rerunDepth',
+  );
+  @override
+  late final GeneratedColumn<int> rerunDepth = GeneratedColumn<int>(
+    'rerun_depth',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(0),
+  );
+  static const VerificationMeta _flagReasonMeta = const VerificationMeta(
+    'flagReason',
+  );
+  @override
+  late final GeneratedColumn<String> flagReason = GeneratedColumn<String>(
+    'flag_reason',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _createdAtMeta = const VerificationMeta(
+    'createdAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> createdAt = GeneratedColumn<DateTime>(
+    'created_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: true,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    id,
+    captureSessionId,
+    agreementCoverage,
+    agreementPrecision,
+    selfDiagnosisTriggered,
+    rerunDepth,
+    flagReason,
+    createdAt,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'scenes';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<Scene> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    } else if (isInserting) {
+      context.missing(_idMeta);
+    }
+    if (data.containsKey('capture_session_id')) {
+      context.handle(
+        _captureSessionIdMeta,
+        captureSessionId.isAcceptableOrUnknown(
+          data['capture_session_id']!,
+          _captureSessionIdMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_captureSessionIdMeta);
+    }
+    if (data.containsKey('agreement_coverage')) {
+      context.handle(
+        _agreementCoverageMeta,
+        agreementCoverage.isAcceptableOrUnknown(
+          data['agreement_coverage']!,
+          _agreementCoverageMeta,
+        ),
+      );
+    }
+    if (data.containsKey('agreement_precision')) {
+      context.handle(
+        _agreementPrecisionMeta,
+        agreementPrecision.isAcceptableOrUnknown(
+          data['agreement_precision']!,
+          _agreementPrecisionMeta,
+        ),
+      );
+    }
+    if (data.containsKey('self_diagnosis_triggered')) {
+      context.handle(
+        _selfDiagnosisTriggeredMeta,
+        selfDiagnosisTriggered.isAcceptableOrUnknown(
+          data['self_diagnosis_triggered']!,
+          _selfDiagnosisTriggeredMeta,
+        ),
+      );
+    }
+    if (data.containsKey('rerun_depth')) {
+      context.handle(
+        _rerunDepthMeta,
+        rerunDepth.isAcceptableOrUnknown(data['rerun_depth']!, _rerunDepthMeta),
+      );
+    }
+    if (data.containsKey('flag_reason')) {
+      context.handle(
+        _flagReasonMeta,
+        flagReason.isAcceptableOrUnknown(data['flag_reason']!, _flagReasonMeta),
+      );
+    }
+    if (data.containsKey('created_at')) {
+      context.handle(
+        _createdAtMeta,
+        createdAt.isAcceptableOrUnknown(data['created_at']!, _createdAtMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_createdAtMeta);
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  Scene map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return Scene(
+      id: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}id'],
+      )!,
+      captureSessionId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}capture_session_id'],
+      )!,
+      agreementCoverage: attachedDatabase.typeMapping.read(
+        DriftSqlType.double,
+        data['${effectivePrefix}agreement_coverage'],
+      )!,
+      agreementPrecision: attachedDatabase.typeMapping.read(
+        DriftSqlType.double,
+        data['${effectivePrefix}agreement_precision'],
+      )!,
+      selfDiagnosisTriggered: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}self_diagnosis_triggered'],
+      )!,
+      rerunDepth: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}rerun_depth'],
+      )!,
+      flagReason: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}flag_reason'],
+      ),
+      createdAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}created_at'],
+      )!,
+    );
+  }
+
+  @override
+  $ScenesTable createAlias(String alias) {
+    return $ScenesTable(attachedDatabase, alias);
+  }
+}
+
+class Scene extends DataClass implements Insertable<Scene> {
+  /// Stable scene ID (from cross_frame_dedup's SceneObservation.sceneId).
+  final String id;
+
+  /// Capture-session bucket — multiple bursts in one session share this.
+  final String captureSessionId;
+
+  /// Mean(1{score>=2}) over the scene's detections (§6.3).
+  final double agreementCoverage;
+
+  /// Mean(1{score>=3}).
+  final double agreementPrecision;
+  final bool selfDiagnosisTriggered;
+  final int rerunDepth;
+
+  /// One of: empty_detection_set / single_source_run /
+  /// diagnosis_budget_exhausted / assemble_failed.
+  final String? flagReason;
+  final DateTime createdAt;
+  const Scene({
+    required this.id,
+    required this.captureSessionId,
+    required this.agreementCoverage,
+    required this.agreementPrecision,
+    required this.selfDiagnosisTriggered,
+    required this.rerunDepth,
+    this.flagReason,
+    required this.createdAt,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<String>(id);
+    map['capture_session_id'] = Variable<String>(captureSessionId);
+    map['agreement_coverage'] = Variable<double>(agreementCoverage);
+    map['agreement_precision'] = Variable<double>(agreementPrecision);
+    map['self_diagnosis_triggered'] = Variable<bool>(selfDiagnosisTriggered);
+    map['rerun_depth'] = Variable<int>(rerunDepth);
+    if (!nullToAbsent || flagReason != null) {
+      map['flag_reason'] = Variable<String>(flagReason);
+    }
+    map['created_at'] = Variable<DateTime>(createdAt);
+    return map;
+  }
+
+  ScenesCompanion toCompanion(bool nullToAbsent) {
+    return ScenesCompanion(
+      id: Value(id),
+      captureSessionId: Value(captureSessionId),
+      agreementCoverage: Value(agreementCoverage),
+      agreementPrecision: Value(agreementPrecision),
+      selfDiagnosisTriggered: Value(selfDiagnosisTriggered),
+      rerunDepth: Value(rerunDepth),
+      flagReason: flagReason == null && nullToAbsent
+          ? const Value.absent()
+          : Value(flagReason),
+      createdAt: Value(createdAt),
+    );
+  }
+
+  factory Scene.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return Scene(
+      id: serializer.fromJson<String>(json['id']),
+      captureSessionId: serializer.fromJson<String>(json['captureSessionId']),
+      agreementCoverage: serializer.fromJson<double>(json['agreementCoverage']),
+      agreementPrecision: serializer.fromJson<double>(
+        json['agreementPrecision'],
+      ),
+      selfDiagnosisTriggered: serializer.fromJson<bool>(
+        json['selfDiagnosisTriggered'],
+      ),
+      rerunDepth: serializer.fromJson<int>(json['rerunDepth']),
+      flagReason: serializer.fromJson<String?>(json['flagReason']),
+      createdAt: serializer.fromJson<DateTime>(json['createdAt']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<String>(id),
+      'captureSessionId': serializer.toJson<String>(captureSessionId),
+      'agreementCoverage': serializer.toJson<double>(agreementCoverage),
+      'agreementPrecision': serializer.toJson<double>(agreementPrecision),
+      'selfDiagnosisTriggered': serializer.toJson<bool>(selfDiagnosisTriggered),
+      'rerunDepth': serializer.toJson<int>(rerunDepth),
+      'flagReason': serializer.toJson<String?>(flagReason),
+      'createdAt': serializer.toJson<DateTime>(createdAt),
+    };
+  }
+
+  Scene copyWith({
+    String? id,
+    String? captureSessionId,
+    double? agreementCoverage,
+    double? agreementPrecision,
+    bool? selfDiagnosisTriggered,
+    int? rerunDepth,
+    Value<String?> flagReason = const Value.absent(),
+    DateTime? createdAt,
+  }) => Scene(
+    id: id ?? this.id,
+    captureSessionId: captureSessionId ?? this.captureSessionId,
+    agreementCoverage: agreementCoverage ?? this.agreementCoverage,
+    agreementPrecision: agreementPrecision ?? this.agreementPrecision,
+    selfDiagnosisTriggered:
+        selfDiagnosisTriggered ?? this.selfDiagnosisTriggered,
+    rerunDepth: rerunDepth ?? this.rerunDepth,
+    flagReason: flagReason.present ? flagReason.value : this.flagReason,
+    createdAt: createdAt ?? this.createdAt,
+  );
+  Scene copyWithCompanion(ScenesCompanion data) {
+    return Scene(
+      id: data.id.present ? data.id.value : this.id,
+      captureSessionId: data.captureSessionId.present
+          ? data.captureSessionId.value
+          : this.captureSessionId,
+      agreementCoverage: data.agreementCoverage.present
+          ? data.agreementCoverage.value
+          : this.agreementCoverage,
+      agreementPrecision: data.agreementPrecision.present
+          ? data.agreementPrecision.value
+          : this.agreementPrecision,
+      selfDiagnosisTriggered: data.selfDiagnosisTriggered.present
+          ? data.selfDiagnosisTriggered.value
+          : this.selfDiagnosisTriggered,
+      rerunDepth: data.rerunDepth.present
+          ? data.rerunDepth.value
+          : this.rerunDepth,
+      flagReason: data.flagReason.present
+          ? data.flagReason.value
+          : this.flagReason,
+      createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('Scene(')
+          ..write('id: $id, ')
+          ..write('captureSessionId: $captureSessionId, ')
+          ..write('agreementCoverage: $agreementCoverage, ')
+          ..write('agreementPrecision: $agreementPrecision, ')
+          ..write('selfDiagnosisTriggered: $selfDiagnosisTriggered, ')
+          ..write('rerunDepth: $rerunDepth, ')
+          ..write('flagReason: $flagReason, ')
+          ..write('createdAt: $createdAt')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(
+    id,
+    captureSessionId,
+    agreementCoverage,
+    agreementPrecision,
+    selfDiagnosisTriggered,
+    rerunDepth,
+    flagReason,
+    createdAt,
+  );
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is Scene &&
+          other.id == this.id &&
+          other.captureSessionId == this.captureSessionId &&
+          other.agreementCoverage == this.agreementCoverage &&
+          other.agreementPrecision == this.agreementPrecision &&
+          other.selfDiagnosisTriggered == this.selfDiagnosisTriggered &&
+          other.rerunDepth == this.rerunDepth &&
+          other.flagReason == this.flagReason &&
+          other.createdAt == this.createdAt);
+}
+
+class ScenesCompanion extends UpdateCompanion<Scene> {
+  final Value<String> id;
+  final Value<String> captureSessionId;
+  final Value<double> agreementCoverage;
+  final Value<double> agreementPrecision;
+  final Value<bool> selfDiagnosisTriggered;
+  final Value<int> rerunDepth;
+  final Value<String?> flagReason;
+  final Value<DateTime> createdAt;
+  final Value<int> rowid;
+  const ScenesCompanion({
+    this.id = const Value.absent(),
+    this.captureSessionId = const Value.absent(),
+    this.agreementCoverage = const Value.absent(),
+    this.agreementPrecision = const Value.absent(),
+    this.selfDiagnosisTriggered = const Value.absent(),
+    this.rerunDepth = const Value.absent(),
+    this.flagReason = const Value.absent(),
+    this.createdAt = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  ScenesCompanion.insert({
+    required String id,
+    required String captureSessionId,
+    this.agreementCoverage = const Value.absent(),
+    this.agreementPrecision = const Value.absent(),
+    this.selfDiagnosisTriggered = const Value.absent(),
+    this.rerunDepth = const Value.absent(),
+    this.flagReason = const Value.absent(),
+    required DateTime createdAt,
+    this.rowid = const Value.absent(),
+  }) : id = Value(id),
+       captureSessionId = Value(captureSessionId),
+       createdAt = Value(createdAt);
+  static Insertable<Scene> custom({
+    Expression<String>? id,
+    Expression<String>? captureSessionId,
+    Expression<double>? agreementCoverage,
+    Expression<double>? agreementPrecision,
+    Expression<bool>? selfDiagnosisTriggered,
+    Expression<int>? rerunDepth,
+    Expression<String>? flagReason,
+    Expression<DateTime>? createdAt,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (captureSessionId != null) 'capture_session_id': captureSessionId,
+      if (agreementCoverage != null) 'agreement_coverage': agreementCoverage,
+      if (agreementPrecision != null) 'agreement_precision': agreementPrecision,
+      if (selfDiagnosisTriggered != null)
+        'self_diagnosis_triggered': selfDiagnosisTriggered,
+      if (rerunDepth != null) 'rerun_depth': rerunDepth,
+      if (flagReason != null) 'flag_reason': flagReason,
+      if (createdAt != null) 'created_at': createdAt,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  ScenesCompanion copyWith({
+    Value<String>? id,
+    Value<String>? captureSessionId,
+    Value<double>? agreementCoverage,
+    Value<double>? agreementPrecision,
+    Value<bool>? selfDiagnosisTriggered,
+    Value<int>? rerunDepth,
+    Value<String?>? flagReason,
+    Value<DateTime>? createdAt,
+    Value<int>? rowid,
+  }) {
+    return ScenesCompanion(
+      id: id ?? this.id,
+      captureSessionId: captureSessionId ?? this.captureSessionId,
+      agreementCoverage: agreementCoverage ?? this.agreementCoverage,
+      agreementPrecision: agreementPrecision ?? this.agreementPrecision,
+      selfDiagnosisTriggered:
+          selfDiagnosisTriggered ?? this.selfDiagnosisTriggered,
+      rerunDepth: rerunDepth ?? this.rerunDepth,
+      flagReason: flagReason ?? this.flagReason,
+      createdAt: createdAt ?? this.createdAt,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<String>(id.value);
+    }
+    if (captureSessionId.present) {
+      map['capture_session_id'] = Variable<String>(captureSessionId.value);
+    }
+    if (agreementCoverage.present) {
+      map['agreement_coverage'] = Variable<double>(agreementCoverage.value);
+    }
+    if (agreementPrecision.present) {
+      map['agreement_precision'] = Variable<double>(agreementPrecision.value);
+    }
+    if (selfDiagnosisTriggered.present) {
+      map['self_diagnosis_triggered'] = Variable<bool>(
+        selfDiagnosisTriggered.value,
+      );
+    }
+    if (rerunDepth.present) {
+      map['rerun_depth'] = Variable<int>(rerunDepth.value);
+    }
+    if (flagReason.present) {
+      map['flag_reason'] = Variable<String>(flagReason.value);
+    }
+    if (createdAt.present) {
+      map['created_at'] = Variable<DateTime>(createdAt.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('ScenesCompanion(')
+          ..write('id: $id, ')
+          ..write('captureSessionId: $captureSessionId, ')
+          ..write('agreementCoverage: $agreementCoverage, ')
+          ..write('agreementPrecision: $agreementPrecision, ')
+          ..write('selfDiagnosisTriggered: $selfDiagnosisTriggered, ')
+          ..write('rerunDepth: $rerunDepth, ')
+          ..write('flagReason: $flagReason, ')
+          ..write('createdAt: $createdAt, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
+class $DetectionsTable extends Detections
+    with TableInfo<$DetectionsTable, Detection> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $DetectionsTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<String> id = GeneratedColumn<String>(
+    'id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _sceneIdMeta = const VerificationMeta(
+    'sceneId',
+  );
+  @override
+  late final GeneratedColumn<String> sceneId = GeneratedColumn<String>(
+    'scene_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'REFERENCES scenes (id)',
+    ),
+  );
+  static const VerificationMeta _bboxMeta = const VerificationMeta('bbox');
+  @override
+  late final GeneratedColumn<String> bbox = GeneratedColumn<String>(
+    'bbox',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _maskRleMeta = const VerificationMeta(
+    'maskRle',
+  );
+  @override
+  late final GeneratedColumn<Uint8List> maskRle = GeneratedColumn<Uint8List>(
+    'mask_rle',
+    aliasedName,
+    true,
+    type: DriftSqlType.blob,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _cropEmbeddingI8Meta = const VerificationMeta(
+    'cropEmbeddingI8',
+  );
+  @override
+  late final GeneratedColumn<Uint8List> cropEmbeddingI8 =
+      GeneratedColumn<Uint8List>(
+        'crop_embedding_i8',
+        aliasedName,
+        true,
+        type: DriftSqlType.blob,
+        requiredDuringInsert: false,
+      );
+  static const VerificationMeta _agreementScoreMeta = const VerificationMeta(
+    'agreementScore',
+  );
+  @override
+  late final GeneratedColumn<double> agreementScore = GeneratedColumn<double>(
+    'agreement_score',
+    aliasedName,
+    false,
+    type: DriftSqlType.double,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(0.0),
+  );
+  static const VerificationMeta _contributingSignalsMeta =
+      const VerificationMeta('contributingSignals');
+  @override
+  late final GeneratedColumn<String> contributingSignals =
+      GeneratedColumn<String>(
+        'contributing_signals',
+        aliasedName,
+        false,
+        type: DriftSqlType.string,
+        requiredDuringInsert: false,
+        defaultValue: const Constant('[]'),
+      );
+  static const VerificationMeta _vlmStructuredAttributesMeta =
+      const VerificationMeta('vlmStructuredAttributes');
+  @override
+  late final GeneratedColumn<String> vlmStructuredAttributes =
+      GeneratedColumn<String>(
+        'vlm_structured_attributes',
+        aliasedName,
+        false,
+        type: DriftSqlType.string,
+        requiredDuringInsert: false,
+        defaultValue: const Constant('{}'),
+      );
+  static const VerificationMeta _primaryLabelMeta = const VerificationMeta(
+    'primaryLabel',
+  );
+  @override
+  late final GeneratedColumn<String> primaryLabel = GeneratedColumn<String>(
+    'primary_label',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _confidenceMeta = const VerificationMeta(
+    'confidence',
+  );
+  @override
+  late final GeneratedColumn<double> confidence = GeneratedColumn<double>(
+    'confidence',
+    aliasedName,
+    false,
+    type: DriftSqlType.double,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(0.0),
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    id,
+    sceneId,
+    bbox,
+    maskRle,
+    cropEmbeddingI8,
+    agreementScore,
+    contributingSignals,
+    vlmStructuredAttributes,
+    primaryLabel,
+    confidence,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'detections';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<Detection> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    } else if (isInserting) {
+      context.missing(_idMeta);
+    }
+    if (data.containsKey('scene_id')) {
+      context.handle(
+        _sceneIdMeta,
+        sceneId.isAcceptableOrUnknown(data['scene_id']!, _sceneIdMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_sceneIdMeta);
+    }
+    if (data.containsKey('bbox')) {
+      context.handle(
+        _bboxMeta,
+        bbox.isAcceptableOrUnknown(data['bbox']!, _bboxMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_bboxMeta);
+    }
+    if (data.containsKey('mask_rle')) {
+      context.handle(
+        _maskRleMeta,
+        maskRle.isAcceptableOrUnknown(data['mask_rle']!, _maskRleMeta),
+      );
+    }
+    if (data.containsKey('crop_embedding_i8')) {
+      context.handle(
+        _cropEmbeddingI8Meta,
+        cropEmbeddingI8.isAcceptableOrUnknown(
+          data['crop_embedding_i8']!,
+          _cropEmbeddingI8Meta,
+        ),
+      );
+    }
+    if (data.containsKey('agreement_score')) {
+      context.handle(
+        _agreementScoreMeta,
+        agreementScore.isAcceptableOrUnknown(
+          data['agreement_score']!,
+          _agreementScoreMeta,
+        ),
+      );
+    }
+    if (data.containsKey('contributing_signals')) {
+      context.handle(
+        _contributingSignalsMeta,
+        contributingSignals.isAcceptableOrUnknown(
+          data['contributing_signals']!,
+          _contributingSignalsMeta,
+        ),
+      );
+    }
+    if (data.containsKey('vlm_structured_attributes')) {
+      context.handle(
+        _vlmStructuredAttributesMeta,
+        vlmStructuredAttributes.isAcceptableOrUnknown(
+          data['vlm_structured_attributes']!,
+          _vlmStructuredAttributesMeta,
+        ),
+      );
+    }
+    if (data.containsKey('primary_label')) {
+      context.handle(
+        _primaryLabelMeta,
+        primaryLabel.isAcceptableOrUnknown(
+          data['primary_label']!,
+          _primaryLabelMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_primaryLabelMeta);
+    }
+    if (data.containsKey('confidence')) {
+      context.handle(
+        _confidenceMeta,
+        confidence.isAcceptableOrUnknown(data['confidence']!, _confidenceMeta),
+      );
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  Detection map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return Detection(
+      id: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}id'],
+      )!,
+      sceneId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}scene_id'],
+      )!,
+      bbox: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}bbox'],
+      )!,
+      maskRle: attachedDatabase.typeMapping.read(
+        DriftSqlType.blob,
+        data['${effectivePrefix}mask_rle'],
+      ),
+      cropEmbeddingI8: attachedDatabase.typeMapping.read(
+        DriftSqlType.blob,
+        data['${effectivePrefix}crop_embedding_i8'],
+      ),
+      agreementScore: attachedDatabase.typeMapping.read(
+        DriftSqlType.double,
+        data['${effectivePrefix}agreement_score'],
+      )!,
+      contributingSignals: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}contributing_signals'],
+      )!,
+      vlmStructuredAttributes: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}vlm_structured_attributes'],
+      )!,
+      primaryLabel: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}primary_label'],
+      )!,
+      confidence: attachedDatabase.typeMapping.read(
+        DriftSqlType.double,
+        data['${effectivePrefix}confidence'],
+      )!,
+    );
+  }
+
+  @override
+  $DetectionsTable createAlias(String alias) {
+    return $DetectionsTable(attachedDatabase, alias);
+  }
+}
+
+class Detection extends DataClass implements Insertable<Detection> {
+  /// Stable detection ID (from cross_frame_dedup's PipelineDetection.id).
+  final String id;
+
+  /// FK → scenes.id.
+  final String sceneId;
+
+  /// JSON: {x, y, width, height} in source-frame pixels.
+  final String bbox;
+
+  /// Optional EfficientSAM mask (RLE-encoded bytes).
+  final Uint8List? maskRle;
+
+  /// 768-byte int8-quantised crop embedding (DINOv2 ViT-B/14, dequant via /127).
+  final Uint8List? cropEmbeddingI8;
+
+  /// agreement_score ∈ {0..5} — how many independent signal classes corroborate.
+  final double agreementScore;
+
+  /// JSON: list of {detector, frameId, rawConfidence}.
+  final String contributingSignals;
+
+  /// JSON: VLM-derived structured attributes (may be {}).
+  final String vlmStructuredAttributes;
+
+  /// Chosen by agreement (not from a class list).
+  final String primaryLabel;
+
+  /// Sigmoid-calibrated confidence ∈ [0, 1].
+  final double confidence;
+  const Detection({
+    required this.id,
+    required this.sceneId,
+    required this.bbox,
+    this.maskRle,
+    this.cropEmbeddingI8,
+    required this.agreementScore,
+    required this.contributingSignals,
+    required this.vlmStructuredAttributes,
+    required this.primaryLabel,
+    required this.confidence,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<String>(id);
+    map['scene_id'] = Variable<String>(sceneId);
+    map['bbox'] = Variable<String>(bbox);
+    if (!nullToAbsent || maskRle != null) {
+      map['mask_rle'] = Variable<Uint8List>(maskRle);
+    }
+    if (!nullToAbsent || cropEmbeddingI8 != null) {
+      map['crop_embedding_i8'] = Variable<Uint8List>(cropEmbeddingI8);
+    }
+    map['agreement_score'] = Variable<double>(agreementScore);
+    map['contributing_signals'] = Variable<String>(contributingSignals);
+    map['vlm_structured_attributes'] = Variable<String>(
+      vlmStructuredAttributes,
+    );
+    map['primary_label'] = Variable<String>(primaryLabel);
+    map['confidence'] = Variable<double>(confidence);
+    return map;
+  }
+
+  DetectionsCompanion toCompanion(bool nullToAbsent) {
+    return DetectionsCompanion(
+      id: Value(id),
+      sceneId: Value(sceneId),
+      bbox: Value(bbox),
+      maskRle: maskRle == null && nullToAbsent
+          ? const Value.absent()
+          : Value(maskRle),
+      cropEmbeddingI8: cropEmbeddingI8 == null && nullToAbsent
+          ? const Value.absent()
+          : Value(cropEmbeddingI8),
+      agreementScore: Value(agreementScore),
+      contributingSignals: Value(contributingSignals),
+      vlmStructuredAttributes: Value(vlmStructuredAttributes),
+      primaryLabel: Value(primaryLabel),
+      confidence: Value(confidence),
+    );
+  }
+
+  factory Detection.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return Detection(
+      id: serializer.fromJson<String>(json['id']),
+      sceneId: serializer.fromJson<String>(json['sceneId']),
+      bbox: serializer.fromJson<String>(json['bbox']),
+      maskRle: serializer.fromJson<Uint8List?>(json['maskRle']),
+      cropEmbeddingI8: serializer.fromJson<Uint8List?>(json['cropEmbeddingI8']),
+      agreementScore: serializer.fromJson<double>(json['agreementScore']),
+      contributingSignals: serializer.fromJson<String>(
+        json['contributingSignals'],
+      ),
+      vlmStructuredAttributes: serializer.fromJson<String>(
+        json['vlmStructuredAttributes'],
+      ),
+      primaryLabel: serializer.fromJson<String>(json['primaryLabel']),
+      confidence: serializer.fromJson<double>(json['confidence']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<String>(id),
+      'sceneId': serializer.toJson<String>(sceneId),
+      'bbox': serializer.toJson<String>(bbox),
+      'maskRle': serializer.toJson<Uint8List?>(maskRle),
+      'cropEmbeddingI8': serializer.toJson<Uint8List?>(cropEmbeddingI8),
+      'agreementScore': serializer.toJson<double>(agreementScore),
+      'contributingSignals': serializer.toJson<String>(contributingSignals),
+      'vlmStructuredAttributes': serializer.toJson<String>(
+        vlmStructuredAttributes,
+      ),
+      'primaryLabel': serializer.toJson<String>(primaryLabel),
+      'confidence': serializer.toJson<double>(confidence),
+    };
+  }
+
+  Detection copyWith({
+    String? id,
+    String? sceneId,
+    String? bbox,
+    Value<Uint8List?> maskRle = const Value.absent(),
+    Value<Uint8List?> cropEmbeddingI8 = const Value.absent(),
+    double? agreementScore,
+    String? contributingSignals,
+    String? vlmStructuredAttributes,
+    String? primaryLabel,
+    double? confidence,
+  }) => Detection(
+    id: id ?? this.id,
+    sceneId: sceneId ?? this.sceneId,
+    bbox: bbox ?? this.bbox,
+    maskRle: maskRle.present ? maskRle.value : this.maskRle,
+    cropEmbeddingI8: cropEmbeddingI8.present
+        ? cropEmbeddingI8.value
+        : this.cropEmbeddingI8,
+    agreementScore: agreementScore ?? this.agreementScore,
+    contributingSignals: contributingSignals ?? this.contributingSignals,
+    vlmStructuredAttributes:
+        vlmStructuredAttributes ?? this.vlmStructuredAttributes,
+    primaryLabel: primaryLabel ?? this.primaryLabel,
+    confidence: confidence ?? this.confidence,
+  );
+  Detection copyWithCompanion(DetectionsCompanion data) {
+    return Detection(
+      id: data.id.present ? data.id.value : this.id,
+      sceneId: data.sceneId.present ? data.sceneId.value : this.sceneId,
+      bbox: data.bbox.present ? data.bbox.value : this.bbox,
+      maskRle: data.maskRle.present ? data.maskRle.value : this.maskRle,
+      cropEmbeddingI8: data.cropEmbeddingI8.present
+          ? data.cropEmbeddingI8.value
+          : this.cropEmbeddingI8,
+      agreementScore: data.agreementScore.present
+          ? data.agreementScore.value
+          : this.agreementScore,
+      contributingSignals: data.contributingSignals.present
+          ? data.contributingSignals.value
+          : this.contributingSignals,
+      vlmStructuredAttributes: data.vlmStructuredAttributes.present
+          ? data.vlmStructuredAttributes.value
+          : this.vlmStructuredAttributes,
+      primaryLabel: data.primaryLabel.present
+          ? data.primaryLabel.value
+          : this.primaryLabel,
+      confidence: data.confidence.present
+          ? data.confidence.value
+          : this.confidence,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('Detection(')
+          ..write('id: $id, ')
+          ..write('sceneId: $sceneId, ')
+          ..write('bbox: $bbox, ')
+          ..write('maskRle: $maskRle, ')
+          ..write('cropEmbeddingI8: $cropEmbeddingI8, ')
+          ..write('agreementScore: $agreementScore, ')
+          ..write('contributingSignals: $contributingSignals, ')
+          ..write('vlmStructuredAttributes: $vlmStructuredAttributes, ')
+          ..write('primaryLabel: $primaryLabel, ')
+          ..write('confidence: $confidence')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(
+    id,
+    sceneId,
+    bbox,
+    $driftBlobEquality.hash(maskRle),
+    $driftBlobEquality.hash(cropEmbeddingI8),
+    agreementScore,
+    contributingSignals,
+    vlmStructuredAttributes,
+    primaryLabel,
+    confidence,
+  );
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is Detection &&
+          other.id == this.id &&
+          other.sceneId == this.sceneId &&
+          other.bbox == this.bbox &&
+          $driftBlobEquality.equals(other.maskRle, this.maskRle) &&
+          $driftBlobEquality.equals(
+            other.cropEmbeddingI8,
+            this.cropEmbeddingI8,
+          ) &&
+          other.agreementScore == this.agreementScore &&
+          other.contributingSignals == this.contributingSignals &&
+          other.vlmStructuredAttributes == this.vlmStructuredAttributes &&
+          other.primaryLabel == this.primaryLabel &&
+          other.confidence == this.confidence);
+}
+
+class DetectionsCompanion extends UpdateCompanion<Detection> {
+  final Value<String> id;
+  final Value<String> sceneId;
+  final Value<String> bbox;
+  final Value<Uint8List?> maskRle;
+  final Value<Uint8List?> cropEmbeddingI8;
+  final Value<double> agreementScore;
+  final Value<String> contributingSignals;
+  final Value<String> vlmStructuredAttributes;
+  final Value<String> primaryLabel;
+  final Value<double> confidence;
+  final Value<int> rowid;
+  const DetectionsCompanion({
+    this.id = const Value.absent(),
+    this.sceneId = const Value.absent(),
+    this.bbox = const Value.absent(),
+    this.maskRle = const Value.absent(),
+    this.cropEmbeddingI8 = const Value.absent(),
+    this.agreementScore = const Value.absent(),
+    this.contributingSignals = const Value.absent(),
+    this.vlmStructuredAttributes = const Value.absent(),
+    this.primaryLabel = const Value.absent(),
+    this.confidence = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  DetectionsCompanion.insert({
+    required String id,
+    required String sceneId,
+    required String bbox,
+    this.maskRle = const Value.absent(),
+    this.cropEmbeddingI8 = const Value.absent(),
+    this.agreementScore = const Value.absent(),
+    this.contributingSignals = const Value.absent(),
+    this.vlmStructuredAttributes = const Value.absent(),
+    required String primaryLabel,
+    this.confidence = const Value.absent(),
+    this.rowid = const Value.absent(),
+  }) : id = Value(id),
+       sceneId = Value(sceneId),
+       bbox = Value(bbox),
+       primaryLabel = Value(primaryLabel);
+  static Insertable<Detection> custom({
+    Expression<String>? id,
+    Expression<String>? sceneId,
+    Expression<String>? bbox,
+    Expression<Uint8List>? maskRle,
+    Expression<Uint8List>? cropEmbeddingI8,
+    Expression<double>? agreementScore,
+    Expression<String>? contributingSignals,
+    Expression<String>? vlmStructuredAttributes,
+    Expression<String>? primaryLabel,
+    Expression<double>? confidence,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (sceneId != null) 'scene_id': sceneId,
+      if (bbox != null) 'bbox': bbox,
+      if (maskRle != null) 'mask_rle': maskRle,
+      if (cropEmbeddingI8 != null) 'crop_embedding_i8': cropEmbeddingI8,
+      if (agreementScore != null) 'agreement_score': agreementScore,
+      if (contributingSignals != null)
+        'contributing_signals': contributingSignals,
+      if (vlmStructuredAttributes != null)
+        'vlm_structured_attributes': vlmStructuredAttributes,
+      if (primaryLabel != null) 'primary_label': primaryLabel,
+      if (confidence != null) 'confidence': confidence,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  DetectionsCompanion copyWith({
+    Value<String>? id,
+    Value<String>? sceneId,
+    Value<String>? bbox,
+    Value<Uint8List?>? maskRle,
+    Value<Uint8List?>? cropEmbeddingI8,
+    Value<double>? agreementScore,
+    Value<String>? contributingSignals,
+    Value<String>? vlmStructuredAttributes,
+    Value<String>? primaryLabel,
+    Value<double>? confidence,
+    Value<int>? rowid,
+  }) {
+    return DetectionsCompanion(
+      id: id ?? this.id,
+      sceneId: sceneId ?? this.sceneId,
+      bbox: bbox ?? this.bbox,
+      maskRle: maskRle ?? this.maskRle,
+      cropEmbeddingI8: cropEmbeddingI8 ?? this.cropEmbeddingI8,
+      agreementScore: agreementScore ?? this.agreementScore,
+      contributingSignals: contributingSignals ?? this.contributingSignals,
+      vlmStructuredAttributes:
+          vlmStructuredAttributes ?? this.vlmStructuredAttributes,
+      primaryLabel: primaryLabel ?? this.primaryLabel,
+      confidence: confidence ?? this.confidence,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<String>(id.value);
+    }
+    if (sceneId.present) {
+      map['scene_id'] = Variable<String>(sceneId.value);
+    }
+    if (bbox.present) {
+      map['bbox'] = Variable<String>(bbox.value);
+    }
+    if (maskRle.present) {
+      map['mask_rle'] = Variable<Uint8List>(maskRle.value);
+    }
+    if (cropEmbeddingI8.present) {
+      map['crop_embedding_i8'] = Variable<Uint8List>(cropEmbeddingI8.value);
+    }
+    if (agreementScore.present) {
+      map['agreement_score'] = Variable<double>(agreementScore.value);
+    }
+    if (contributingSignals.present) {
+      map['contributing_signals'] = Variable<String>(contributingSignals.value);
+    }
+    if (vlmStructuredAttributes.present) {
+      map['vlm_structured_attributes'] = Variable<String>(
+        vlmStructuredAttributes.value,
+      );
+    }
+    if (primaryLabel.present) {
+      map['primary_label'] = Variable<String>(primaryLabel.value);
+    }
+    if (confidence.present) {
+      map['confidence'] = Variable<double>(confidence.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('DetectionsCompanion(')
+          ..write('id: $id, ')
+          ..write('sceneId: $sceneId, ')
+          ..write('bbox: $bbox, ')
+          ..write('maskRle: $maskRle, ')
+          ..write('cropEmbeddingI8: $cropEmbeddingI8, ')
+          ..write('agreementScore: $agreementScore, ')
+          ..write('contributingSignals: $contributingSignals, ')
+          ..write('vlmStructuredAttributes: $vlmStructuredAttributes, ')
+          ..write('primaryLabel: $primaryLabel, ')
+          ..write('confidence: $confidence, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
+class $DetectionLabelsTable extends DetectionLabels
+    with TableInfo<$DetectionLabelsTable, DetectionLabel> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $DetectionLabelsTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<int> id = GeneratedColumn<int>(
+    'id',
+    aliasedName,
+    false,
+    hasAutoIncrement: true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'PRIMARY KEY AUTOINCREMENT',
+    ),
+  );
+  static const VerificationMeta _detectionIdMeta = const VerificationMeta(
+    'detectionId',
+  );
+  @override
+  late final GeneratedColumn<String> detectionId = GeneratedColumn<String>(
+    'detection_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'REFERENCES detections (id)',
+    ),
+  );
+  static const VerificationMeta _labelMeta = const VerificationMeta('label');
+  @override
+  late final GeneratedColumn<String> label = GeneratedColumn<String>(
+    'label',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _confidenceMeta = const VerificationMeta(
+    'confidence',
+  );
+  @override
+  late final GeneratedColumn<double> confidence = GeneratedColumn<double>(
+    'confidence',
+    aliasedName,
+    false,
+    type: DriftSqlType.double,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(0.0),
+  );
+  static const VerificationMeta _isPrimaryMeta = const VerificationMeta(
+    'isPrimary',
+  );
+  @override
+  late final GeneratedColumn<bool> isPrimary = GeneratedColumn<bool>(
+    'is_primary',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("is_primary" IN (0, 1))',
+    ),
+    defaultValue: const Constant(false),
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    id,
+    detectionId,
+    label,
+    confidence,
+    isPrimary,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'detection_labels';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<DetectionLabel> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    }
+    if (data.containsKey('detection_id')) {
+      context.handle(
+        _detectionIdMeta,
+        detectionId.isAcceptableOrUnknown(
+          data['detection_id']!,
+          _detectionIdMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_detectionIdMeta);
+    }
+    if (data.containsKey('label')) {
+      context.handle(
+        _labelMeta,
+        label.isAcceptableOrUnknown(data['label']!, _labelMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_labelMeta);
+    }
+    if (data.containsKey('confidence')) {
+      context.handle(
+        _confidenceMeta,
+        confidence.isAcceptableOrUnknown(data['confidence']!, _confidenceMeta),
+      );
+    }
+    if (data.containsKey('is_primary')) {
+      context.handle(
+        _isPrimaryMeta,
+        isPrimary.isAcceptableOrUnknown(data['is_primary']!, _isPrimaryMeta),
+      );
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  DetectionLabel map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return DetectionLabel(
+      id: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}id'],
+      )!,
+      detectionId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}detection_id'],
+      )!,
+      label: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}label'],
+      )!,
+      confidence: attachedDatabase.typeMapping.read(
+        DriftSqlType.double,
+        data['${effectivePrefix}confidence'],
+      )!,
+      isPrimary: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}is_primary'],
+      )!,
+    );
+  }
+
+  @override
+  $DetectionLabelsTable createAlias(String alias) {
+    return $DetectionLabelsTable(attachedDatabase, alias);
+  }
+}
+
+class DetectionLabel extends DataClass implements Insertable<DetectionLabel> {
+  final int id;
+  final String detectionId;
+  final String label;
+  final double confidence;
+
+  /// True for the cluster's primary label, false for alternates.
+  final bool isPrimary;
+  const DetectionLabel({
+    required this.id,
+    required this.detectionId,
+    required this.label,
+    required this.confidence,
+    required this.isPrimary,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<int>(id);
+    map['detection_id'] = Variable<String>(detectionId);
+    map['label'] = Variable<String>(label);
+    map['confidence'] = Variable<double>(confidence);
+    map['is_primary'] = Variable<bool>(isPrimary);
+    return map;
+  }
+
+  DetectionLabelsCompanion toCompanion(bool nullToAbsent) {
+    return DetectionLabelsCompanion(
+      id: Value(id),
+      detectionId: Value(detectionId),
+      label: Value(label),
+      confidence: Value(confidence),
+      isPrimary: Value(isPrimary),
+    );
+  }
+
+  factory DetectionLabel.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return DetectionLabel(
+      id: serializer.fromJson<int>(json['id']),
+      detectionId: serializer.fromJson<String>(json['detectionId']),
+      label: serializer.fromJson<String>(json['label']),
+      confidence: serializer.fromJson<double>(json['confidence']),
+      isPrimary: serializer.fromJson<bool>(json['isPrimary']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<int>(id),
+      'detectionId': serializer.toJson<String>(detectionId),
+      'label': serializer.toJson<String>(label),
+      'confidence': serializer.toJson<double>(confidence),
+      'isPrimary': serializer.toJson<bool>(isPrimary),
+    };
+  }
+
+  DetectionLabel copyWith({
+    int? id,
+    String? detectionId,
+    String? label,
+    double? confidence,
+    bool? isPrimary,
+  }) => DetectionLabel(
+    id: id ?? this.id,
+    detectionId: detectionId ?? this.detectionId,
+    label: label ?? this.label,
+    confidence: confidence ?? this.confidence,
+    isPrimary: isPrimary ?? this.isPrimary,
+  );
+  DetectionLabel copyWithCompanion(DetectionLabelsCompanion data) {
+    return DetectionLabel(
+      id: data.id.present ? data.id.value : this.id,
+      detectionId: data.detectionId.present
+          ? data.detectionId.value
+          : this.detectionId,
+      label: data.label.present ? data.label.value : this.label,
+      confidence: data.confidence.present
+          ? data.confidence.value
+          : this.confidence,
+      isPrimary: data.isPrimary.present ? data.isPrimary.value : this.isPrimary,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('DetectionLabel(')
+          ..write('id: $id, ')
+          ..write('detectionId: $detectionId, ')
+          ..write('label: $label, ')
+          ..write('confidence: $confidence, ')
+          ..write('isPrimary: $isPrimary')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode =>
+      Object.hash(id, detectionId, label, confidence, isPrimary);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is DetectionLabel &&
+          other.id == this.id &&
+          other.detectionId == this.detectionId &&
+          other.label == this.label &&
+          other.confidence == this.confidence &&
+          other.isPrimary == this.isPrimary);
+}
+
+class DetectionLabelsCompanion extends UpdateCompanion<DetectionLabel> {
+  final Value<int> id;
+  final Value<String> detectionId;
+  final Value<String> label;
+  final Value<double> confidence;
+  final Value<bool> isPrimary;
+  const DetectionLabelsCompanion({
+    this.id = const Value.absent(),
+    this.detectionId = const Value.absent(),
+    this.label = const Value.absent(),
+    this.confidence = const Value.absent(),
+    this.isPrimary = const Value.absent(),
+  });
+  DetectionLabelsCompanion.insert({
+    this.id = const Value.absent(),
+    required String detectionId,
+    required String label,
+    this.confidence = const Value.absent(),
+    this.isPrimary = const Value.absent(),
+  }) : detectionId = Value(detectionId),
+       label = Value(label);
+  static Insertable<DetectionLabel> custom({
+    Expression<int>? id,
+    Expression<String>? detectionId,
+    Expression<String>? label,
+    Expression<double>? confidence,
+    Expression<bool>? isPrimary,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (detectionId != null) 'detection_id': detectionId,
+      if (label != null) 'label': label,
+      if (confidence != null) 'confidence': confidence,
+      if (isPrimary != null) 'is_primary': isPrimary,
+    });
+  }
+
+  DetectionLabelsCompanion copyWith({
+    Value<int>? id,
+    Value<String>? detectionId,
+    Value<String>? label,
+    Value<double>? confidence,
+    Value<bool>? isPrimary,
+  }) {
+    return DetectionLabelsCompanion(
+      id: id ?? this.id,
+      detectionId: detectionId ?? this.detectionId,
+      label: label ?? this.label,
+      confidence: confidence ?? this.confidence,
+      isPrimary: isPrimary ?? this.isPrimary,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<int>(id.value);
+    }
+    if (detectionId.present) {
+      map['detection_id'] = Variable<String>(detectionId.value);
+    }
+    if (label.present) {
+      map['label'] = Variable<String>(label.value);
+    }
+    if (confidence.present) {
+      map['confidence'] = Variable<double>(confidence.value);
+    }
+    if (isPrimary.present) {
+      map['is_primary'] = Variable<bool>(isPrimary.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('DetectionLabelsCompanion(')
+          ..write('id: $id, ')
+          ..write('detectionId: $detectionId, ')
+          ..write('label: $label, ')
+          ..write('confidence: $confidence, ')
+          ..write('isPrimary: $isPrimary')
+          ..write(')'))
+        .toString();
+  }
+}
+
 abstract class _$AppDatabase extends GeneratedDatabase {
   _$AppDatabase(QueryExecutor e) : super(e);
   $AppDatabaseManager get managers => $AppDatabaseManager(this);
   late final $InventoryItemsTable inventoryItems = $InventoryItemsTable(this);
   late final $LabelsTable labels = $LabelsTable(this);
   late final $LabelSearchFtsTable labelSearchFts = $LabelSearchFtsTable(this);
+  late final $ScenesTable scenes = $ScenesTable(this);
+  late final $DetectionsTable detections = $DetectionsTable(this);
+  late final $DetectionLabelsTable detectionLabels = $DetectionLabelsTable(
+    this,
+  );
   @override
   Iterable<TableInfo<Table, Object?>> get allTables =>
       allSchemaEntities.whereType<TableInfo<Table, Object?>>();
@@ -1220,6 +2912,9 @@ abstract class _$AppDatabase extends GeneratedDatabase {
     inventoryItems,
     labels,
     labelSearchFts,
+    scenes,
+    detections,
+    detectionLabels,
   ];
   @override
   StreamQueryUpdateRules get streamUpdateRules => const StreamQueryUpdateRules([
@@ -1241,6 +2936,8 @@ typedef $$InventoryItemsTableCreateCompanionBuilder =
       Value<String?> serverPhotoUrl,
       required String detectionData,
       Value<String> status,
+      Value<String?> sceneId,
+      Value<bool> isFlagged,
       required DateTime createdAt,
       required DateTime updatedAt,
     });
@@ -1252,6 +2949,8 @@ typedef $$InventoryItemsTableUpdateCompanionBuilder =
       Value<String?> serverPhotoUrl,
       Value<String> detectionData,
       Value<String> status,
+      Value<String?> sceneId,
+      Value<bool> isFlagged,
       Value<DateTime> createdAt,
       Value<DateTime> updatedAt,
     });
@@ -1320,6 +3019,16 @@ class $$InventoryItemsTableFilterComposer
 
   ColumnFilters<String> get status => $composableBuilder(
     column: $table.status,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get sceneId => $composableBuilder(
+    column: $table.sceneId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get isFlagged => $composableBuilder(
+    column: $table.isFlagged,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -1398,6 +3107,16 @@ class $$InventoryItemsTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<String> get sceneId => $composableBuilder(
+    column: $table.sceneId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<bool> get isFlagged => $composableBuilder(
+    column: $table.isFlagged,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<DateTime> get createdAt => $composableBuilder(
     column: $table.createdAt,
     builder: (column) => ColumnOrderings(column),
@@ -1441,6 +3160,12 @@ class $$InventoryItemsTableAnnotationComposer
 
   GeneratedColumn<String> get status =>
       $composableBuilder(column: $table.status, builder: (column) => column);
+
+  GeneratedColumn<String> get sceneId =>
+      $composableBuilder(column: $table.sceneId, builder: (column) => column);
+
+  GeneratedColumn<bool> get isFlagged =>
+      $composableBuilder(column: $table.isFlagged, builder: (column) => column);
 
   GeneratedColumn<DateTime> get createdAt =>
       $composableBuilder(column: $table.createdAt, builder: (column) => column);
@@ -1510,6 +3235,8 @@ class $$InventoryItemsTableTableManager
                 Value<String?> serverPhotoUrl = const Value.absent(),
                 Value<String> detectionData = const Value.absent(),
                 Value<String> status = const Value.absent(),
+                Value<String?> sceneId = const Value.absent(),
+                Value<bool> isFlagged = const Value.absent(),
                 Value<DateTime> createdAt = const Value.absent(),
                 Value<DateTime> updatedAt = const Value.absent(),
               }) => InventoryItemsCompanion(
@@ -1519,6 +3246,8 @@ class $$InventoryItemsTableTableManager
                 serverPhotoUrl: serverPhotoUrl,
                 detectionData: detectionData,
                 status: status,
+                sceneId: sceneId,
+                isFlagged: isFlagged,
                 createdAt: createdAt,
                 updatedAt: updatedAt,
               ),
@@ -1530,6 +3259,8 @@ class $$InventoryItemsTableTableManager
                 Value<String?> serverPhotoUrl = const Value.absent(),
                 required String detectionData,
                 Value<String> status = const Value.absent(),
+                Value<String?> sceneId = const Value.absent(),
+                Value<bool> isFlagged = const Value.absent(),
                 required DateTime createdAt,
                 required DateTime updatedAt,
               }) => InventoryItemsCompanion.insert(
@@ -1539,6 +3270,8 @@ class $$InventoryItemsTableTableManager
                 serverPhotoUrl: serverPhotoUrl,
                 detectionData: detectionData,
                 status: status,
+                sceneId: sceneId,
+                isFlagged: isFlagged,
                 createdAt: createdAt,
                 updatedAt: updatedAt,
               ),
@@ -2092,6 +3825,1214 @@ typedef $$LabelSearchFtsTableProcessedTableManager =
       LabelSearchEntry,
       PrefetchHooks Function()
     >;
+typedef $$ScenesTableCreateCompanionBuilder =
+    ScenesCompanion Function({
+      required String id,
+      required String captureSessionId,
+      Value<double> agreementCoverage,
+      Value<double> agreementPrecision,
+      Value<bool> selfDiagnosisTriggered,
+      Value<int> rerunDepth,
+      Value<String?> flagReason,
+      required DateTime createdAt,
+      Value<int> rowid,
+    });
+typedef $$ScenesTableUpdateCompanionBuilder =
+    ScenesCompanion Function({
+      Value<String> id,
+      Value<String> captureSessionId,
+      Value<double> agreementCoverage,
+      Value<double> agreementPrecision,
+      Value<bool> selfDiagnosisTriggered,
+      Value<int> rerunDepth,
+      Value<String?> flagReason,
+      Value<DateTime> createdAt,
+      Value<int> rowid,
+    });
+
+final class $$ScenesTableReferences
+    extends BaseReferences<_$AppDatabase, $ScenesTable, Scene> {
+  $$ScenesTableReferences(super.$_db, super.$_table, super.$_typedResult);
+
+  static MultiTypedResultKey<$DetectionsTable, List<Detection>>
+  _detectionsRefsTable(_$AppDatabase db) => MultiTypedResultKey.fromTable(
+    db.detections,
+    aliasName: $_aliasNameGenerator(db.scenes.id, db.detections.sceneId),
+  );
+
+  $$DetectionsTableProcessedTableManager get detectionsRefs {
+    final manager = $$DetectionsTableTableManager(
+      $_db,
+      $_db.detections,
+    ).filter((f) => f.sceneId.id.sqlEquals($_itemColumn<String>('id')!));
+
+    final cache = $_typedResult.readTableOrNull(_detectionsRefsTable($_db));
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: cache),
+    );
+  }
+}
+
+class $$ScenesTableFilterComposer
+    extends Composer<_$AppDatabase, $ScenesTable> {
+  $$ScenesTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<String> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get captureSessionId => $composableBuilder(
+    column: $table.captureSessionId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<double> get agreementCoverage => $composableBuilder(
+    column: $table.agreementCoverage,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<double> get agreementPrecision => $composableBuilder(
+    column: $table.agreementPrecision,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get selfDiagnosisTriggered => $composableBuilder(
+    column: $table.selfDiagnosisTriggered,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get rerunDepth => $composableBuilder(
+    column: $table.rerunDepth,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get flagReason => $composableBuilder(
+    column: $table.flagReason,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get createdAt => $composableBuilder(
+    column: $table.createdAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  Expression<bool> detectionsRefs(
+    Expression<bool> Function($$DetectionsTableFilterComposer f) f,
+  ) {
+    final $$DetectionsTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.detections,
+      getReferencedColumn: (t) => t.sceneId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$DetectionsTableFilterComposer(
+            $db: $db,
+            $table: $db.detections,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
+  }
+}
+
+class $$ScenesTableOrderingComposer
+    extends Composer<_$AppDatabase, $ScenesTable> {
+  $$ScenesTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<String> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get captureSessionId => $composableBuilder(
+    column: $table.captureSessionId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<double> get agreementCoverage => $composableBuilder(
+    column: $table.agreementCoverage,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<double> get agreementPrecision => $composableBuilder(
+    column: $table.agreementPrecision,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<bool> get selfDiagnosisTriggered => $composableBuilder(
+    column: $table.selfDiagnosisTriggered,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get rerunDepth => $composableBuilder(
+    column: $table.rerunDepth,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get flagReason => $composableBuilder(
+    column: $table.flagReason,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get createdAt => $composableBuilder(
+    column: $table.createdAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$ScenesTableAnnotationComposer
+    extends Composer<_$AppDatabase, $ScenesTable> {
+  $$ScenesTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<String> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<String> get captureSessionId => $composableBuilder(
+    column: $table.captureSessionId,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<double> get agreementCoverage => $composableBuilder(
+    column: $table.agreementCoverage,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<double> get agreementPrecision => $composableBuilder(
+    column: $table.agreementPrecision,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<bool> get selfDiagnosisTriggered => $composableBuilder(
+    column: $table.selfDiagnosisTriggered,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get rerunDepth => $composableBuilder(
+    column: $table.rerunDepth,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get flagReason => $composableBuilder(
+    column: $table.flagReason,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<DateTime> get createdAt =>
+      $composableBuilder(column: $table.createdAt, builder: (column) => column);
+
+  Expression<T> detectionsRefs<T extends Object>(
+    Expression<T> Function($$DetectionsTableAnnotationComposer a) f,
+  ) {
+    final $$DetectionsTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.detections,
+      getReferencedColumn: (t) => t.sceneId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$DetectionsTableAnnotationComposer(
+            $db: $db,
+            $table: $db.detections,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
+  }
+}
+
+class $$ScenesTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $ScenesTable,
+          Scene,
+          $$ScenesTableFilterComposer,
+          $$ScenesTableOrderingComposer,
+          $$ScenesTableAnnotationComposer,
+          $$ScenesTableCreateCompanionBuilder,
+          $$ScenesTableUpdateCompanionBuilder,
+          (Scene, $$ScenesTableReferences),
+          Scene,
+          PrefetchHooks Function({bool detectionsRefs})
+        > {
+  $$ScenesTableTableManager(_$AppDatabase db, $ScenesTable table)
+    : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$ScenesTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$ScenesTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$ScenesTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback:
+              ({
+                Value<String> id = const Value.absent(),
+                Value<String> captureSessionId = const Value.absent(),
+                Value<double> agreementCoverage = const Value.absent(),
+                Value<double> agreementPrecision = const Value.absent(),
+                Value<bool> selfDiagnosisTriggered = const Value.absent(),
+                Value<int> rerunDepth = const Value.absent(),
+                Value<String?> flagReason = const Value.absent(),
+                Value<DateTime> createdAt = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => ScenesCompanion(
+                id: id,
+                captureSessionId: captureSessionId,
+                agreementCoverage: agreementCoverage,
+                agreementPrecision: agreementPrecision,
+                selfDiagnosisTriggered: selfDiagnosisTriggered,
+                rerunDepth: rerunDepth,
+                flagReason: flagReason,
+                createdAt: createdAt,
+                rowid: rowid,
+              ),
+          createCompanionCallback:
+              ({
+                required String id,
+                required String captureSessionId,
+                Value<double> agreementCoverage = const Value.absent(),
+                Value<double> agreementPrecision = const Value.absent(),
+                Value<bool> selfDiagnosisTriggered = const Value.absent(),
+                Value<int> rerunDepth = const Value.absent(),
+                Value<String?> flagReason = const Value.absent(),
+                required DateTime createdAt,
+                Value<int> rowid = const Value.absent(),
+              }) => ScenesCompanion.insert(
+                id: id,
+                captureSessionId: captureSessionId,
+                agreementCoverage: agreementCoverage,
+                agreementPrecision: agreementPrecision,
+                selfDiagnosisTriggered: selfDiagnosisTriggered,
+                rerunDepth: rerunDepth,
+                flagReason: flagReason,
+                createdAt: createdAt,
+                rowid: rowid,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map(
+                (e) =>
+                    (e.readTable(table), $$ScenesTableReferences(db, table, e)),
+              )
+              .toList(),
+          prefetchHooksCallback: ({detectionsRefs = false}) {
+            return PrefetchHooks(
+              db: db,
+              explicitlyWatchedTables: [if (detectionsRefs) db.detections],
+              addJoins: null,
+              getPrefetchedDataCallback: (items) async {
+                return [
+                  if (detectionsRefs)
+                    await $_getPrefetchedData<Scene, $ScenesTable, Detection>(
+                      currentTable: table,
+                      referencedTable: $$ScenesTableReferences
+                          ._detectionsRefsTable(db),
+                      managerFromTypedResult: (p0) =>
+                          $$ScenesTableReferences(db, table, p0).detectionsRefs,
+                      referencedItemsForCurrentItem: (item, referencedItems) =>
+                          referencedItems.where((e) => e.sceneId == item.id),
+                      typedResults: items,
+                    ),
+                ];
+              },
+            );
+          },
+        ),
+      );
+}
+
+typedef $$ScenesTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $ScenesTable,
+      Scene,
+      $$ScenesTableFilterComposer,
+      $$ScenesTableOrderingComposer,
+      $$ScenesTableAnnotationComposer,
+      $$ScenesTableCreateCompanionBuilder,
+      $$ScenesTableUpdateCompanionBuilder,
+      (Scene, $$ScenesTableReferences),
+      Scene,
+      PrefetchHooks Function({bool detectionsRefs})
+    >;
+typedef $$DetectionsTableCreateCompanionBuilder =
+    DetectionsCompanion Function({
+      required String id,
+      required String sceneId,
+      required String bbox,
+      Value<Uint8List?> maskRle,
+      Value<Uint8List?> cropEmbeddingI8,
+      Value<double> agreementScore,
+      Value<String> contributingSignals,
+      Value<String> vlmStructuredAttributes,
+      required String primaryLabel,
+      Value<double> confidence,
+      Value<int> rowid,
+    });
+typedef $$DetectionsTableUpdateCompanionBuilder =
+    DetectionsCompanion Function({
+      Value<String> id,
+      Value<String> sceneId,
+      Value<String> bbox,
+      Value<Uint8List?> maskRle,
+      Value<Uint8List?> cropEmbeddingI8,
+      Value<double> agreementScore,
+      Value<String> contributingSignals,
+      Value<String> vlmStructuredAttributes,
+      Value<String> primaryLabel,
+      Value<double> confidence,
+      Value<int> rowid,
+    });
+
+final class $$DetectionsTableReferences
+    extends BaseReferences<_$AppDatabase, $DetectionsTable, Detection> {
+  $$DetectionsTableReferences(super.$_db, super.$_table, super.$_typedResult);
+
+  static $ScenesTable _sceneIdTable(_$AppDatabase db) => db.scenes.createAlias(
+    $_aliasNameGenerator(db.detections.sceneId, db.scenes.id),
+  );
+
+  $$ScenesTableProcessedTableManager get sceneId {
+    final $_column = $_itemColumn<String>('scene_id')!;
+
+    final manager = $$ScenesTableTableManager(
+      $_db,
+      $_db.scenes,
+    ).filter((f) => f.id.sqlEquals($_column));
+    final item = $_typedResult.readTableOrNull(_sceneIdTable($_db));
+    if (item == null) return manager;
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: [item]),
+    );
+  }
+
+  static MultiTypedResultKey<$DetectionLabelsTable, List<DetectionLabel>>
+  _detectionLabelsRefsTable(_$AppDatabase db) => MultiTypedResultKey.fromTable(
+    db.detectionLabels,
+    aliasName: $_aliasNameGenerator(
+      db.detections.id,
+      db.detectionLabels.detectionId,
+    ),
+  );
+
+  $$DetectionLabelsTableProcessedTableManager get detectionLabelsRefs {
+    final manager = $$DetectionLabelsTableTableManager(
+      $_db,
+      $_db.detectionLabels,
+    ).filter((f) => f.detectionId.id.sqlEquals($_itemColumn<String>('id')!));
+
+    final cache = $_typedResult.readTableOrNull(
+      _detectionLabelsRefsTable($_db),
+    );
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: cache),
+    );
+  }
+}
+
+class $$DetectionsTableFilterComposer
+    extends Composer<_$AppDatabase, $DetectionsTable> {
+  $$DetectionsTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<String> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get bbox => $composableBuilder(
+    column: $table.bbox,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<Uint8List> get maskRle => $composableBuilder(
+    column: $table.maskRle,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<Uint8List> get cropEmbeddingI8 => $composableBuilder(
+    column: $table.cropEmbeddingI8,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<double> get agreementScore => $composableBuilder(
+    column: $table.agreementScore,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get contributingSignals => $composableBuilder(
+    column: $table.contributingSignals,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get vlmStructuredAttributes => $composableBuilder(
+    column: $table.vlmStructuredAttributes,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get primaryLabel => $composableBuilder(
+    column: $table.primaryLabel,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<double> get confidence => $composableBuilder(
+    column: $table.confidence,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  $$ScenesTableFilterComposer get sceneId {
+    final $$ScenesTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.sceneId,
+      referencedTable: $db.scenes,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$ScenesTableFilterComposer(
+            $db: $db,
+            $table: $db.scenes,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+
+  Expression<bool> detectionLabelsRefs(
+    Expression<bool> Function($$DetectionLabelsTableFilterComposer f) f,
+  ) {
+    final $$DetectionLabelsTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.detectionLabels,
+      getReferencedColumn: (t) => t.detectionId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$DetectionLabelsTableFilterComposer(
+            $db: $db,
+            $table: $db.detectionLabels,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
+  }
+}
+
+class $$DetectionsTableOrderingComposer
+    extends Composer<_$AppDatabase, $DetectionsTable> {
+  $$DetectionsTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<String> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get bbox => $composableBuilder(
+    column: $table.bbox,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<Uint8List> get maskRle => $composableBuilder(
+    column: $table.maskRle,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<Uint8List> get cropEmbeddingI8 => $composableBuilder(
+    column: $table.cropEmbeddingI8,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<double> get agreementScore => $composableBuilder(
+    column: $table.agreementScore,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get contributingSignals => $composableBuilder(
+    column: $table.contributingSignals,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get vlmStructuredAttributes => $composableBuilder(
+    column: $table.vlmStructuredAttributes,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get primaryLabel => $composableBuilder(
+    column: $table.primaryLabel,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<double> get confidence => $composableBuilder(
+    column: $table.confidence,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  $$ScenesTableOrderingComposer get sceneId {
+    final $$ScenesTableOrderingComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.sceneId,
+      referencedTable: $db.scenes,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$ScenesTableOrderingComposer(
+            $db: $db,
+            $table: $db.scenes,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$DetectionsTableAnnotationComposer
+    extends Composer<_$AppDatabase, $DetectionsTable> {
+  $$DetectionsTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<String> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<String> get bbox =>
+      $composableBuilder(column: $table.bbox, builder: (column) => column);
+
+  GeneratedColumn<Uint8List> get maskRle =>
+      $composableBuilder(column: $table.maskRle, builder: (column) => column);
+
+  GeneratedColumn<Uint8List> get cropEmbeddingI8 => $composableBuilder(
+    column: $table.cropEmbeddingI8,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<double> get agreementScore => $composableBuilder(
+    column: $table.agreementScore,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get contributingSignals => $composableBuilder(
+    column: $table.contributingSignals,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get vlmStructuredAttributes => $composableBuilder(
+    column: $table.vlmStructuredAttributes,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get primaryLabel => $composableBuilder(
+    column: $table.primaryLabel,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<double> get confidence => $composableBuilder(
+    column: $table.confidence,
+    builder: (column) => column,
+  );
+
+  $$ScenesTableAnnotationComposer get sceneId {
+    final $$ScenesTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.sceneId,
+      referencedTable: $db.scenes,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$ScenesTableAnnotationComposer(
+            $db: $db,
+            $table: $db.scenes,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+
+  Expression<T> detectionLabelsRefs<T extends Object>(
+    Expression<T> Function($$DetectionLabelsTableAnnotationComposer a) f,
+  ) {
+    final $$DetectionLabelsTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.detectionLabels,
+      getReferencedColumn: (t) => t.detectionId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$DetectionLabelsTableAnnotationComposer(
+            $db: $db,
+            $table: $db.detectionLabels,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
+  }
+}
+
+class $$DetectionsTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $DetectionsTable,
+          Detection,
+          $$DetectionsTableFilterComposer,
+          $$DetectionsTableOrderingComposer,
+          $$DetectionsTableAnnotationComposer,
+          $$DetectionsTableCreateCompanionBuilder,
+          $$DetectionsTableUpdateCompanionBuilder,
+          (Detection, $$DetectionsTableReferences),
+          Detection,
+          PrefetchHooks Function({bool sceneId, bool detectionLabelsRefs})
+        > {
+  $$DetectionsTableTableManager(_$AppDatabase db, $DetectionsTable table)
+    : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$DetectionsTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$DetectionsTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$DetectionsTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback:
+              ({
+                Value<String> id = const Value.absent(),
+                Value<String> sceneId = const Value.absent(),
+                Value<String> bbox = const Value.absent(),
+                Value<Uint8List?> maskRle = const Value.absent(),
+                Value<Uint8List?> cropEmbeddingI8 = const Value.absent(),
+                Value<double> agreementScore = const Value.absent(),
+                Value<String> contributingSignals = const Value.absent(),
+                Value<String> vlmStructuredAttributes = const Value.absent(),
+                Value<String> primaryLabel = const Value.absent(),
+                Value<double> confidence = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => DetectionsCompanion(
+                id: id,
+                sceneId: sceneId,
+                bbox: bbox,
+                maskRle: maskRle,
+                cropEmbeddingI8: cropEmbeddingI8,
+                agreementScore: agreementScore,
+                contributingSignals: contributingSignals,
+                vlmStructuredAttributes: vlmStructuredAttributes,
+                primaryLabel: primaryLabel,
+                confidence: confidence,
+                rowid: rowid,
+              ),
+          createCompanionCallback:
+              ({
+                required String id,
+                required String sceneId,
+                required String bbox,
+                Value<Uint8List?> maskRle = const Value.absent(),
+                Value<Uint8List?> cropEmbeddingI8 = const Value.absent(),
+                Value<double> agreementScore = const Value.absent(),
+                Value<String> contributingSignals = const Value.absent(),
+                Value<String> vlmStructuredAttributes = const Value.absent(),
+                required String primaryLabel,
+                Value<double> confidence = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => DetectionsCompanion.insert(
+                id: id,
+                sceneId: sceneId,
+                bbox: bbox,
+                maskRle: maskRle,
+                cropEmbeddingI8: cropEmbeddingI8,
+                agreementScore: agreementScore,
+                contributingSignals: contributingSignals,
+                vlmStructuredAttributes: vlmStructuredAttributes,
+                primaryLabel: primaryLabel,
+                confidence: confidence,
+                rowid: rowid,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map(
+                (e) => (
+                  e.readTable(table),
+                  $$DetectionsTableReferences(db, table, e),
+                ),
+              )
+              .toList(),
+          prefetchHooksCallback:
+              ({sceneId = false, detectionLabelsRefs = false}) {
+                return PrefetchHooks(
+                  db: db,
+                  explicitlyWatchedTables: [
+                    if (detectionLabelsRefs) db.detectionLabels,
+                  ],
+                  addJoins:
+                      <
+                        T extends TableManagerState<
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic
+                        >
+                      >(state) {
+                        if (sceneId) {
+                          state =
+                              state.withJoin(
+                                    currentTable: table,
+                                    currentColumn: table.sceneId,
+                                    referencedTable: $$DetectionsTableReferences
+                                        ._sceneIdTable(db),
+                                    referencedColumn:
+                                        $$DetectionsTableReferences
+                                            ._sceneIdTable(db)
+                                            .id,
+                                  )
+                                  as T;
+                        }
+
+                        return state;
+                      },
+                  getPrefetchedDataCallback: (items) async {
+                    return [
+                      if (detectionLabelsRefs)
+                        await $_getPrefetchedData<
+                          Detection,
+                          $DetectionsTable,
+                          DetectionLabel
+                        >(
+                          currentTable: table,
+                          referencedTable: $$DetectionsTableReferences
+                              ._detectionLabelsRefsTable(db),
+                          managerFromTypedResult: (p0) =>
+                              $$DetectionsTableReferences(
+                                db,
+                                table,
+                                p0,
+                              ).detectionLabelsRefs,
+                          referencedItemsForCurrentItem:
+                              (item, referencedItems) => referencedItems.where(
+                                (e) => e.detectionId == item.id,
+                              ),
+                          typedResults: items,
+                        ),
+                    ];
+                  },
+                );
+              },
+        ),
+      );
+}
+
+typedef $$DetectionsTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $DetectionsTable,
+      Detection,
+      $$DetectionsTableFilterComposer,
+      $$DetectionsTableOrderingComposer,
+      $$DetectionsTableAnnotationComposer,
+      $$DetectionsTableCreateCompanionBuilder,
+      $$DetectionsTableUpdateCompanionBuilder,
+      (Detection, $$DetectionsTableReferences),
+      Detection,
+      PrefetchHooks Function({bool sceneId, bool detectionLabelsRefs})
+    >;
+typedef $$DetectionLabelsTableCreateCompanionBuilder =
+    DetectionLabelsCompanion Function({
+      Value<int> id,
+      required String detectionId,
+      required String label,
+      Value<double> confidence,
+      Value<bool> isPrimary,
+    });
+typedef $$DetectionLabelsTableUpdateCompanionBuilder =
+    DetectionLabelsCompanion Function({
+      Value<int> id,
+      Value<String> detectionId,
+      Value<String> label,
+      Value<double> confidence,
+      Value<bool> isPrimary,
+    });
+
+final class $$DetectionLabelsTableReferences
+    extends
+        BaseReferences<_$AppDatabase, $DetectionLabelsTable, DetectionLabel> {
+  $$DetectionLabelsTableReferences(
+    super.$_db,
+    super.$_table,
+    super.$_typedResult,
+  );
+
+  static $DetectionsTable _detectionIdTable(_$AppDatabase db) =>
+      db.detections.createAlias(
+        $_aliasNameGenerator(db.detectionLabels.detectionId, db.detections.id),
+      );
+
+  $$DetectionsTableProcessedTableManager get detectionId {
+    final $_column = $_itemColumn<String>('detection_id')!;
+
+    final manager = $$DetectionsTableTableManager(
+      $_db,
+      $_db.detections,
+    ).filter((f) => f.id.sqlEquals($_column));
+    final item = $_typedResult.readTableOrNull(_detectionIdTable($_db));
+    if (item == null) return manager;
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: [item]),
+    );
+  }
+}
+
+class $$DetectionLabelsTableFilterComposer
+    extends Composer<_$AppDatabase, $DetectionLabelsTable> {
+  $$DetectionLabelsTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get label => $composableBuilder(
+    column: $table.label,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<double> get confidence => $composableBuilder(
+    column: $table.confidence,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get isPrimary => $composableBuilder(
+    column: $table.isPrimary,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  $$DetectionsTableFilterComposer get detectionId {
+    final $$DetectionsTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.detectionId,
+      referencedTable: $db.detections,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$DetectionsTableFilterComposer(
+            $db: $db,
+            $table: $db.detections,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$DetectionLabelsTableOrderingComposer
+    extends Composer<_$AppDatabase, $DetectionLabelsTable> {
+  $$DetectionLabelsTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get label => $composableBuilder(
+    column: $table.label,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<double> get confidence => $composableBuilder(
+    column: $table.confidence,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<bool> get isPrimary => $composableBuilder(
+    column: $table.isPrimary,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  $$DetectionsTableOrderingComposer get detectionId {
+    final $$DetectionsTableOrderingComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.detectionId,
+      referencedTable: $db.detections,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$DetectionsTableOrderingComposer(
+            $db: $db,
+            $table: $db.detections,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$DetectionLabelsTableAnnotationComposer
+    extends Composer<_$AppDatabase, $DetectionLabelsTable> {
+  $$DetectionLabelsTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<int> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<String> get label =>
+      $composableBuilder(column: $table.label, builder: (column) => column);
+
+  GeneratedColumn<double> get confidence => $composableBuilder(
+    column: $table.confidence,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<bool> get isPrimary =>
+      $composableBuilder(column: $table.isPrimary, builder: (column) => column);
+
+  $$DetectionsTableAnnotationComposer get detectionId {
+    final $$DetectionsTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.detectionId,
+      referencedTable: $db.detections,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$DetectionsTableAnnotationComposer(
+            $db: $db,
+            $table: $db.detections,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$DetectionLabelsTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $DetectionLabelsTable,
+          DetectionLabel,
+          $$DetectionLabelsTableFilterComposer,
+          $$DetectionLabelsTableOrderingComposer,
+          $$DetectionLabelsTableAnnotationComposer,
+          $$DetectionLabelsTableCreateCompanionBuilder,
+          $$DetectionLabelsTableUpdateCompanionBuilder,
+          (DetectionLabel, $$DetectionLabelsTableReferences),
+          DetectionLabel,
+          PrefetchHooks Function({bool detectionId})
+        > {
+  $$DetectionLabelsTableTableManager(
+    _$AppDatabase db,
+    $DetectionLabelsTable table,
+  ) : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$DetectionLabelsTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$DetectionLabelsTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$DetectionLabelsTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                Value<String> detectionId = const Value.absent(),
+                Value<String> label = const Value.absent(),
+                Value<double> confidence = const Value.absent(),
+                Value<bool> isPrimary = const Value.absent(),
+              }) => DetectionLabelsCompanion(
+                id: id,
+                detectionId: detectionId,
+                label: label,
+                confidence: confidence,
+                isPrimary: isPrimary,
+              ),
+          createCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                required String detectionId,
+                required String label,
+                Value<double> confidence = const Value.absent(),
+                Value<bool> isPrimary = const Value.absent(),
+              }) => DetectionLabelsCompanion.insert(
+                id: id,
+                detectionId: detectionId,
+                label: label,
+                confidence: confidence,
+                isPrimary: isPrimary,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map(
+                (e) => (
+                  e.readTable(table),
+                  $$DetectionLabelsTableReferences(db, table, e),
+                ),
+              )
+              .toList(),
+          prefetchHooksCallback: ({detectionId = false}) {
+            return PrefetchHooks(
+              db: db,
+              explicitlyWatchedTables: [],
+              addJoins:
+                  <
+                    T extends TableManagerState<
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic
+                    >
+                  >(state) {
+                    if (detectionId) {
+                      state =
+                          state.withJoin(
+                                currentTable: table,
+                                currentColumn: table.detectionId,
+                                referencedTable:
+                                    $$DetectionLabelsTableReferences
+                                        ._detectionIdTable(db),
+                                referencedColumn:
+                                    $$DetectionLabelsTableReferences
+                                        ._detectionIdTable(db)
+                                        .id,
+                              )
+                              as T;
+                    }
+
+                    return state;
+                  },
+              getPrefetchedDataCallback: (items) async {
+                return [];
+              },
+            );
+          },
+        ),
+      );
+}
+
+typedef $$DetectionLabelsTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $DetectionLabelsTable,
+      DetectionLabel,
+      $$DetectionLabelsTableFilterComposer,
+      $$DetectionLabelsTableOrderingComposer,
+      $$DetectionLabelsTableAnnotationComposer,
+      $$DetectionLabelsTableCreateCompanionBuilder,
+      $$DetectionLabelsTableUpdateCompanionBuilder,
+      (DetectionLabel, $$DetectionLabelsTableReferences),
+      DetectionLabel,
+      PrefetchHooks Function({bool detectionId})
+    >;
 
 class $AppDatabaseManager {
   final _$AppDatabase _db;
@@ -2102,4 +5043,10 @@ class $AppDatabaseManager {
       $$LabelsTableTableManager(_db, _db.labels);
   $$LabelSearchFtsTableTableManager get labelSearchFts =>
       $$LabelSearchFtsTableTableManager(_db, _db.labelSearchFts);
+  $$ScenesTableTableManager get scenes =>
+      $$ScenesTableTableManager(_db, _db.scenes);
+  $$DetectionsTableTableManager get detections =>
+      $$DetectionsTableTableManager(_db, _db.detections);
+  $$DetectionLabelsTableTableManager get detectionLabels =>
+      $$DetectionLabelsTableTableManager(_db, _db.detectionLabels);
 }

@@ -7,7 +7,7 @@ void main() {
       const DetectionSuccess state = DetectionSuccess(
         detections: [],
         processingTimeMs: 100,
-        detector: 'coreml',
+        detector: 'pipeline',
         classifier: 'none',
       );
       expect(state.isEnriching, false);
@@ -17,7 +17,7 @@ void main() {
       const DetectionSuccess state = DetectionSuccess(
         detections: [],
         processingTimeMs: 0,
-        detector: 'coreml',
+        detector: 'pipeline',
         classifier: 'none',
         isEnriching: true,
       );

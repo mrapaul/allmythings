@@ -20,7 +20,8 @@ import UIKit
             return
         }
         let messenger = registrar.messenger()
-        CoreMLDetector.register(messenger: messenger)
+        // CoreMLDetector removed in section-08 — phone always calls the Mac
+        // pipeline-service via the Fastify edge.
         MacServerDiscovery.register(messenger: messenger)
     }
 }
