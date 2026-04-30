@@ -11,16 +11,12 @@ class $InventoryItemsTable extends InventoryItems
   $InventoryItemsTable(this.attachedDatabase, [this._alias]);
   static const VerificationMeta _idMeta = const VerificationMeta('id');
   @override
-  late final GeneratedColumn<int> id = GeneratedColumn<int>(
+  late final GeneratedColumn<String> id = GeneratedColumn<String>(
     'id',
     aliasedName,
     false,
-    hasAutoIncrement: true,
-    type: DriftSqlType.int,
-    requiredDuringInsert: false,
-    defaultConstraints: GeneratedColumn.constraintIsAlways(
-      'PRIMARY KEY AUTOINCREMENT',
-    ),
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
   );
   static const VerificationMeta _photoPathMeta = const VerificationMeta(
     'photoPath',
@@ -76,17 +72,6 @@ class $InventoryItemsTable extends InventoryItems
     requiredDuringInsert: false,
     defaultValue: const Constant('completed'),
   );
-  static const VerificationMeta _sceneIdMeta = const VerificationMeta(
-    'sceneId',
-  );
-  @override
-  late final GeneratedColumn<String> sceneId = GeneratedColumn<String>(
-    'scene_id',
-    aliasedName,
-    true,
-    type: DriftSqlType.string,
-    requiredDuringInsert: false,
-  );
   static const VerificationMeta _isFlaggedMeta = const VerificationMeta(
     'isFlagged',
   );
@@ -132,7 +117,6 @@ class $InventoryItemsTable extends InventoryItems
     serverPhotoUrl,
     detectionData,
     status,
-    sceneId,
     isFlagged,
     createdAt,
     updatedAt,
@@ -151,6 +135,8 @@ class $InventoryItemsTable extends InventoryItems
     final data = instance.toColumns(true);
     if (data.containsKey('id')) {
       context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    } else if (isInserting) {
+      context.missing(_idMeta);
     }
     if (data.containsKey('photo_path')) {
       context.handle(
@@ -197,12 +183,6 @@ class $InventoryItemsTable extends InventoryItems
         status.isAcceptableOrUnknown(data['status']!, _statusMeta),
       );
     }
-    if (data.containsKey('scene_id')) {
-      context.handle(
-        _sceneIdMeta,
-        sceneId.isAcceptableOrUnknown(data['scene_id']!, _sceneIdMeta),
-      );
-    }
     if (data.containsKey('is_flagged')) {
       context.handle(
         _isFlaggedMeta,
@@ -235,7 +215,7 @@ class $InventoryItemsTable extends InventoryItems
     final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
     return InventoryItem(
       id: attachedDatabase.typeMapping.read(
-        DriftSqlType.int,
+        DriftSqlType.string,
         data['${effectivePrefix}id'],
       )!,
       photoPath: attachedDatabase.typeMapping.read(
@@ -258,10 +238,6 @@ class $InventoryItemsTable extends InventoryItems
         DriftSqlType.string,
         data['${effectivePrefix}status'],
       )!,
-      sceneId: attachedDatabase.typeMapping.read(
-        DriftSqlType.string,
-        data['${effectivePrefix}scene_id'],
-      ),
       isFlagged: attachedDatabase.typeMapping.read(
         DriftSqlType.bool,
         data['${effectivePrefix}is_flagged'],
@@ -284,8 +260,8 @@ class $InventoryItemsTable extends InventoryItems
 }
 
 class InventoryItem extends DataClass implements Insertable<InventoryItem> {
-  /// Primary key
-  final int id;
+  /// Primary key — IS the sceneId from cross_frame_dedup. One row per scene.
+  final String id;
 
   /// Absolute path to full-resolution photo
   final String photoPath;
@@ -301,11 +277,6 @@ class InventoryItem extends DataClass implements Insertable<InventoryItem> {
 
   /// Processing status (pending, completed, failed, flagged).
   final String status;
-
-  /// FK to scenes.id when the item belongs to a multi-frame burst (§5.3).
-  /// Nullable so legacy single-frame items continue to work during the
-  /// transition window.
-  final String? sceneId;
 
   /// True when self_diagnosis flagged the run (empty_detection_set,
   /// single_source_run, or diagnosis_budget_exhausted).
@@ -323,7 +294,6 @@ class InventoryItem extends DataClass implements Insertable<InventoryItem> {
     this.serverPhotoUrl,
     required this.detectionData,
     required this.status,
-    this.sceneId,
     required this.isFlagged,
     required this.createdAt,
     required this.updatedAt,
@@ -331,7 +301,7 @@ class InventoryItem extends DataClass implements Insertable<InventoryItem> {
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
     final map = <String, Expression>{};
-    map['id'] = Variable<int>(id);
+    map['id'] = Variable<String>(id);
     map['photo_path'] = Variable<String>(photoPath);
     map['thumbnail_path'] = Variable<String>(thumbnailPath);
     if (!nullToAbsent || serverPhotoUrl != null) {
@@ -339,9 +309,6 @@ class InventoryItem extends DataClass implements Insertable<InventoryItem> {
     }
     map['detection_data'] = Variable<String>(detectionData);
     map['status'] = Variable<String>(status);
-    if (!nullToAbsent || sceneId != null) {
-      map['scene_id'] = Variable<String>(sceneId);
-    }
     map['is_flagged'] = Variable<bool>(isFlagged);
     map['created_at'] = Variable<DateTime>(createdAt);
     map['updated_at'] = Variable<DateTime>(updatedAt);
@@ -358,9 +325,6 @@ class InventoryItem extends DataClass implements Insertable<InventoryItem> {
           : Value(serverPhotoUrl),
       detectionData: Value(detectionData),
       status: Value(status),
-      sceneId: sceneId == null && nullToAbsent
-          ? const Value.absent()
-          : Value(sceneId),
       isFlagged: Value(isFlagged),
       createdAt: Value(createdAt),
       updatedAt: Value(updatedAt),
@@ -373,13 +337,12 @@ class InventoryItem extends DataClass implements Insertable<InventoryItem> {
   }) {
     serializer ??= driftRuntimeOptions.defaultSerializer;
     return InventoryItem(
-      id: serializer.fromJson<int>(json['id']),
+      id: serializer.fromJson<String>(json['id']),
       photoPath: serializer.fromJson<String>(json['photoPath']),
       thumbnailPath: serializer.fromJson<String>(json['thumbnailPath']),
       serverPhotoUrl: serializer.fromJson<String?>(json['serverPhotoUrl']),
       detectionData: serializer.fromJson<String>(json['detectionData']),
       status: serializer.fromJson<String>(json['status']),
-      sceneId: serializer.fromJson<String?>(json['sceneId']),
       isFlagged: serializer.fromJson<bool>(json['isFlagged']),
       createdAt: serializer.fromJson<DateTime>(json['createdAt']),
       updatedAt: serializer.fromJson<DateTime>(json['updatedAt']),
@@ -389,13 +352,12 @@ class InventoryItem extends DataClass implements Insertable<InventoryItem> {
   Map<String, dynamic> toJson({ValueSerializer? serializer}) {
     serializer ??= driftRuntimeOptions.defaultSerializer;
     return <String, dynamic>{
-      'id': serializer.toJson<int>(id),
+      'id': serializer.toJson<String>(id),
       'photoPath': serializer.toJson<String>(photoPath),
       'thumbnailPath': serializer.toJson<String>(thumbnailPath),
       'serverPhotoUrl': serializer.toJson<String?>(serverPhotoUrl),
       'detectionData': serializer.toJson<String>(detectionData),
       'status': serializer.toJson<String>(status),
-      'sceneId': serializer.toJson<String?>(sceneId),
       'isFlagged': serializer.toJson<bool>(isFlagged),
       'createdAt': serializer.toJson<DateTime>(createdAt),
       'updatedAt': serializer.toJson<DateTime>(updatedAt),
@@ -403,13 +365,12 @@ class InventoryItem extends DataClass implements Insertable<InventoryItem> {
   }
 
   InventoryItem copyWith({
-    int? id,
+    String? id,
     String? photoPath,
     String? thumbnailPath,
     Value<String?> serverPhotoUrl = const Value.absent(),
     String? detectionData,
     String? status,
-    Value<String?> sceneId = const Value.absent(),
     bool? isFlagged,
     DateTime? createdAt,
     DateTime? updatedAt,
@@ -422,7 +383,6 @@ class InventoryItem extends DataClass implements Insertable<InventoryItem> {
         : this.serverPhotoUrl,
     detectionData: detectionData ?? this.detectionData,
     status: status ?? this.status,
-    sceneId: sceneId.present ? sceneId.value : this.sceneId,
     isFlagged: isFlagged ?? this.isFlagged,
     createdAt: createdAt ?? this.createdAt,
     updatedAt: updatedAt ?? this.updatedAt,
@@ -441,7 +401,6 @@ class InventoryItem extends DataClass implements Insertable<InventoryItem> {
           ? data.detectionData.value
           : this.detectionData,
       status: data.status.present ? data.status.value : this.status,
-      sceneId: data.sceneId.present ? data.sceneId.value : this.sceneId,
       isFlagged: data.isFlagged.present ? data.isFlagged.value : this.isFlagged,
       createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
       updatedAt: data.updatedAt.present ? data.updatedAt.value : this.updatedAt,
@@ -457,7 +416,6 @@ class InventoryItem extends DataClass implements Insertable<InventoryItem> {
           ..write('serverPhotoUrl: $serverPhotoUrl, ')
           ..write('detectionData: $detectionData, ')
           ..write('status: $status, ')
-          ..write('sceneId: $sceneId, ')
           ..write('isFlagged: $isFlagged, ')
           ..write('createdAt: $createdAt, ')
           ..write('updatedAt: $updatedAt')
@@ -473,7 +431,6 @@ class InventoryItem extends DataClass implements Insertable<InventoryItem> {
     serverPhotoUrl,
     detectionData,
     status,
-    sceneId,
     isFlagged,
     createdAt,
     updatedAt,
@@ -488,23 +445,22 @@ class InventoryItem extends DataClass implements Insertable<InventoryItem> {
           other.serverPhotoUrl == this.serverPhotoUrl &&
           other.detectionData == this.detectionData &&
           other.status == this.status &&
-          other.sceneId == this.sceneId &&
           other.isFlagged == this.isFlagged &&
           other.createdAt == this.createdAt &&
           other.updatedAt == this.updatedAt);
 }
 
 class InventoryItemsCompanion extends UpdateCompanion<InventoryItem> {
-  final Value<int> id;
+  final Value<String> id;
   final Value<String> photoPath;
   final Value<String> thumbnailPath;
   final Value<String?> serverPhotoUrl;
   final Value<String> detectionData;
   final Value<String> status;
-  final Value<String?> sceneId;
   final Value<bool> isFlagged;
   final Value<DateTime> createdAt;
   final Value<DateTime> updatedAt;
+  final Value<int> rowid;
   const InventoryItemsCompanion({
     this.id = const Value.absent(),
     this.photoPath = const Value.absent(),
@@ -512,38 +468,39 @@ class InventoryItemsCompanion extends UpdateCompanion<InventoryItem> {
     this.serverPhotoUrl = const Value.absent(),
     this.detectionData = const Value.absent(),
     this.status = const Value.absent(),
-    this.sceneId = const Value.absent(),
     this.isFlagged = const Value.absent(),
     this.createdAt = const Value.absent(),
     this.updatedAt = const Value.absent(),
+    this.rowid = const Value.absent(),
   });
   InventoryItemsCompanion.insert({
-    this.id = const Value.absent(),
+    required String id,
     required String photoPath,
     required String thumbnailPath,
     this.serverPhotoUrl = const Value.absent(),
     required String detectionData,
     this.status = const Value.absent(),
-    this.sceneId = const Value.absent(),
     this.isFlagged = const Value.absent(),
     required DateTime createdAt,
     required DateTime updatedAt,
-  }) : photoPath = Value(photoPath),
+    this.rowid = const Value.absent(),
+  }) : id = Value(id),
+       photoPath = Value(photoPath),
        thumbnailPath = Value(thumbnailPath),
        detectionData = Value(detectionData),
        createdAt = Value(createdAt),
        updatedAt = Value(updatedAt);
   static Insertable<InventoryItem> custom({
-    Expression<int>? id,
+    Expression<String>? id,
     Expression<String>? photoPath,
     Expression<String>? thumbnailPath,
     Expression<String>? serverPhotoUrl,
     Expression<String>? detectionData,
     Expression<String>? status,
-    Expression<String>? sceneId,
     Expression<bool>? isFlagged,
     Expression<DateTime>? createdAt,
     Expression<DateTime>? updatedAt,
+    Expression<int>? rowid,
   }) {
     return RawValuesInsertable({
       if (id != null) 'id': id,
@@ -552,24 +509,24 @@ class InventoryItemsCompanion extends UpdateCompanion<InventoryItem> {
       if (serverPhotoUrl != null) 'server_photo_url': serverPhotoUrl,
       if (detectionData != null) 'detection_data': detectionData,
       if (status != null) 'status': status,
-      if (sceneId != null) 'scene_id': sceneId,
       if (isFlagged != null) 'is_flagged': isFlagged,
       if (createdAt != null) 'created_at': createdAt,
       if (updatedAt != null) 'updated_at': updatedAt,
+      if (rowid != null) 'rowid': rowid,
     });
   }
 
   InventoryItemsCompanion copyWith({
-    Value<int>? id,
+    Value<String>? id,
     Value<String>? photoPath,
     Value<String>? thumbnailPath,
     Value<String?>? serverPhotoUrl,
     Value<String>? detectionData,
     Value<String>? status,
-    Value<String?>? sceneId,
     Value<bool>? isFlagged,
     Value<DateTime>? createdAt,
     Value<DateTime>? updatedAt,
+    Value<int>? rowid,
   }) {
     return InventoryItemsCompanion(
       id: id ?? this.id,
@@ -578,10 +535,10 @@ class InventoryItemsCompanion extends UpdateCompanion<InventoryItem> {
       serverPhotoUrl: serverPhotoUrl ?? this.serverPhotoUrl,
       detectionData: detectionData ?? this.detectionData,
       status: status ?? this.status,
-      sceneId: sceneId ?? this.sceneId,
       isFlagged: isFlagged ?? this.isFlagged,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
+      rowid: rowid ?? this.rowid,
     );
   }
 
@@ -589,7 +546,7 @@ class InventoryItemsCompanion extends UpdateCompanion<InventoryItem> {
   Map<String, Expression> toColumns(bool nullToAbsent) {
     final map = <String, Expression>{};
     if (id.present) {
-      map['id'] = Variable<int>(id.value);
+      map['id'] = Variable<String>(id.value);
     }
     if (photoPath.present) {
       map['photo_path'] = Variable<String>(photoPath.value);
@@ -606,9 +563,6 @@ class InventoryItemsCompanion extends UpdateCompanion<InventoryItem> {
     if (status.present) {
       map['status'] = Variable<String>(status.value);
     }
-    if (sceneId.present) {
-      map['scene_id'] = Variable<String>(sceneId.value);
-    }
     if (isFlagged.present) {
       map['is_flagged'] = Variable<bool>(isFlagged.value);
     }
@@ -617,6 +571,9 @@ class InventoryItemsCompanion extends UpdateCompanion<InventoryItem> {
     }
     if (updatedAt.present) {
       map['updated_at'] = Variable<DateTime>(updatedAt.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
     }
     return map;
   }
@@ -630,10 +587,10 @@ class InventoryItemsCompanion extends UpdateCompanion<InventoryItem> {
           ..write('serverPhotoUrl: $serverPhotoUrl, ')
           ..write('detectionData: $detectionData, ')
           ..write('status: $status, ')
-          ..write('sceneId: $sceneId, ')
           ..write('isFlagged: $isFlagged, ')
           ..write('createdAt: $createdAt, ')
-          ..write('updatedAt: $updatedAt')
+          ..write('updatedAt: $updatedAt, ')
+          ..write('rowid: $rowid')
           ..write(')'))
         .toString();
   }
@@ -659,11 +616,11 @@ class $LabelsTable extends Labels with TableInfo<$LabelsTable, Label> {
   );
   static const VerificationMeta _itemIdMeta = const VerificationMeta('itemId');
   @override
-  late final GeneratedColumn<int> itemId = GeneratedColumn<int>(
+  late final GeneratedColumn<String> itemId = GeneratedColumn<String>(
     'item_id',
     aliasedName,
     false,
-    type: DriftSqlType.int,
+    type: DriftSqlType.string,
     requiredDuringInsert: true,
     defaultConstraints: GeneratedColumn.constraintIsAlways(
       'REFERENCES inventory_items (id) ON DELETE CASCADE',
@@ -790,7 +747,7 @@ class $LabelsTable extends Labels with TableInfo<$LabelsTable, Label> {
         data['${effectivePrefix}id'],
       )!,
       itemId: attachedDatabase.typeMapping.read(
-        DriftSqlType.int,
+        DriftSqlType.string,
         data['${effectivePrefix}item_id'],
       )!,
       key: attachedDatabase.typeMapping.read(
@@ -822,8 +779,8 @@ class Label extends DataClass implements Insertable<Label> {
   /// Primary key
   final int id;
 
-  /// Foreign key to inventory_items table
-  final int itemId;
+  /// Foreign key to inventory_items.id (now a TEXT sceneId since v6).
+  final String itemId;
 
   /// Category key (type, color, brand, material, etc.)
   final String key;
@@ -848,7 +805,7 @@ class Label extends DataClass implements Insertable<Label> {
   Map<String, Expression> toColumns(bool nullToAbsent) {
     final map = <String, Expression>{};
     map['id'] = Variable<int>(id);
-    map['item_id'] = Variable<int>(itemId);
+    map['item_id'] = Variable<String>(itemId);
     map['key'] = Variable<String>(key);
     map['value'] = Variable<String>(value);
     map['confidence'] = Variable<double>(confidence);
@@ -874,7 +831,7 @@ class Label extends DataClass implements Insertable<Label> {
     serializer ??= driftRuntimeOptions.defaultSerializer;
     return Label(
       id: serializer.fromJson<int>(json['id']),
-      itemId: serializer.fromJson<int>(json['itemId']),
+      itemId: serializer.fromJson<String>(json['itemId']),
       key: serializer.fromJson<String>(json['key']),
       value: serializer.fromJson<String>(json['value']),
       confidence: serializer.fromJson<double>(json['confidence']),
@@ -886,7 +843,7 @@ class Label extends DataClass implements Insertable<Label> {
     serializer ??= driftRuntimeOptions.defaultSerializer;
     return <String, dynamic>{
       'id': serializer.toJson<int>(id),
-      'itemId': serializer.toJson<int>(itemId),
+      'itemId': serializer.toJson<String>(itemId),
       'key': serializer.toJson<String>(key),
       'value': serializer.toJson<String>(value),
       'confidence': serializer.toJson<double>(confidence),
@@ -896,7 +853,7 @@ class Label extends DataClass implements Insertable<Label> {
 
   Label copyWith({
     int? id,
-    int? itemId,
+    String? itemId,
     String? key,
     String? value,
     double? confidence,
@@ -952,7 +909,7 @@ class Label extends DataClass implements Insertable<Label> {
 
 class LabelsCompanion extends UpdateCompanion<Label> {
   final Value<int> id;
-  final Value<int> itemId;
+  final Value<String> itemId;
   final Value<String> key;
   final Value<String> value;
   final Value<double> confidence;
@@ -967,7 +924,7 @@ class LabelsCompanion extends UpdateCompanion<Label> {
   });
   LabelsCompanion.insert({
     this.id = const Value.absent(),
-    required int itemId,
+    required String itemId,
     required String key,
     required String value,
     this.confidence = const Value.absent(),
@@ -978,7 +935,7 @@ class LabelsCompanion extends UpdateCompanion<Label> {
        createdAt = Value(createdAt);
   static Insertable<Label> custom({
     Expression<int>? id,
-    Expression<int>? itemId,
+    Expression<String>? itemId,
     Expression<String>? key,
     Expression<String>? value,
     Expression<double>? confidence,
@@ -996,7 +953,7 @@ class LabelsCompanion extends UpdateCompanion<Label> {
 
   LabelsCompanion copyWith({
     Value<int>? id,
-    Value<int>? itemId,
+    Value<String>? itemId,
     Value<String>? key,
     Value<String>? value,
     Value<double>? confidence,
@@ -1019,7 +976,7 @@ class LabelsCompanion extends UpdateCompanion<Label> {
       map['id'] = Variable<int>(id.value);
     }
     if (itemId.present) {
-      map['item_id'] = Variable<int>(itemId.value);
+      map['item_id'] = Variable<String>(itemId.value);
     }
     if (key.present) {
       map['key'] = Variable<String>(key.value);
@@ -2930,29 +2887,29 @@ abstract class _$AppDatabase extends GeneratedDatabase {
 
 typedef $$InventoryItemsTableCreateCompanionBuilder =
     InventoryItemsCompanion Function({
-      Value<int> id,
+      required String id,
       required String photoPath,
       required String thumbnailPath,
       Value<String?> serverPhotoUrl,
       required String detectionData,
       Value<String> status,
-      Value<String?> sceneId,
       Value<bool> isFlagged,
       required DateTime createdAt,
       required DateTime updatedAt,
+      Value<int> rowid,
     });
 typedef $$InventoryItemsTableUpdateCompanionBuilder =
     InventoryItemsCompanion Function({
-      Value<int> id,
+      Value<String> id,
       Value<String> photoPath,
       Value<String> thumbnailPath,
       Value<String?> serverPhotoUrl,
       Value<String> detectionData,
       Value<String> status,
-      Value<String?> sceneId,
       Value<bool> isFlagged,
       Value<DateTime> createdAt,
       Value<DateTime> updatedAt,
+      Value<int> rowid,
     });
 
 final class $$InventoryItemsTableReferences
@@ -2974,7 +2931,7 @@ final class $$InventoryItemsTableReferences
     final manager = $$LabelsTableTableManager(
       $_db,
       $_db.labels,
-    ).filter((f) => f.itemId.id.sqlEquals($_itemColumn<int>('id')!));
+    ).filter((f) => f.itemId.id.sqlEquals($_itemColumn<String>('id')!));
 
     final cache = $_typedResult.readTableOrNull(_labelsRefsTable($_db));
     return ProcessedTableManager(
@@ -2992,7 +2949,7 @@ class $$InventoryItemsTableFilterComposer
     super.$addJoinBuilderToRootComposer,
     super.$removeJoinBuilderFromRootComposer,
   });
-  ColumnFilters<int> get id => $composableBuilder(
+  ColumnFilters<String> get id => $composableBuilder(
     column: $table.id,
     builder: (column) => ColumnFilters(column),
   );
@@ -3019,11 +2976,6 @@ class $$InventoryItemsTableFilterComposer
 
   ColumnFilters<String> get status => $composableBuilder(
     column: $table.status,
-    builder: (column) => ColumnFilters(column),
-  );
-
-  ColumnFilters<String> get sceneId => $composableBuilder(
-    column: $table.sceneId,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -3077,7 +3029,7 @@ class $$InventoryItemsTableOrderingComposer
     super.$addJoinBuilderToRootComposer,
     super.$removeJoinBuilderFromRootComposer,
   });
-  ColumnOrderings<int> get id => $composableBuilder(
+  ColumnOrderings<String> get id => $composableBuilder(
     column: $table.id,
     builder: (column) => ColumnOrderings(column),
   );
@@ -3107,11 +3059,6 @@ class $$InventoryItemsTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
-  ColumnOrderings<String> get sceneId => $composableBuilder(
-    column: $table.sceneId,
-    builder: (column) => ColumnOrderings(column),
-  );
-
   ColumnOrderings<bool> get isFlagged => $composableBuilder(
     column: $table.isFlagged,
     builder: (column) => ColumnOrderings(column),
@@ -3137,7 +3084,7 @@ class $$InventoryItemsTableAnnotationComposer
     super.$addJoinBuilderToRootComposer,
     super.$removeJoinBuilderFromRootComposer,
   });
-  GeneratedColumn<int> get id =>
+  GeneratedColumn<String> get id =>
       $composableBuilder(column: $table.id, builder: (column) => column);
 
   GeneratedColumn<String> get photoPath =>
@@ -3160,9 +3107,6 @@ class $$InventoryItemsTableAnnotationComposer
 
   GeneratedColumn<String> get status =>
       $composableBuilder(column: $table.status, builder: (column) => column);
-
-  GeneratedColumn<String> get sceneId =>
-      $composableBuilder(column: $table.sceneId, builder: (column) => column);
 
   GeneratedColumn<bool> get isFlagged =>
       $composableBuilder(column: $table.isFlagged, builder: (column) => column);
@@ -3229,16 +3173,16 @@ class $$InventoryItemsTableTableManager
               $$InventoryItemsTableAnnotationComposer($db: db, $table: table),
           updateCompanionCallback:
               ({
-                Value<int> id = const Value.absent(),
+                Value<String> id = const Value.absent(),
                 Value<String> photoPath = const Value.absent(),
                 Value<String> thumbnailPath = const Value.absent(),
                 Value<String?> serverPhotoUrl = const Value.absent(),
                 Value<String> detectionData = const Value.absent(),
                 Value<String> status = const Value.absent(),
-                Value<String?> sceneId = const Value.absent(),
                 Value<bool> isFlagged = const Value.absent(),
                 Value<DateTime> createdAt = const Value.absent(),
                 Value<DateTime> updatedAt = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
               }) => InventoryItemsCompanion(
                 id: id,
                 photoPath: photoPath,
@@ -3246,23 +3190,23 @@ class $$InventoryItemsTableTableManager
                 serverPhotoUrl: serverPhotoUrl,
                 detectionData: detectionData,
                 status: status,
-                sceneId: sceneId,
                 isFlagged: isFlagged,
                 createdAt: createdAt,
                 updatedAt: updatedAt,
+                rowid: rowid,
               ),
           createCompanionCallback:
               ({
-                Value<int> id = const Value.absent(),
+                required String id,
                 required String photoPath,
                 required String thumbnailPath,
                 Value<String?> serverPhotoUrl = const Value.absent(),
                 required String detectionData,
                 Value<String> status = const Value.absent(),
-                Value<String?> sceneId = const Value.absent(),
                 Value<bool> isFlagged = const Value.absent(),
                 required DateTime createdAt,
                 required DateTime updatedAt,
+                Value<int> rowid = const Value.absent(),
               }) => InventoryItemsCompanion.insert(
                 id: id,
                 photoPath: photoPath,
@@ -3270,10 +3214,10 @@ class $$InventoryItemsTableTableManager
                 serverPhotoUrl: serverPhotoUrl,
                 detectionData: detectionData,
                 status: status,
-                sceneId: sceneId,
                 isFlagged: isFlagged,
                 createdAt: createdAt,
                 updatedAt: updatedAt,
+                rowid: rowid,
               ),
           withReferenceMapper: (p0) => p0
               .map(
@@ -3334,7 +3278,7 @@ typedef $$InventoryItemsTableProcessedTableManager =
 typedef $$LabelsTableCreateCompanionBuilder =
     LabelsCompanion Function({
       Value<int> id,
-      required int itemId,
+      required String itemId,
       required String key,
       required String value,
       Value<double> confidence,
@@ -3343,7 +3287,7 @@ typedef $$LabelsTableCreateCompanionBuilder =
 typedef $$LabelsTableUpdateCompanionBuilder =
     LabelsCompanion Function({
       Value<int> id,
-      Value<int> itemId,
+      Value<String> itemId,
       Value<String> key,
       Value<String> value,
       Value<double> confidence,
@@ -3360,7 +3304,7 @@ final class $$LabelsTableReferences
       );
 
   $$InventoryItemsTableProcessedTableManager get itemId {
-    final $_column = $_itemColumn<int>('item_id')!;
+    final $_column = $_itemColumn<String>('item_id')!;
 
     final manager = $$InventoryItemsTableTableManager(
       $_db,
@@ -3569,7 +3513,7 @@ class $$LabelsTableTableManager
           updateCompanionCallback:
               ({
                 Value<int> id = const Value.absent(),
-                Value<int> itemId = const Value.absent(),
+                Value<String> itemId = const Value.absent(),
                 Value<String> key = const Value.absent(),
                 Value<String> value = const Value.absent(),
                 Value<double> confidence = const Value.absent(),
@@ -3585,7 +3529,7 @@ class $$LabelsTableTableManager
           createCompanionCallback:
               ({
                 Value<int> id = const Value.absent(),
-                required int itemId,
+                required String itemId,
                 required String key,
                 required String value,
                 Value<double> confidence = const Value.absent(),

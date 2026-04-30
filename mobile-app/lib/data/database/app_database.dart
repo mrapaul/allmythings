@@ -48,7 +48,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase.fromExecutor(super.e);
 
   @override
-  int get schemaVersion => 5;
+  int get schemaVersion => 6;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -63,8 +63,10 @@ class AppDatabase extends _$AppDatabase {
         onUpgrade: (m, from, to) async {
           // Section-08: rewrite, no migration. Per stored memory
           // `feedback_no_migrations.md` the app is not deployed;
-          // any v<5 DB on disk is dropped and recreated cleanly.
-          if (from < 5) {
+          // any v<6 DB on disk is dropped and recreated cleanly.
+          // v6 = inventory_items.id is the sceneId TEXT PK;
+          //      labels.itemId is TEXT.
+          if (from < 6) {
             // Drop tables in reverse-dependency order, ignoring missing.
             for (final t in const [
               'detection_labels',

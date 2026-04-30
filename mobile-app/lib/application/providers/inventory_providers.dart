@@ -55,7 +55,7 @@ class InventoryListNotifier extends AsyncNotifier<List<InventoryItem>> {
     unawaited(_runBackgroundDetection(itemId, imageFile));
   }
 
-  Future<void> _runBackgroundDetection(int itemId, File imageFile) async {
+  Future<void> _runBackgroundDetection(String itemId, File imageFile) async {
     final repository = await ref.read(inventoryRepositoryProvider.future);
     final imageService = ref.read(imageProcessingServiceProvider);
 
@@ -123,7 +123,7 @@ class InventoryListNotifier extends AsyncNotifier<List<InventoryItem>> {
   }
 
   /// Confirm an unconfirmed item after user review
-  Future<void> confirmItem(int itemId) async {
+  Future<void> confirmItem(String itemId) async {
     final repository = await ref.read(inventoryRepositoryProvider.future);
     await repository.updateItemStatus(itemId: itemId, status: 'completed');
     
@@ -134,7 +134,7 @@ class InventoryListNotifier extends AsyncNotifier<List<InventoryItem>> {
   }
 
   /// Legacy method for manual saves (if needed)
-  Future<int> saveDetection({
+  Future<String> saveDetection({
     required String photoPath,
     required String thumbnailPath,
     required DetectedObject detection,
@@ -151,7 +151,7 @@ class InventoryListNotifier extends AsyncNotifier<List<InventoryItem>> {
   }
 
   /// Update labels for an item
-  Future<void> updateLabels(int itemId, List<LabelEntry> labels) async {
+  Future<void> updateLabels(String itemId, List<LabelEntry> labels) async {
     final repository = await ref.read(inventoryRepositoryProvider.future);
     await repository.updateItemLabels(itemId, labels);
     
@@ -167,15 +167,15 @@ final inventoryItemsProvider =
 );
 
 /// Provider for a single item by ID
-final FutureProviderFamily<InventoryItem?, int> inventoryItemProvider =
-    FutureProvider.family<InventoryItem?, int>((ref, itemId) async {
+final FutureProviderFamily<InventoryItem?, String> inventoryItemProvider =
+    FutureProvider.family<InventoryItem?, String>((ref, itemId) async {
   final repository = await ref.watch(inventoryRepositoryProvider.future);
   return repository.getItemById(itemId);
 });
 
 /// Provider for item labels
-final FutureProviderFamily<List<Label>, int> itemLabelsProvider =
-    FutureProvider.family<List<Label>, int>((ref, itemId) async {
+final FutureProviderFamily<List<Label>, String> itemLabelsProvider =
+    FutureProvider.family<List<Label>, String>((ref, itemId) async {
   final repository = await ref.watch(inventoryRepositoryProvider.future);
   return repository.getLabelsForItem(itemId);
 });
