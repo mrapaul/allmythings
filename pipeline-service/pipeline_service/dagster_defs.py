@@ -207,7 +207,7 @@ def florence_detect_op(frames: list[Frame]) -> list[FrameDetections]:
     return _run_async(florence_detect_impl(frames))
 
 
-@op(name="grounding_dino_detect", out=Out(list, description="§3.5 stub"), tags=_STUB_METADATA)
+@op(name="grounding_dino_detect", out=Out(list, description="§3.5 — gdino"))
 def grounding_dino_detect_op(
     frames: list[Frame],
     prompts: PromptList,
@@ -215,19 +215,22 @@ def grounding_dino_detect_op(
     return grounding_dino_detect_impl(frames, prompts)
 
 
-@op(name="sahi_recovery", out=Out(list, description="§3.6 stub"), tags=_STUB_METADATA)
+@op(name="sahi_recovery", out=Out(list, description="§3.6 — tiled re-detect"))
 def sahi_recovery_op(
     frames: list[Frame],
     per_detector_detections: list[FrameDetections],
+    prompts: PromptList,
 ) -> list[FrameDetections]:
-    return sahi_recovery_impl(frames, per_detector_detections)
+    return sahi_recovery_impl(
+        frames, per_detector_detections, prompts=prompts
+    )
 
 
-@op(name="effsam_segment", out=Out(list, description="§3.7 stub"), tags=_STUB_METADATA)
+@op(name="effsam_segment", out=Out(list, description="§3.7 — masks"))
 def effsam_segment_op(
     frames: list[Frame],
     fused_frames: list[FusedFrame],
-) -> list[bytes]:
+) -> list:
     return effsam_segment_impl(frames, fused_frames)
 
 
@@ -355,7 +358,7 @@ def pipeline_job() -> None:
     prompts = vlm_prompt_expansion_op(frames, embeddings, florence)
     gdino = grounding_dino_detect_op(frames, prompts)
     first_pass = _concat_first_pass(florence, gdino)
-    sahi = sahi_recovery_op(frames, first_pass)
+    sahi = sahi_recovery_op(frames, first_pass, prompts)
     all_dets = _concat_detections(florence, gdino, sahi)
     fused_frames = box_fusion_op(all_dets)
     effsam_segment_op(frames, fused_frames)
