@@ -304,8 +304,7 @@ def classification_refine_op(
 @op(
     name="agreement_scoring",
     ins={"observation": In(SceneObservation)},
-    out=Out(SceneObservation, description="§3.13 stub"),
-    tags=_STUB_METADATA,
+    out=Out(SceneObservation, description="§3.13 — agreement scoring + flags"),
 )
 def agreement_scoring_op(observation: SceneObservation) -> SceneObservation:
     return agreement_scoring_impl(observation)
@@ -315,13 +314,15 @@ def agreement_scoring_op(observation: SceneObservation) -> SceneObservation:
     name="self_diagnosis",
     ins={"observation": In(SceneObservation)},
     out=DynamicOut(SceneObservation),
-    description="§3.14 stub — terminal branch only; DynamicOut signature kept "
-    "so section-07 can drop in fan-out without re-wiring.",
-    tags=_STUB_METADATA,
+    description="§3.14 — DynamicOut fan-out per strictness ladder.",
 )
 def self_diagnosis_op(observation: SceneObservation):
-    for idx, obs in enumerate(self_diagnosis_impl(observation, rerun_depth=0)):
-        yield DynamicOutput(obs, mapping_key=f"branch_{idx}")
+    for item in self_diagnosis_impl(observation, rerun_depth=observation.rerunDepth):
+        if isinstance(item, tuple):
+            mapping_key, terminal_obs, _directive = item
+            yield DynamicOutput(terminal_obs, mapping_key=mapping_key)
+        else:
+            yield DynamicOutput(item, mapping_key="terminal")
 
 
 # ---------- Graph plumbing ----------------------------------------------------

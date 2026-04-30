@@ -21,20 +21,10 @@ from typing import Any, Iterable
 import pytest
 
 
-STUB_OPS = [
-    # scene_embedding — REAL in section-04
-    # vlm_prompt_expansion — REAL in section-04
-    # florence_detect — REAL in section-03
-    # grounding_dino_detect — REAL in section-05
-    # sahi_recovery — REAL in section-05
-    # effsam_segment — REAL in section-05
-    # box_fusion — REAL in section-06
-    # crop_embedding — REAL in section-04
-    # cross_pass_dedup — REAL in section-06
-    # cross_frame_dedup — REAL in section-06
-    # classification_refine — REAL in section-03
-    "agreement_scoring",
-    "self_diagnosis",
+STUB_OPS: list[str] = [
+    # All section-01 stubs are now REAL. Sections 03, 04, 05, 06, 07 each
+    # replaced theirs in turn. This list exists only to keep the parametrised
+    # decorator happy if the section-07 done-checklist regresses.
 ]
 
 
@@ -135,17 +125,20 @@ def test_box_fusion_empty_yields_empty_list() -> None:
     assert box_fusion_impl([]) == []
 
 
-def test_self_diagnosis_terminal_branch_yields_input(
+def test_self_diagnosis_above_thresholds_yields_terminal(
     isolated_env: dict[str, str],
 ) -> None:
+    """Section-07 self_diagnosis: high-coverage scene → terminal yield."""
     from pipeline_service.ops.self_diagnosis import self_diagnosis_impl
     from pipeline_service.types import SceneObservation
 
-    obs = SceneObservation.empty(scene_id="s", run_id="r", frame_ids=["F0"])
+    obs = SceneObservation.empty(
+        scene_id="s", run_id="r", frame_ids=["F0"]
+    ).model_copy(update={"agreementCoverage": 0.9, "agreementPrecision": 0.5})
     yielded = list(self_diagnosis_impl(obs, rerun_depth=0))
-    # Section-01 stub: always terminal, never DynamicOut fan-out — but the
-    # signature is DynamicOut so section-07 can drop in fan-out logic.
-    assert yielded == [obs]
+    assert len(yielded) == 1
+    # Above-threshold path emits a SceneObservation, not a directive tuple.
+    assert isinstance(yielded[0], SceneObservation)
 
 
 # -- helpers --------------------------------------------------------------------
