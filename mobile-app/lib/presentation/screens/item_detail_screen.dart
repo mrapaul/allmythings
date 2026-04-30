@@ -100,16 +100,45 @@ class ItemDetailScreen extends ConsumerWidget {
                       ),
                       const SizedBox(height: 12),
                       labelsAsync.when(
-                        data: (labels) => Wrap(
-                          spacing: 8,
-                          runSpacing: 8,
-                          children: [
-                            ...labels.map((l) => _LabelChip(label: l)),
-                            _EditButton(onTap: () {
-                              unawaited(_showEditLabelsDialog(context, ref, labels));
-                            }),
-                          ],
-                        ),
+                        data: (labels) {
+                          // §9.5 null-audit: when classification_refine fails
+                          // through (vlmStructuredAttributes={}), there are
+                          // no labels for this item — show a hint instead of
+                          // an empty Wrap so the user gets a clear signal.
+                          if (labels.isEmpty) {
+                            return Row(
+                              children: [
+                                const Expanded(
+                                  child: Text(
+                                    'No attributes detected yet — tap edit to add manually.',
+                                    style: TextStyle(
+                                      color: Colors.grey,
+                                      fontStyle: FontStyle.italic,
+                                    ),
+                                  ),
+                                ),
+                                const SizedBox(width: 8),
+                                _EditButton(onTap: () {
+                                  unawaited(
+                                    _showEditLabelsDialog(context, ref, labels),
+                                  );
+                                }),
+                              ],
+                            );
+                          }
+                          return Wrap(
+                            spacing: 8,
+                            runSpacing: 8,
+                            children: [
+                              ...labels.map((l) => _LabelChip(label: l)),
+                              _EditButton(onTap: () {
+                                unawaited(
+                                  _showEditLabelsDialog(context, ref, labels),
+                                );
+                              }),
+                            ],
+                          );
+                        },
                         loading: () => const LinearProgressIndicator(),
                         error: (e, _) => Text('Error loading labels: $e'),
                       ),
@@ -126,6 +155,11 @@ class ItemDetailScreen extends ConsumerWidget {
                       const SizedBox(height: 12),
                       _MetadataRow(label: 'Captured', value: item.createdAt.toString()),
                       _MetadataRow(label: 'Status', value: item.status.toUpperCase()),
+                      if (item.isFlagged)
+                        const _MetadataRow(
+                          label: 'Flagged',
+                          value: 'Self-diagnosis flagged this run — review attributes',
+                        ),
                     ],
                   ),
                 ),

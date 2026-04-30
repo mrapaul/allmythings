@@ -3,8 +3,6 @@ import 'dart:io';
 import 'package:all_my_things/application/state/detection_state.dart';
 import 'package:all_my_things/data/remote/api_client.dart';
 import 'package:all_my_things/data/repositories/detection_repository.dart';
-import 'package:all_my_things/domain/models/detected_object.dart';
-import 'package:all_my_things/native/coreml_detector.dart';
 import 'package:flutter/foundation.dart' show debugPrint;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -14,59 +12,29 @@ final detectionRepositoryProvider = Provider<DetectionRepository>((ref) {
   return DetectionRepository(apiClient);
 });
 
-/// Notifier for managing detection state
+/// Notifier for managing detection state.
+///
+/// Section-08: the on-device CoreML "fast path" tier and the offline
+/// CoreML fallback are GONE. The phone always calls the Mac pipeline-
+/// service via the Fastify edge; there is no client-side detection.
+/// Multi-frame burst + on-device pre-checks (blur/exposure/face redaction)
+/// happen in the camera screen before this notifier runs.
 class DetectionNotifier extends Notifier<DetectionState> {
   @override
   DetectionState build() => const DetectionState.initial();
 
-  /// Detect objects using three-tier cascade:
-  /// 1. CoreML on-device (instant, ~50ms)
-  /// 2. Mac deep pass via API (rich attributes, ~5–15s)
-  /// 3. Falls back to CoreML-only on Mac failure (offline mode)
+  /// Detect objects via the Mac pipeline-service. Single path — no
+  /// client-side detection.
   Future<DetectionResult> detectObjects(File imageFile) async {
     state = const DetectionState.loading();
-
-    // Tier 1: CoreML on-device — instant, no network
-    final coreMLAvailable = await CoreMLDetector.isAvailable();
-    debugPrint('[DETECT] CoreML available: $coreMLAvailable');
-    final fastBoxes = await CoreMLDetector.detect(imageFile);
-    debugPrint('[DETECT] CoreML returned ${fastBoxes.length} boxes');
-    if (fastBoxes.isNotEmpty) {
-      state = DetectionState.success(
-        detections: fastBoxes.map(_coreMLBoxToDetectedObject).toList(),
-        processingTimeMs: 0,
-        detector: 'coreml',
-        classifier: 'none',
-        isEnriching: true, // shimmer while deep pass runs
-      );
-    }
-
-    // Tier 2: Mac deep pass (enriched attributes)
     try {
       final repository = ref.read(detectionRepositoryProvider);
-      debugPrint('[DETECT] Calling Mac deep pass API...');
+      debugPrint('[DETECT] Calling Mac pipeline-service...');
       final result = await repository.detectObjects(imageFile);
-      debugPrint('[DETECT] Mac returned ${result.detections.length} detections in ${result.processingTimeMs}ms');
-
-      if (result.detections.isEmpty && fastBoxes.isNotEmpty) {
-        // Deep pass found nothing — keep CoreML boxes but use deep pass metadata
-        final coreMLDetections =
-            fastBoxes.map(_coreMLBoxToDetectedObject).toList();
-        state = DetectionState.success(
-          detections: coreMLDetections,
-          processingTimeMs: result.processingTimeMs,
-          detector: result.detector,
-          classifier: result.classifier,
-          isEnriching: false,
-        );
-        return DetectionResult(
-          detections: coreMLDetections,
-          detector: result.detector,
-          classifier: result.classifier,
-          processingTimeMs: result.processingTimeMs,
-        );
-      }
-
+      debugPrint(
+        '[DETECT] Pipeline returned ${result.detections.length} detections '
+        'in ${result.processingTimeMs}ms',
+      );
       state = DetectionState.success(
         detections: result.detections,
         processingTimeMs: result.processingTimeMs,
@@ -77,23 +45,7 @@ class DetectionNotifier extends Notifier<DetectionState> {
       );
       return result;
     } catch (e, st) {
-      debugPrint('[DETECT] Mac call failed: $e\n$st');
-      if (fastBoxes.isNotEmpty) {
-        // Mac unreachable — show CoreML results with offline indicator
-        state = DetectionState.success(
-          detections: fastBoxes.map(_coreMLBoxToDetectedObject).toList(),
-          processingTimeMs: 0,
-          detector: 'coreml',
-          classifier: 'offline',
-          isEnriching: false,
-        );
-        return DetectionResult(
-          detections: fastBoxes.map(_coreMLBoxToDetectedObject).toList(),
-          detector: 'coreml',
-          classifier: 'offline',
-          processingTimeMs: 0,
-        );
-      }
+      debugPrint('[DETECT] pipeline call failed: $e\n$st');
       state = DetectionState.error(e.toString());
       rethrow;
     }
@@ -102,21 +54,6 @@ class DetectionNotifier extends Notifier<DetectionState> {
   /// Reset state
   void reset() {
     state = const DetectionState.initial();
-  }
-
-  DetectedObject _coreMLBoxToDetectedObject(CoreMLBox box) {
-    return DetectedObject(
-      boxIndex: box.boxIndex,
-      label: box.label,
-      category: 'object',
-      confidence: box.confidence,
-      boundingBox: BoundingBox(
-        x: box.x,
-        y: box.y,
-        width: box.width,
-        height: box.height,
-      ),
-    );
   }
 }
 

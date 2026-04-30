@@ -1,8 +1,11 @@
 import 'dart:io';
 
+import 'package:all_my_things/data/database/tables/detection_labels.dart';
+import 'package:all_my_things/data/database/tables/detections.dart';
 import 'package:all_my_things/data/database/tables/inventory_items.dart';
 import 'package:all_my_things/data/database/tables/label_search_fts.dart';
 import 'package:all_my_things/data/database/tables/labels.dart';
+import 'package:all_my_things/data/database/tables/scenes.dart';
 import 'package:drift/drift.dart';
 import 'package:drift/native.dart';
 import 'package:path/path.dart' as p;
@@ -10,12 +13,22 @@ import 'package:path_provider/path_provider.dart';
 
 part 'app_database.g.dart';
 
-/// Main database class for the Visual Home Inventory Manager
+/// Main database class for the Visual Home Inventory Manager.
+///
+/// Section-08 schema v5: adds scenes / detections / detection_labels tables
+/// (mirroring the new SceneObservation contract from sections 04-07) plus
+/// inventory_items.sceneId + isFlagged columns. Per the user's stored
+/// memory `feedback_no_migrations.md` (app not deployed), v4→v5 is a
+/// REWRITE: the on-disk DB is dropped and recreated when the version is
+/// older than v5.
 @DriftDatabase(
   tables: [
     InventoryItems,
     Labels,
     LabelSearchFts,
+    Scenes,
+    Detections,
+    DetectionLabels,
   ],
 )
 class AppDatabase extends _$AppDatabase {
@@ -35,7 +48,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase.fromExecutor(super.e);
 
   @override
-  int get schemaVersion => 4;
+  int get schemaVersion => 5;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -48,28 +61,24 @@ class AppDatabase extends _$AppDatabase {
           await _createIndexes();
         },
         onUpgrade: (m, from, to) async {
-          if (from < 2) {
-            // Re-create FTS table to include key column
-            await m.deleteTable('label_search_fts');
-            await m.createTable(labelSearchFts);
-            
-            // Re-create triggers
-            await customStatement('DROP TRIGGER IF EXISTS label_search_insert');
-            await customStatement('DROP TRIGGER IF EXISTS label_search_update');
-            await customStatement('DROP TRIGGER IF EXISTS label_search_delete');
+          // Section-08: rewrite, no migration. Per stored memory
+          // `feedback_no_migrations.md` the app is not deployed;
+          // any v<5 DB on disk is dropped and recreated cleanly.
+          if (from < 5) {
+            // Drop tables in reverse-dependency order, ignoring missing.
+            for (final t in const [
+              'detection_labels',
+              'detections',
+              'scenes',
+              'label_search_fts',
+              'labels',
+              'inventory_items',
+            ]) {
+              await customStatement('DROP TABLE IF EXISTS $t');
+            }
+            await m.createAll();
             await _createFtsTriggers();
-            
-            // Re-populate FTS table
-            await customStatement('''
-              INSERT INTO label_search_fts(label_id, key, value)
-              SELECT id, key, value FROM labels;
-            ''');
-          }
-          if (from < 3) {
-            await m.addColumn(inventoryItems, inventoryItems.status);
-          }
-          if (from < 4) {
-            await m.addColumn(inventoryItems, inventoryItems.serverPhotoUrl);
+            await _createIndexes();
           }
         },
       );
