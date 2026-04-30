@@ -19,6 +19,8 @@ import { getTemporalClient, closeTemporalClient } from './temporal/client';
 import { createWorker, runWorker, closeWorker } from './temporal/worker';
 import { ProviderHealthService } from './services/provider-health.service';
 import { advertiseService } from './utils/bonjour-advertiser';
+import { CircuitBreaker } from './utils/circuit-breaker';
+import { createPipelineClient } from './clients/pipeline.client';
 
 process.on('uncaughtException', (err) => {
   logger.fatal({ err: err.message, stack: err.stack }, 'Uncaught Exception');
@@ -61,6 +63,25 @@ export async function buildApp(options?: { disableRateLimit?: boolean }): Promis
   const temporal = await getTemporalClient();
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   (app as any).temporal = temporal;
+
+  // Pipeline-service client (section-02). Wired here so detect.route.ts and
+  // detect-status.route.ts can flag-gate on USE_PIPELINE_SERVICE without
+  // each route file constructing its own client.
+  if (envConfig.usePipelineService) {
+    const breaker = new CircuitBreaker('pipeline-service', {
+      failureThreshold: 5,
+      resetTimeout: 30_000,
+      halfOpenRequests: 1,
+    });
+    const pipeline = createPipelineClient({
+      baseUrl: envConfig.pipelineUrl,
+      circuitBreaker: breaker,
+      longPollTimeoutS: envConfig.pipelineLongPollTimeoutS,
+      maxRpsPerRun: envConfig.pipelineMaxRps,
+    });
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    (app as any).pipeline = pipeline;
+  }
 
   // Provider health service (periodic probes, independent of workflows)
   const health = new ProviderHealthService({
