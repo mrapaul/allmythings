@@ -1,0 +1,7 @@
+{
+  "agreement_coverage_min": 0.70,
+  "dedup_precision_min": 0.88,
+  "op_failure_rate_max": 0.05,
+  "single_source_run_rate_max": 0.05,
+  "empty_detection_set_rate_max": 0.02
+}

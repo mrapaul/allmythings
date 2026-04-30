@@ -1,0 +1,11 @@
+__pycache__/
+*.pyc
+.pytest_cache/
+.venv/
+.uv/
+dist/
+build/
+*.egg-info/
+eval/corpora/
+eval/last-metrics.json
+.dagster/
