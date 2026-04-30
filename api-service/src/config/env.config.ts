@@ -42,6 +42,13 @@ export interface EnvConfig {
   tier1Model: string;
   tier2Model: string;
   tier3Model: string;
+
+  // Pipeline-service sidecar (section-02)
+  pipelineUrl: string;
+  usePipelineService: boolean;
+  pipelineLongPollTimeoutS: number;
+  pipelineMaxRps: number;
+  legacyResponseShape: boolean;
 }
 
 export const envConfig: EnvConfig = {
@@ -82,4 +89,9 @@ export const envConfig: EnvConfig = {
   tier1Model: process.env.TIER_1_MODEL || 'qwen2.5vl:7b',
   tier2Model: process.env.TIER_2_MODEL || 'qwen2.5vl:3b',
   tier3Model: process.env.TIER_3_MODEL || 'moondream',
+  pipelineUrl: process.env.PIPELINE_URL || 'http://127.0.0.1:14101',
+  usePipelineService: process.env.USE_PIPELINE_SERVICE === 'true',
+  pipelineLongPollTimeoutS: parseInt(process.env.PIPELINE_LONGPOLL_TIMEOUT_S || '25', 10),
+  pipelineMaxRps: parseInt(process.env.PIPELINE_MAX_RPS || '5', 10),
+  legacyResponseShape: process.env.LEGACY_RESPONSE_SHAPE === 'true',
 };
