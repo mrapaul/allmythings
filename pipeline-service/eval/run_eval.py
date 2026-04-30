@@ -1,17 +1,13 @@
-"""Eval-rig entry point.
+"""Top-level CLI shim — delegates to ``pipeline_service.eval.run_eval``.
 
-Section-01 ships this as a placeholder. Section-09 fills it in with the
-real corpus runner that emits ``last-metrics.json`` and gates CI on
-``thresholds.json``.
+Section-01 created this as a placeholder; section-09 now wires the real
+runner. The structure test expects this file at the top level of
+``pipeline-service/``; the implementation lives inside the package so
+imports resolve cleanly under uv/hatch.
 """
 from __future__ import annotations
 
-import sys
-
-
-def main() -> int:  # pragma: no cover — section-09 implements this
-    print("eval/run_eval.py is a placeholder (section-09 implements this)", file=sys.stderr)
-    return 0
+from pipeline_service.eval.run_eval import main  # noqa: F401  re-export
 
 
 if __name__ == "__main__":

@@ -246,10 +246,13 @@ db-new:
 
 .PHONY: help setup install install-api install-mobile dev dev-api dev-mobile dev-detection dev-full start start-deps stop status logs smoke backup restore install-supervisor uninstall-supervisor build build-api build-mobile test test-api test-mobile test-detection lint lint-api lint-mobile format format-api format-mobile generate clean clean-api clean-mobile build-api-raw build-mobile-raw verify guarantee test-ios release-ios test-iphone db-up db-down db-new
 
-.PHONY: eval eval-ci eval-baseline
+.PHONY: eval eval-ci eval-baseline eval-pipeline
 
 eval: ## Run eval harness on all configured candidate models
 	node eval/harness.mjs qwen2.5vl:7b florence:qwen7b hybrid:owlv2-qwen7b
+
+eval-pipeline: ## Run section-09 pipeline eval rig (writes pipeline-service/eval/last-metrics.json)
+	cd pipeline-service && uv run python -m pipeline_service.eval.run_eval
 
 eval-ci: ## Run eval gated by eval/baseline.json
 	node eval/harness.mjs qwen2.5vl:7b florence:qwen7b hybrid:owlv2-qwen7b --ci
