@@ -25,9 +25,9 @@ STUB_OPS = [
     # scene_embedding — REAL in section-04
     # vlm_prompt_expansion — REAL in section-04
     # florence_detect — REAL in section-03
-    "grounding_dino_detect",
-    "sahi_recovery",
-    "effsam_segment",
+    # grounding_dino_detect — REAL in section-05
+    # sahi_recovery — REAL in section-05
+    # effsam_segment — REAL in section-05
     "box_fusion",
     # crop_embedding — REAL in section-04
     "cross_pass_dedup",
