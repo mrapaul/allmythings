@@ -13,6 +13,13 @@ dependencies = [
     "httpx>=0.27",
     "Pillow>=10.4",
     "numpy>=1.26",
+    "sentence-transformers>=3.0",
+    # GT-eval harness dependencies (gt_eval/ — see docs/superpowers/specs/claude-plan.md §8)
+    "pycocotools>=2.0.7",
+    "torchmetrics>=1.4",
+    "scipy>=1.13",
+    "requests>=2.32",
+    "tqdm>=4.67",
 ]
 
 [dependency-groups]

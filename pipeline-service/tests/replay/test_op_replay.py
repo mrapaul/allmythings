@@ -36,10 +36,15 @@ def find_fixtures(op: str | None = None) -> list[ReplayFixture]:
     for op_dir in FIXTURE_ROOT.iterdir():
         if not op_dir.is_dir():
             continue
+        # Skip non-op fixture sub-trees (e.g. ``eval/`` for the GT-eval harness).
+        if op_dir.name == "eval":
+            continue
         if op is not None and op_dir.name != op:
             continue
         for fp in sorted(op_dir.glob("*.json")):
             data = json.loads(fp.read_text())
+            if not isinstance(data, dict) or "op" not in data:
+                continue
             out.append(
                 ReplayFixture(
                     op=data["op"],

@@ -260,3 +260,11 @@ eval-ci: ## Run eval gated by eval/baseline.json
 eval-baseline: ## Re-snapshot current results as new baseline (commit after)
 	node eval/harness.mjs qwen2.5vl:7b florence:qwen7b hybrid:owlv2-qwen7b
 	@latest=$$(ls -t eval/report-*.json | head -1); cp "$$latest" eval/baseline.json; echo "Baseline = $$latest"
+
+.PHONY: test-eval test-eval-smoke
+
+test-eval: ## Run GT-based evaluation harness on LVIS-OV indoor subset
+	@cd pipeline-service && uv run python -m pipeline_service.eval.run_eval
+
+test-eval-smoke: ## Faster smoke run, 100 images
+	@cd pipeline-service && EVAL_SAMPLE_SIZE=100 uv run python -m pipeline_service.eval.run_eval

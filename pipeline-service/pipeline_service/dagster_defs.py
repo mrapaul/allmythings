@@ -24,6 +24,7 @@ live alongside the wiring.
 """
 from __future__ import annotations
 
+import os
 from typing import Any
 
 from dagster import (
@@ -37,6 +38,8 @@ from dagster import (
     op,
 )
 
+from pipeline_service.models.grounding_dino import GroundingDinoLoader
+from pipeline_service.models.grounding_dino_http import HttpGroundingDinoBackend
 from pipeline_service.ops.agreement_scoring import agreement_scoring_impl
 from pipeline_service.ops.assemble_result import assemble_result_impl
 from pipeline_service.ops.box_fusion import box_fusion_impl
@@ -69,6 +72,19 @@ from pipeline_service.types import (
 
 
 _STUB_METADATA = {"op_stubbed": True, "section": "01"}
+
+
+_EVAL_TRUTHY = {"1", "true", "yes", "on"}
+
+
+def _eval_skip_sahi_enabled() -> bool:
+    """Return True iff ``EVAL_SKIP_SAHI`` is set to a truthy value.
+
+    Defined inline here (not in ``gt_eval/``) to avoid an import cycle:
+    ``gt_eval/runner.py`` imports ``pipeline_job`` from this module.
+    """
+    raw = os.environ.get("EVAL_SKIP_SAHI", "")
+    return raw.strip().lower() in _EVAL_TRUTHY
 
 
 def _run_async(coro):
@@ -207,12 +223,42 @@ def florence_detect_op(frames: list[Frame]) -> list[FrameDetections]:
     return _run_async(florence_detect_impl(frames))
 
 
+def _build_gdino_loader() -> GroundingDinoLoader:
+    """Pick the Grounding-DINO backend at op-invocation time.
+
+    In production we want the real model — the detection-service Florence-2
+    sidecar also exposes ``/detect/grounding_dino`` (HF
+    ``IDEA-Research/grounding-dino-tiny`` on MPS), so the pipeline-service
+    stays torch-free and just talks HTTP. The deterministic-fake backend is
+    a section-01 stub kept around for tests / replay fixtures; flip via
+    ``GROUNDING_DINO_BACKEND=fake`` so CI doesn't need a live sidecar.
+    """
+    backend_kind = os.environ.get("GROUNDING_DINO_BACKEND", "http").lower()
+    if backend_kind == "fake":
+        return GroundingDinoLoader()  # falls back to _deterministic_fake_gdino
+    base_url = os.environ.get("DETECTION_SERVICE_URL", "http://127.0.0.1:14001")
+    timeout_s = float(os.environ.get("GROUNDING_DINO_TIMEOUT_S", "30"))
+    # Defaults match the official Grounding DINO README (0.40 / 0.30).
+    # See pipeline_service.models.grounding_dino_http.HttpGroundingDinoBackend
+    # for the rationale.
+    box_thr = float(os.environ.get("DETECTION_BOX_THRESHOLD", "0.40"))
+    text_thr = float(os.environ.get("DETECTION_TEXT_THRESHOLD", "0.30"))
+    return GroundingDinoLoader(
+        backend=HttpGroundingDinoBackend(
+            base_url=base_url,
+            timeout_s=timeout_s,
+            box_threshold=box_thr,
+            text_threshold=text_thr,
+        )
+    )
+
+
 @op(name="grounding_dino_detect", out=Out(list, description="§3.5 — gdino"))
 def grounding_dino_detect_op(
     frames: list[Frame],
     prompts: PromptList,
 ) -> list[FrameDetections]:
-    return grounding_dino_detect_impl(frames, prompts)
+    return grounding_dino_detect_impl(frames, prompts, loader=_build_gdino_loader())
 
 
 @op(name="sahi_recovery", out=Out(list, description="§3.6 — tiled re-detect"))
@@ -221,8 +267,15 @@ def sahi_recovery_op(
     per_detector_detections: list[FrameDetections],
     prompts: PromptList,
 ) -> list[FrameDetections]:
+    # GT-eval env-gated short-circuit (see eval/gt_eval/runner.py).
+    # Default behaviour (env var absent) is unchanged.
+    if _eval_skip_sahi_enabled():
+        return []
     return sahi_recovery_impl(
-        frames, per_detector_detections, prompts=prompts
+        frames,
+        per_detector_detections,
+        prompts=prompts,
+        loader=_build_gdino_loader(),
     )
 
 

@@ -1,0 +1,29 @@
+{
+  "plugin_root": "/Users/mrarindampaul/.claude/plugins/cache/piercelamb-plugins/deep-implement/0.2.1",
+  "sections_dir": "/Users/mrarindampaul/Develop/allmythings/docs/superpowers/specs/sections",
+  "target_dir": "/Users/mrarindampaul/Develop/allmythings",
+  "state_dir": "/Users/mrarindampaul/Develop/allmythings/docs/superpowers/specs/implementation",
+  "git_root": "/Users/mrarindampaul/Develop/allmythings",
+  "commit_style": "conventional",
+  "test_command": "uv run pytest",
+  "sections": [
+    "section-01-foundation",
+    "section-02-datasets",
+    "section-03-matchers",
+    "section-04-judges",
+    "section-05-metrics",
+    "section-06-baseline",
+    "section-07-pipeline-shim",
+    "section-08-orchestration"
+  ],
+  "sections_state": {},
+  "pre_commit": {
+    "present": true,
+    "type": "native-hook",
+    "config_file": null,
+    "native_hook": "/Users/mrarindampaul/Develop/allmythings/.git/hooks/pre-commit",
+    "may_modify_files": true,
+    "detected_formatters": []
+  },
+  "created_at": "2026-05-05T21:50:31.098345+00:00"
+}

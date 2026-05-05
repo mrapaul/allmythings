@@ -9,3 +9,4 @@ build/
 eval/corpora/
 eval/last-metrics.json
 .dagster/
+eval/datasets/

@@ -1,0 +1,202 @@
+{
+  "images": [
+    {
+      "id": 1,
+      "file_name": "couch.jpg",
+      "width": 640,
+      "height": 480
+    },
+    {
+      "id": 2,
+      "file_name": "dining_table.jpg",
+      "width": 640,
+      "height": 480
+    },
+    {
+      "id": 3,
+      "file_name": "fridge.jpg",
+      "width": 480,
+      "height": 640
+    },
+    {
+      "id": 4,
+      "file_name": "lamp.jpg",
+      "width": 320,
+      "height": 480
+    },
+    {
+      "id": 5,
+      "file_name": "bookshelf.jpg",
+      "width": 640,
+      "height": 480
+    }
+  ],
+  "annotations": [
+    {
+      "id": 1,
+      "image_id": 1,
+      "category_id": 1,
+      "bbox": [
+        50,
+        100,
+        300,
+        200
+      ],
+      "area": 60000
+    },
+    {
+      "id": 2,
+      "image_id": 1,
+      "category_id": 4,
+      "bbox": [
+        400,
+        50,
+        80,
+        120
+      ],
+      "area": 9600
+    },
+    {
+      "id": 3,
+      "image_id": 1,
+      "category_id": 2,
+      "bbox": [
+        200,
+        350,
+        200,
+        80
+      ],
+      "area": 16000
+    },
+    {
+      "id": 4,
+      "image_id": 2,
+      "category_id": 2,
+      "bbox": [
+        80,
+        150,
+        480,
+        220
+      ],
+      "area": 105600
+    },
+    {
+      "id": 5,
+      "image_id": 2,
+      "category_id": 4,
+      "bbox": [
+        50,
+        60,
+        60,
+        90
+      ],
+      "area": 5400
+    },
+    {
+      "id": 6,
+      "image_id": 2,
+      "category_id": 4,
+      "bbox": [
+        520,
+        60,
+        60,
+        90
+      ],
+      "area": 5400
+    },
+    {
+      "id": 7,
+      "image_id": 3,
+      "category_id": 3,
+      "bbox": [
+        80,
+        100,
+        320,
+        480
+      ],
+      "area": 153600
+    },
+    {
+      "id": 8,
+      "image_id": 4,
+      "category_id": 4,
+      "bbox": [
+        100,
+        50,
+        130,
+        360
+      ],
+      "area": 46800
+    },
+    {
+      "id": 9,
+      "image_id": 4,
+      "category_id": 2,
+      "bbox": [
+        40,
+        410,
+        240,
+        60
+      ],
+      "area": 14400
+    },
+    {
+      "id": 10,
+      "image_id": 5,
+      "category_id": 2,
+      "bbox": [
+        60,
+        60,
+        520,
+        380
+      ],
+      "area": 197600
+    },
+    {
+      "id": 11,
+      "image_id": 5,
+      "category_id": 1,
+      "bbox": [
+        70,
+        80,
+        200,
+        350
+      ],
+      "area": 70000
+    },
+    {
+      "id": 12,
+      "image_id": 5,
+      "category_id": 4,
+      "bbox": [
+        400,
+        100,
+        100,
+        200
+      ],
+      "area": 20000
+    }
+  ],
+  "categories": [
+    {
+      "id": 1,
+      "name": "couch",
+      "supercategory": "furniture"
+    },
+    {
+      "id": 2,
+      "name": "dining_table",
+      "supercategory": "furniture"
+    },
+    {
+      "id": 3,
+      "name": "refrigerator",
+      "supercategory": "appliance"
+    },
+    {
+      "id": 4,
+      "name": "lamp",
+      "supercategory": "lighting"
+    }
+  ]
+}
