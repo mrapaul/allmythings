@@ -32,6 +32,51 @@ vi.mock('react-native-keyboard-controller', () => ({
   KeyboardProvider: ({ children }: { children: unknown }) => children,
 }));
 
+// Reanimated v4 ships RN-only worklet runtime that Vite cannot resolve. The
+// shim exposes the surface QuickActionsSheet (and friends) use: a default
+// `Animated.View`-style component plus the worklet hooks (which return
+// no-op style objects in tests).
+vi.mock('react-native-reanimated', () => {
+  const View = 'AnimatedView';
+  return {
+    default: {
+      View,
+      Text: 'AnimatedText',
+      Image: 'AnimatedImage',
+      ScrollView: 'AnimatedScrollView',
+    },
+    Easing: {
+      out: (fn: unknown) => fn,
+      in: (fn: unknown) => fn,
+      inOut: (fn: unknown) => fn,
+      cubic: (t: number) => t,
+      linear: (t: number) => t,
+      bezier: () => (t: number) => t,
+    },
+    useSharedValue: (initial: number) => ({ value: initial }),
+    useAnimatedStyle: (cb: () => Record<string, unknown>) => cb(),
+    withTiming: (v: number) => v,
+    withSpring: (v: number) => v,
+    withDelay: (_d: number, v: number) => v,
+    FadeIn: { delay: () => ({}), duration: () => ({}) },
+    FadeOut: { delay: () => ({}), duration: () => ({}) },
+    Layout: { springify: () => ({ damping: () => ({}) }) },
+  };
+});
+
+// `@shopify/flash-list` requires native bindings (Fabric renderer) that
+// Vite/JSDOM can't load. Replace with string-element stand-ins.
+vi.mock('@shopify/flash-list', () => ({
+  FlashList: 'FlashList',
+  MasonryFlashList: 'MasonryFlashList',
+}));
+
+// `expo-image` ships ESM that pulls native modules. The string-stub keeps
+// snapshots and component trees parseable in tests.
+vi.mock('expo-image', () => ({
+  Image: 'ExpoImage',
+}));
+
 vi.mock('expo', () => ({
   reloadAppAsync: () => Promise.resolve(),
 }));
