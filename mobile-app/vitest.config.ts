@@ -30,6 +30,7 @@ export default defineConfig({
     alias: {
       '@': path.resolve(__dirname, '.'),
       'react-native': path.resolve(__dirname, './__tests__/stubs/react-native.ts'),
+      '@expo/vector-icons': path.resolve(__dirname, './__tests__/stubs/expo-vector-icons.ts'),
     },
   },
 });

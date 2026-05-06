@@ -10,6 +10,40 @@ vi.mock('expo-linear-gradient', () => ({
   LinearGradient: 'LinearGradient',
 }));
 
+vi.mock('expo-haptics', () => ({
+  selectionAsync: () => Promise.resolve(),
+  impactAsync: () => Promise.resolve(),
+  notificationAsync: () => Promise.resolve(),
+  ImpactFeedbackStyle: { Light: 'light', Medium: 'medium', Heavy: 'heavy' },
+  NotificationFeedbackType: { Success: 'success', Warning: 'warning', Error: 'error' },
+}));
+
+vi.mock('react-native-safe-area-context', () => ({
+  useSafeAreaInsets: () => ({ top: 0, bottom: 0, left: 0, right: 0 }),
+  SafeAreaProvider: ({ children }: { children: unknown }) => children,
+  SafeAreaView: 'SafeAreaView',
+}));
+
+vi.mock('react-native-keyboard-controller', () => ({
+  KeyboardAwareScrollView: 'KeyboardAwareScrollView',
+  KeyboardProvider: ({ children }: { children: unknown }) => children,
+}));
+
+vi.mock('expo', () => ({
+  reloadAppAsync: () => Promise.resolve(),
+}));
+
+vi.mock('expo-router', () => ({
+  useRouter: () => ({
+    push: () => undefined,
+    replace: () => undefined,
+    back: () => undefined,
+  }),
+  useLocalSearchParams: () => ({}),
+  Link: 'Link',
+  Stack: { Screen: 'StackScreen' },
+}));
+
 // `@testing-library/react-native` ships CJS that pulls in the real
 // `react-native` package via `require()` (which Vite's import-analysis
 // cannot rewrite, so the Flow-typed RN entry is parsed and explodes).
