@@ -1,0 +1,33 @@
+{
+  "expo": {
+    "name": "Home Inventory",
+    "slug": "home-inventory",
+    "scheme": "homeinventory",
+    "version": "0.1.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "automatic",
+    "newArchEnabled": true,
+    "splash": {
+      "resizeMode": "contain",
+      "backgroundColor": "#FFF8F0"
+    },
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.codesparktech.homeinventory"
+    },
+    "android": {
+      "adaptiveIcon": {
+        "backgroundColor": "#FFF8F0"
+      },
+      "package": "com.codesparktech.homeinventory"
+    },
+    "plugins": [
+      "expo-router",
+      "expo-font",
+      "expo-sqlite"
+    ],
+    "experiments": {
+      "typedRoutes": true
+    }
+  }
+}
