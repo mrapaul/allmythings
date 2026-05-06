@@ -132,6 +132,14 @@ vi.mock('expo-constants', () => ({
   default: { expoConfig: { extra: {} } },
 }));
 
+// `@sentry/react-native` ships native bindings + RN-only modules. The init
+// path is a no-op in tests; `wrap` must be a pass-through so the wrapped
+// root component still renders.
+vi.mock('@sentry/react-native', () => ({
+  init: vi.fn(),
+  wrap: <T>(component: T): T => component,
+}));
+
 vi.mock('expo', () => ({
   reloadAppAsync: () => Promise.resolve(),
 }));

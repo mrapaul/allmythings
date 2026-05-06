@@ -2,6 +2,7 @@ import { HomesProvider } from '@/contexts/HomesContext';
 import { InventoryProvider } from '@/contexts/InventoryContext';
 import { getDb } from '@/db/client';
 import { Repo } from '@/db/repository';
+import { initSentry, wrapApp } from '@/observability/sentry';
 import { PhotoStorage } from '@/services/photo-storage';
 import { Prefs } from '@/stores/prefs';
 import { Fraunces_700Bold, useFonts } from '@expo-google-fonts/fraunces';
@@ -12,9 +13,13 @@ import * as SplashScreen from 'expo-splash-screen';
 import { useEffect, useMemo } from 'react';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
+// Module-load side-effects: install observability before anything else
+// can throw, so error reports + traces capture the very first frame.
+initSentry();
+
 SplashScreen.preventAutoHideAsync().catch(() => {});
 
-export default function RootLayout() {
+function RootLayout() {
   const [loaded] = useFonts({
     Fraunces_700Bold,
     Inter_400Regular,
@@ -43,3 +48,5 @@ export default function RootLayout() {
     </GestureHandlerRootView>
   );
 }
+
+export default wrapApp(RootLayout);
