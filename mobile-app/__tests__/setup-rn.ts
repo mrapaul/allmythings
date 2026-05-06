@@ -3,6 +3,9 @@ import { vi } from 'vitest';
 // React 19 `act()` requires this global flag to be set in the test env.
 (globalThis as unknown as { IS_REACT_ACT_ENVIRONMENT: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
 
+// React Native's `__DEV__` global. Components branch on it for dev-only UI.
+(globalThis as unknown as { __DEV__: boolean }).__DEV__ = false;
+
 // `react-native` is aliased to `__tests__/stubs/react-native.ts` via vitest
 // config because Vite cannot parse RN's Flow-typed source.
 

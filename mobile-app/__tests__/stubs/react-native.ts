@@ -8,6 +8,7 @@ const ScrollView = 'ScrollView';
 const Image = 'Image';
 const TextInput = 'TextInput';
 const TouchableOpacity = 'TouchableOpacity';
+const Modal = 'Modal';
 
 const StyleSheet = {
   absoluteFill: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 },
@@ -40,6 +41,7 @@ export {
   Image,
   TextInput,
   TouchableOpacity,
+  Modal,
   StyleSheet,
   Platform,
   Dimensions,
