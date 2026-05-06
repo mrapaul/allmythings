@@ -14,5 +14,12 @@
     }
   },
   "include": ["**/*.ts", "**/*.tsx", "expo-env.d.ts"],
-  "exclude": ["node_modules", "dist", "build"]
+  "exclude": [
+    "node_modules",
+    "dist",
+    "build",
+    "api/generated/client.gen.ts",
+    "api/generated/sdk.gen.ts",
+    "api/generated/index.ts"
+  ]
 }
