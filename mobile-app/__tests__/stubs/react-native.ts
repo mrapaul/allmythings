@@ -10,6 +10,43 @@ const TextInput = 'TextInput';
 const TouchableOpacity = 'TouchableOpacity';
 const Modal = 'Modal';
 
+// Minimal `Animated` stand-in for tests. Spring/timing/parallel calls just
+// invoke the start callback synchronously; values never actually animate.
+type AnimStart = { start: (cb?: (r?: { finished: boolean }) => void) => void };
+const noopAnim = (): AnimStart => ({
+  start: (cb) => cb?.({ finished: true }),
+});
+// `new Animated.Value(initial)` — initial is accepted but ignored.
+class AnimatedValue {
+  constructor(...args: unknown[]) {
+    void args;
+  }
+  setValue() {
+    /* noop */
+  }
+}
+const Animated = {
+  View: 'AnimatedView',
+  Text: 'AnimatedText',
+  Image: 'AnimatedImage',
+  ScrollView: 'AnimatedScrollView',
+  Value: AnimatedValue,
+  spring: (_v: unknown, _cfg: unknown): AnimStart => noopAnim(),
+  timing: (_v: unknown, _cfg: unknown): AnimStart => noopAnim(),
+  parallel: (anims: AnimStart[]): AnimStart => ({
+    start: (cb) => {
+      for (const a of anims) a.start();
+      cb?.({ finished: true });
+    },
+  }),
+  sequence: (anims: AnimStart[]): AnimStart => ({
+    start: (cb) => {
+      for (const a of anims) a.start();
+      cb?.({ finished: true });
+    },
+  }),
+};
+
 const StyleSheet = {
   absoluteFill: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 },
   absoluteFillObject: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 },
@@ -42,6 +79,7 @@ export {
   TextInput,
   TouchableOpacity,
   Modal,
+  Animated,
   StyleSheet,
   Platform,
   Dimensions,
