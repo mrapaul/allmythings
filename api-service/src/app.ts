@@ -6,6 +6,8 @@ import multipart from '@fastify/multipart';
 import cors from '@fastify/cors';
 import rateLimit from '@fastify/rate-limit';
 import fastifyStatic from '@fastify/static';
+import swagger from '@fastify/swagger';
+import swaggerUi from '@fastify/swagger-ui';
 import path from 'node:path';
 import fs from 'node:fs';
 import { envConfig } from './config/env.config';
@@ -90,6 +92,17 @@ export async function buildApp(options?: { disableRateLimit?: boolean }): Promis
   app.addHook('onClose', async () => {
     health.stop();
   });
+
+  await app.register(swagger, {
+    openapi: {
+      openapi: '3.1.0',
+      info: { title: 'Visual Home Inventory API', version: '2.0.0' },
+      servers: [{ url: '/' }],
+      components: { securitySchemes: { bearerAuth: { type: 'http', scheme: 'bearer' } } },
+      security: [{ bearerAuth: [] }],
+    },
+  });
+  await app.register(swaggerUi, { routePrefix: '/docs' });
 
   await app.register(detectRoute);
   await app.register(detectStatusRoute);
