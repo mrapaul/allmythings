@@ -4,7 +4,8 @@ import { useColorScheme } from 'react-native';
 export type Scheme = 'light' | 'dark';
 
 export function resolveColors(scheme: Scheme) {
-  return scheme === 'dark' ? Colors.dark : Colors.light;
+  const palette = scheme === 'dark' ? Colors.dark : Colors.light;
+  return { ...palette, radius: Colors.radius };
 }
 
 export function useColors() {

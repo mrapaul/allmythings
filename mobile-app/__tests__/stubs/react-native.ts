@@ -7,6 +7,7 @@ const Pressable = 'Pressable';
 const ScrollView = 'ScrollView';
 const Image = 'Image';
 const TextInput = 'TextInput';
+const TouchableOpacity = 'TouchableOpacity';
 
 const StyleSheet = {
   absoluteFill: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 },
@@ -38,6 +39,7 @@ export {
   ScrollView,
   Image,
   TextInput,
+  TouchableOpacity,
   StyleSheet,
   Platform,
   Dimensions,
