@@ -20,8 +20,7 @@ export function resolveResponsive(width: number, height = 0): Responsive {
   else if (width >= 900) breakpoint = 'lg';
   else if (width >= 600) breakpoint = 'md';
 
-  const columns =
-    breakpoint === 'sm' ? 2 : breakpoint === 'md' ? 3 : breakpoint === 'lg' ? 4 : 5;
+  const columns = breakpoint === 'sm' ? 2 : breakpoint === 'md' ? 3 : breakpoint === 'lg' ? 4 : 5;
   const gutter = breakpoint === 'sm' ? 12 : 16;
   const cardGap = breakpoint === 'sm' ? 10 : 14;
   const contentMaxWidth = breakpoint === 'xl' ? 1100 : breakpoint === 'lg' ? 920 : width;
