@@ -20,6 +20,7 @@ import { ProviderHealthService } from './services/provider-health.service';
 import { advertiseService } from './utils/bonjour-advertiser';
 import { CircuitBreaker } from './utils/circuit-breaker';
 import { createPipelineClient } from './clients/pipeline.client';
+import { detectedItemSchema } from './schemas/detected-item.schema';
 
 process.on('uncaughtException', (err) => {
   logger.fatal({ err: err.message, stack: err.stack }, 'Uncaught Exception');
@@ -38,6 +39,8 @@ export async function buildApp(options?: { disableRateLimit?: boolean }): Promis
     requestIdLogLabel: 'requestId',
     trustProxy: true,
   });
+
+  app.addSchema(detectedItemSchema);
 
   app.setErrorHandler(errorHandler);
   app.setNotFoundHandler(notFoundHandler);

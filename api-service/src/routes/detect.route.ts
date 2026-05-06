@@ -10,6 +10,7 @@ import {
   PipelineUnavailableError,
   QueueFullError,
 } from '../clients/pipeline.client';
+import { mapSceneToItems } from './detect.mapper';
 
 const MAX_IMAGE_SIZE = 10 * 1024 * 1024;
 const SUPPORTED = new Set(['image/jpeg', 'image/png', 'image/webp']);
@@ -21,7 +22,30 @@ export async function detectRoute(app: FastifyInstance): Promise<void> {
 
   app.post(
     '/v1/detect',
-    { preHandler: authMiddleware },
+    {
+      preHandler: authMiddleware,
+      schema: {
+        summary: 'Detect home objects in 1–3 image frames',
+        tags: ['vision'],
+        response: {
+          200: {
+            type: 'object',
+            required: ['items'],
+            properties: {
+              items: { type: 'array', items: { $ref: 'DetectedItem' } },
+            },
+          },
+          202: {
+            type: 'object',
+            required: ['runId', 'statusUrl'],
+            properties: {
+              runId: { type: 'string' },
+              statusUrl: { type: 'string' },
+            },
+          },
+        },
+      },
+    },
     async (request: FastifyRequest, reply: FastifyReply) => {
       // Section-08 §7: accept 1–3 multipart parts. Each part is an
       // independent capture frame; the pipeline's cross_frame_dedup uses
@@ -146,7 +170,7 @@ async function runPipelinePath(args: BurstPathArgs) {
   }
 
   if (launch.idempotentHit && launch.status === 'succeeded' && launch.result) {
-    return reply.code(200).send(launch.result);
+    return reply.code(200).send({ items: mapSceneToItems(launch.result) });
   }
 
   const deadlineMs = Date.now() + envConfig.httpResponseTimeoutMs - PIPELINE_DEADLINE_BUFFER_MS;
@@ -161,7 +185,7 @@ async function runPipelinePath(args: BurstPathArgs) {
   }
 
   if (final.status === 'succeeded' && final.result) {
-    return reply.code(200).send(final.result);
+    return reply.code(200).send({ items: mapSceneToItems(final.result) });
   }
   if (final.status === 'running') {
     return reply.code(202).send({
