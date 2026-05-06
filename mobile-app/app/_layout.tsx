@@ -2,6 +2,7 @@ import { HomesProvider } from '@/contexts/HomesContext';
 import { InventoryProvider } from '@/contexts/InventoryContext';
 import { getDb } from '@/db/client';
 import { Repo } from '@/db/repository';
+import { initOtel } from '@/observability/otel';
 import { initSentry, wrapApp } from '@/observability/sentry';
 import { PhotoStorage } from '@/services/photo-storage';
 import { Prefs } from '@/stores/prefs';
@@ -16,6 +17,7 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler';
 // Module-load side-effects: install observability before anything else
 // can throw, so error reports + traces capture the very first frame.
 initSentry();
+initOtel();
 
 SplashScreen.preventAutoHideAsync().catch(() => {});
 

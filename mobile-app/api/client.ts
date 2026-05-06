@@ -1,3 +1,4 @@
+import { context, trace } from '@opentelemetry/api';
 import Constants from 'expo-constants';
 import { ofetch } from 'ofetch';
 
@@ -27,6 +28,14 @@ export const apiFetch = ofetch.create({
 });
 
 export function makeTraceparent(): string {
+  // Prefer the active OTel span so server traces stitch back to the mobile
+  // span that triggered them. Falls back to a random-id traceparent when no
+  // span is active (e.g., background fetches outside a `withSpan` scope).
+  const span = trace.getSpan(context.active());
+  if (span) {
+    const sc = span.spanContext();
+    return `00-${sc.traceId}-${sc.spanId}-01`;
+  }
   const hex = (n: number) => {
     let out = '';
     for (let i = 0; i < n; i++) out += Math.floor(Math.random() * 16).toString(16);

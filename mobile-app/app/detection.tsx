@@ -6,6 +6,7 @@ import { useHomes } from '@/contexts/HomesContext';
 import { useInventory } from '@/contexts/InventoryContext';
 import { useColors } from '@/hooks/useColors';
 import { useResponsive } from '@/hooks/useResponsive';
+import { withSpan } from '@/observability/otel';
 import {
   type DetectionRow as DetectionStoreRow,
   getDetectionStore,
@@ -115,15 +116,17 @@ export default function DetectionScreen() {
       setImgWH({ w, h });
 
       try {
-        for await (const ev of detectImageStream(
-          { fileUri: uploadUri, fileName: 'frame.jpg', mimeType: 'image/jpeg' },
-          controller.signal,
-        )) {
-          if (controller.signal.aborted) break;
-          if (ev.type === 'meta') prefs.setLastDetectionRunId(ev.runId);
-          if (ev.type === 'done' || ev.type === 'error') prefs.setLastDetectionRunId(null);
-          store.getState().handleEvent(ev);
-        }
+        await withSpan('detect.stream', async () => {
+          for await (const ev of detectImageStream(
+            { fileUri: uploadUri, fileName: 'frame.jpg', mimeType: 'image/jpeg' },
+            controller.signal,
+          )) {
+            if (controller.signal.aborted) break;
+            if (ev.type === 'meta') prefs.setLastDetectionRunId(ev.runId);
+            if (ev.type === 'done' || ev.type === 'error') prefs.setLastDetectionRunId(null);
+            store.getState().handleEvent(ev);
+          }
+        });
       } catch (err) {
         if (!controller.signal.aborted) {
           store.getState().handleEvent({
