@@ -20,7 +20,13 @@ class MyApp extends ConsumerWidget {
     return MaterialApp.router(
       title: 'All My Things',
       debugShowCheckedModeBanner: false,
-      theme: AppTheme.light,
+      theme: AppTheme.light(),
+      darkTheme: AppTheme.dark(),
+      // Match design: follow system color scheme (the design's `useColors`
+      // hook is keyed off `useColorScheme` — dark phone → dark app, light
+      // phone → light app). The screenshot the user shared is the dark
+      // variant; their phone is in dark mode.
+      themeMode: ThemeMode.system,
       routerConfig: goRouter,
     );
   }

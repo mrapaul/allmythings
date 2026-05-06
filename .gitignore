@@ -33,3 +33,6 @@ node_modules/
 /.env
 /.env.local
 !/.env.example
+
+# Reference material (design folder is local-only — contains 200+ MB binaries)
+/design/

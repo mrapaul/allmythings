@@ -8,6 +8,7 @@ from fastapi import FastAPI
 from detection_service.config import settings
 from detection_service.telemetry import configure_telemetry, mount_prometheus
 from detection_service.routes.florence import router as florence_router
+from detection_service.routes.grounding_dino import router as grounding_dino_router
 
 log = logging.getLogger(__name__)
 
@@ -30,6 +31,7 @@ configure_telemetry(app=app)
 mount_prometheus(app)
 
 app.include_router(florence_router, tags=["detect"])
+app.include_router(grounding_dino_router, tags=["detect"])
 
 
 @app.get("/")

@@ -1,9 +1,11 @@
 import 'dart:convert';
 import 'dart:math';
+import 'dart:typed_data';
 
 import 'package:all_my_things/data/database/app_database.dart';
 import 'package:all_my_things/data/repositories/detection_repository.dart';
 import 'package:all_my_things/domain/models/detected_object.dart';
+import 'package:all_my_things/domain/models/scene_observation.dart' as wire;
 import 'package:drift/drift.dart';
 
 /// Repository for inventory items in local database.
@@ -262,6 +264,141 @@ class InventoryRepository {
   Future<List<InventoryItem>> searchItems(String query) async {
     if (query.trim().isEmpty) return [];
     return _database.searchItems(query);
+  }
+
+  /// Section-08 §7: persist a SceneObservation to the v6 schema in one
+  /// transaction. Idempotent on sceneId — re-persisting the same scene
+  /// replaces the prior rows rather than duplicating them. Writes:
+  ///   1 inventory_items row (id = sceneId)
+  ///   1 scenes row
+  ///   N detections rows
+  ///   N + (alternates summed) detection_labels rows
+  Future<void> persistScene({
+    required wire.SceneObservation observation,
+    required String photoPath,
+    required String thumbnailPath,
+    String? captureSessionId,
+    String? serverPhotoUrl,
+  }) async {
+    final now = DateTime.now();
+    final sceneId = observation.sceneId;
+
+    await _database.transaction(() async {
+      // Drop any prior rows for this sceneId so re-persists are
+      // idempotent (FK cascades aren't on by default for our schema).
+      final priorDetIds = await (_database.select(_database.detections)
+            ..where((t) => t.sceneId.equals(sceneId)))
+          .map((d) => d.id)
+          .get();
+      if (priorDetIds.isNotEmpty) {
+        await (_database.delete(_database.detectionLabels)
+              ..where((t) => t.detectionId.isIn(priorDetIds)))
+            .go();
+      }
+      await (_database.delete(_database.detections)
+            ..where((t) => t.sceneId.equals(sceneId)))
+          .go();
+      await (_database.delete(_database.scenes)
+            ..where((t) => t.id.equals(sceneId)))
+          .go();
+      await (_database.delete(_database.inventoryItems)
+            ..where((t) => t.id.equals(sceneId)))
+          .go();
+
+      // Inventory item — id IS the sceneId. Status reflects flagged.
+      await _database.into(_database.inventoryItems).insert(
+            InventoryItemsCompanion.insert(
+              id: sceneId,
+              photoPath: photoPath,
+              thumbnailPath: thumbnailPath,
+              serverPhotoUrl: Value(serverPhotoUrl),
+              detectionData: jsonEncode(observation.toJson()),
+              status: Value(observation.flagged ? 'flagged' : 'completed'),
+              isFlagged: Value(observation.flagged),
+              createdAt: now,
+              updatedAt: now,
+            ),
+          );
+
+      await _database.into(_database.scenes).insert(
+            ScenesCompanion.insert(
+              id: sceneId,
+              captureSessionId: captureSessionId ?? sceneId,
+              agreementCoverage: Value(observation.agreementCoverage),
+              agreementPrecision: Value(observation.agreementPrecision),
+              selfDiagnosisTriggered:
+                  Value(observation.selfDiagnosisTriggered),
+              rerunDepth: Value(observation.rerunDepth),
+              flagReason: Value(observation.flagReason),
+              createdAt: now,
+            ),
+          );
+
+      for (final det in observation.detections) {
+        Uint8List? embed;
+        final b64 = det.cropEmbeddingB64;
+        if (b64 != null && b64.isNotEmpty) {
+          try {
+            final bytes = base64Decode(b64);
+            // Schema CHECK enforces 768 bytes; only persist if it matches
+            // so we never blow up the transaction with a constraint error.
+            if (bytes.length == 768) {
+              embed = Uint8List.fromList(bytes);
+            }
+          } on FormatException {
+            embed = null;
+          }
+        }
+        Uint8List? mask;
+        final mb64 = det.maskRleB64;
+        if (mb64 != null && mb64.isNotEmpty) {
+          try {
+            mask = Uint8List.fromList(base64Decode(mb64));
+          } on FormatException {
+            mask = null;
+          }
+        }
+
+        await _database.into(_database.detections).insert(
+              DetectionsCompanion.insert(
+                id: det.id,
+                sceneId: sceneId,
+                bbox: jsonEncode(det.bbox.toJson()),
+                maskRle: Value(mask),
+                cropEmbeddingI8: Value(embed),
+                agreementScore: Value(det.agreementScore),
+                contributingSignals: Value(jsonEncode(
+                  det.contributingSignals.map((s) => s.toJson()).toList(),
+                )),
+                vlmStructuredAttributes:
+                    Value(jsonEncode(det.vlmStructuredAttributes)),
+                primaryLabel: det.primaryLabel,
+                confidence: Value(det.confidence),
+              ),
+            );
+
+        // Primary label first — denormalised so FTS5 over detection_labels
+        // works without indexing JSON paths.
+        await _database.into(_database.detectionLabels).insert(
+              DetectionLabelsCompanion.insert(
+                detectionId: det.id,
+                label: det.primaryLabel,
+                confidence: Value(det.confidence),
+                isPrimary: const Value(true),
+              ),
+            );
+        for (final alt in det.alternateLabels) {
+          await _database.into(_database.detectionLabels).insert(
+                DetectionLabelsCompanion.insert(
+                  detectionId: det.id,
+                  label: alt.label,
+                  confidence: Value(alt.confidence),
+                  isPrimary: const Value(false),
+                ),
+              );
+        }
+      }
+    });
   }
 
   /// Get inventory statistics

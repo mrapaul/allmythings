@@ -74,17 +74,35 @@ async def _detect_one(
         return _detector_error_response(frame.frame_id)
 
     raw_regions = payload.get("regions", []) if isinstance(payload, dict) else []
+    # Florence returns normalised [0,1] bbox coordinates; gdino + sahi
+    # downstream expect pixel-space coordinates so cross-pass dedup
+    # (IoU-based) can compare them. Multiply by the *served* image
+    # dimensions returned alongside the regions — this matches the W/H
+    # the model actually saw, which may differ from frame.rgb_shape if
+    # the encoder resized.
+    served_w = float(payload.get("image_width") or 0.0) if isinstance(payload, dict) else 0.0
+    served_h = float(payload.get("image_height") or 0.0) if isinstance(payload, dict) else 0.0
+    if served_w <= 0 or served_h <= 0:
+        # Fall back to the frame's own decoded dims.
+        try:
+            served_h, served_w = float(frame.rgb_shape[0]), float(frame.rgb_shape[1])
+        except (IndexError, TypeError):
+            served_w = served_h = 0.0
     detections: list[RawDetection] = []
     for region in raw_regions:
         try:
+            x_norm = float(region.get("x", 0.0))
+            y_norm = float(region.get("y", 0.0))
+            w_norm = float(region.get("width", 0.0))
+            h_norm = float(region.get("height", 0.0))
             det = RawDetection(
                 detector="florence",
                 frame_id=frame.frame_id,
                 bbox=BBox(
-                    x=float(region.get("x", 0.0)),
-                    y=float(region.get("y", 0.0)),
-                    width=float(region.get("width", 0.0)),
-                    height=float(region.get("height", 0.0)),
+                    x=x_norm * served_w,
+                    y=y_norm * served_h,
+                    width=w_norm * served_w,
+                    height=h_norm * served_h,
                 ),
                 label=str(region.get("caption", "")).strip(),
                 raw_confidence=None,
@@ -93,6 +111,25 @@ async def _detect_one(
             logger.warning("malformed Florence region in %s: %s", frame.frame_id, exc)
             continue
         if not det.label:
+            continue
+        # Florence-2's dense-region head sometimes emits scene-caption
+        # regions (verbose labels like "living room with X and Y") whose
+        # bbox spans the full frame on one axis with substantial area on
+        # the other. These poison downstream classification (Qwen-VL just
+        # sees the whole scene again). Drop when one axis is ≥95% AND the
+        # combined normalised area is ≥30% — that pairing catches scene
+        # strips while preserving thin-but-tall/wide legitimate objects
+        # (a vertical lamp at 0.05×0.95 has area ~0.05, kept).
+        if (w_norm >= 0.95 or h_norm >= 0.95) and (w_norm * h_norm) >= 0.30:
+            logger.info(
+                "dropping scene-caption Florence region in %s "
+                "(w=%.3f h=%.3f area=%.3f label=%r)",
+                frame.frame_id,
+                w_norm,
+                h_norm,
+                w_norm * h_norm,
+                det.label,
+            )
             continue
         detections.append(det)
 
@@ -139,10 +176,17 @@ async def florence_detect_impl(
     becomes ``detector_error=True``; op continues for other frames.
 
     Empty input → empty output.
+
+    When ``EVAL_MOCK_BACKENDS=1`` is set in the environment AND no
+    explicit ``client`` was provided, emit deterministic synthetic
+    detections so CI / eval can run without a real Florence backend.
     """
     sorted_frames = sorted(list(frames), key=lambda f: f.frame_id)
     if not sorted_frames:
         return []
+    from pipeline_service.ops._synthetic import is_mock_mode, synthetic_frame_detections
+    if client is None and is_mock_mode():
+        return synthetic_frame_detections("florence", sorted_frames)
     flo = client or FlorenceClient()
     out: list[FrameDetections] = []
     for frame in sorted_frames:

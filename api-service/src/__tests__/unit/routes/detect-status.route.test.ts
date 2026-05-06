@@ -1,6 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import Fastify, { FastifyInstance } from 'fastify';
-import { WorkflowNotFoundError } from '@temporalio/client';
 import { detectStatusRoute } from '../../../routes/detect-status.route';
 import {
   PipelineClient,
@@ -8,7 +7,6 @@ import {
   RunNotFoundError,
 } from '../../../clients/pipeline.client';
 import type { SceneObservation } from '../../../types/pipeline';
-import { envConfig } from '../../../config/env.config';
 
 const SCENE: SceneObservation = {
   sceneId: 's',
@@ -31,69 +29,11 @@ interface MockPipeline extends PipelineClient {
   waitForCompletion: ReturnType<typeof vi.fn>;
 }
 
-describe('GET /v1/detect/status/:workflowId — flag-off (legacy Temporal)', () => {
-  let app: FastifyInstance;
-  let mockHandle: { describe: ReturnType<typeof vi.fn>; result: ReturnType<typeof vi.fn> };
-
-  beforeEach(async () => {
-    vi.spyOn(envConfig, 'usePipelineService', 'get').mockReturnValue(false);
-    app = Fastify({ logger: false });
-    mockHandle = { describe: vi.fn(), result: vi.fn() };
-    const mockTemporal = { workflow: { getHandle: vi.fn(() => mockHandle) } };
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    (app as any).temporal = mockTemporal;
-    await app.register(detectStatusRoute);
-  });
-  afterEach(async () => {
-    vi.restoreAllMocks();
-    await app.close();
-  });
-
-  it('returns 200 + result when workflow is COMPLETED', async () => {
-    mockHandle.describe.mockResolvedValue({ status: { name: 'COMPLETED' }, startTime: new Date() });
-    mockHandle.result.mockResolvedValue({
-      photoId: 'p1', photoUrl: '/photos/p1.jpg', itemCount: 0, items: [], errors: [], traceId: 't', processingMs: 10,
-    });
-    const res = await app.inject({ method: 'GET', url: '/v1/detect/status/detect-abc' });
-    expect(res.statusCode).toBe(200);
-    expect(res.json().status).toBe('completed');
-  });
-
-  it('returns 202 + running when workflow is RUNNING', async () => {
-    mockHandle.describe.mockResolvedValue({ status: { name: 'RUNNING' }, startTime: new Date() });
-    const res = await app.inject({ method: 'GET', url: '/v1/detect/status/detect-xyz' });
-    expect(res.statusCode).toBe(202);
-    expect(res.json().status).toBe('running');
-  });
-
-  it('returns 500 + failed when workflow is FAILED', async () => {
-    mockHandle.describe.mockResolvedValue({ status: { name: 'FAILED' }, startTime: new Date() });
-    const res = await app.inject({ method: 'GET', url: '/v1/detect/status/detect-bad' });
-    expect(res.statusCode).toBe(500);
-    expect(res.json().status).toBe('failed');
-  });
-
-  it('returns 500 + terminated when workflow is TERMINATED', async () => {
-    mockHandle.describe.mockResolvedValue({ status: { name: 'TERMINATED' }, startTime: new Date() });
-    const res = await app.inject({ method: 'GET', url: '/v1/detect/status/detect-killed' });
-    expect(res.statusCode).toBe(500);
-    expect(res.json().status).toBe('terminated');
-  });
-
-  it('returns 404 when workflow is not found', async () => {
-    mockHandle.describe.mockRejectedValue(new WorkflowNotFoundError('not found', 'detect-missing', 'rid'));
-    const res = await app.inject({ method: 'GET', url: '/v1/detect/status/detect-missing' });
-    expect(res.statusCode).toBe(404);
-    expect(res.json().error).toBe('workflow_not_found');
-  });
-});
-
-describe('GET /v1/detect/status/:workflowId — flag-on (pipeline-service)', () => {
+describe('GET /v1/detect/status/:workflowId — pipeline-service single path', () => {
   let app: FastifyInstance;
   let pipeline: MockPipeline;
 
   beforeEach(async () => {
-    vi.spyOn(envConfig, 'usePipelineService', 'get').mockReturnValue(true);
     app = Fastify({ logger: false });
     pipeline = {
       launchRun: vi.fn(),
@@ -102,8 +42,6 @@ describe('GET /v1/detect/status/:workflowId — flag-on (pipeline-service)', () 
     } as unknown as MockPipeline;
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     (app as any).pipeline = pipeline;
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    (app as any).temporal = { workflow: { getHandle: vi.fn() } };
     await app.register(detectStatusRoute);
   });
   afterEach(async () => {
@@ -182,16 +120,12 @@ describe('GET /v1/detect/status/:workflowId — flag-on (pipeline-service)', () 
     expect(res.json().error).toBe('pipeline_unavailable');
   });
 
-  it('flag-on does NOT call temporal (regression)', async () => {
-    pipeline.getRun.mockResolvedValue({
-      runId: 'r-9',
-      status: 'succeeded',
-      startedAt: 's',
-      result: SCENE,
-    });
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const temporal = (app as any).temporal as { workflow: { getHandle: ReturnType<typeof vi.fn> } };
-    await app.inject({ method: 'GET', url: '/v1/detect/status/r-9' });
-    expect(temporal.workflow.getHandle).not.toHaveBeenCalled();
+  it('no pipeline configured → 503', async () => {
+    const bare = Fastify({ logger: false });
+    await bare.register(detectStatusRoute);
+    const res = await bare.inject({ method: 'GET', url: '/v1/detect/status/r-9' });
+    expect(res.statusCode).toBe(503);
+    expect(res.json().error).toBe('pipeline_unavailable');
+    await bare.close();
   });
 });

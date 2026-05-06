@@ -8,14 +8,15 @@ export async function healthRoute(app: FastifyInstance): Promise<void> {
 
   app.get('/v1/health', async (_request, reply) => {
     const snapshot = health.snapshot();
-    const temporalUp = snapshot.temporal.status === 'up';
     const florenceUp = snapshot.florence.status === 'up';
     const ollamaUp = snapshot.ollama.status === 'up';
+    const pipelineUp = snapshot.pipeline.status === 'up';
 
-    // Temporal AND Florence are required minimum — florence-only fallback
-    // is still usable when Ollama is down, but not without Florence or Temporal.
-    const isFunctional = temporalUp && florenceUp;
-    const allUp = temporalUp && florenceUp && ollamaUp;
+    // Pipeline is the load-bearing dependency post-section-10. Florence
+    // remains a soft requirement (mock stand-in is OK in dev). Ollama
+    // failure degrades but does not unhealth the service.
+    const isFunctional = pipelineUp && florenceUp;
+    const allUp = pipelineUp && florenceUp && ollamaUp;
     const status = allUp ? 'healthy' : isFunctional ? 'degraded' : 'unhealthy';
 
     return reply.code(isFunctional ? 200 : 503).send({

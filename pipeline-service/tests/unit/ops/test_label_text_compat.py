@@ -79,7 +79,14 @@ def test_encoder_persistent_failure_returns_true_degraded() -> None:
 
 
 def test_threshold_is_respected() -> None:
-    """A higher threshold should make even synonyms fail."""
+    """The threshold gates the cosine match. With the real
+    sentence-transformers backend, ``sofa``/``couch`` cosine is ≈ 0.86
+    (well above 0.6 → True) but below 0.95 → False at a stricter cap.
+    Identical normalised strings short-circuit and remain True at any
+    threshold."""
     enc = LabelEncoder()
+    # Real synonym pair: cosine ≈ 0.86 → True at 0.6, False at 0.95.
     assert label_text_compat("sofa", "couch", threshold=0.6, encoder=enc) is True
-    assert label_text_compat("sofa", "couch", threshold=0.999, encoder=enc) is False
+    assert label_text_compat("sofa", "couch", threshold=0.95, encoder=enc) is False
+    # Identical normalised strings short-circuit regardless of threshold.
+    assert label_text_compat("Sofa", "sofa", threshold=0.999, encoder=enc) is True

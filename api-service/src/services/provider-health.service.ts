@@ -13,23 +13,23 @@ export interface ProviderState {
 export interface HealthSnapshot {
   florence: ProviderState;
   ollama: ProviderState;
-  temporal: ProviderState;
+  pipeline: ProviderState;
 }
 
 export interface ProviderHealthConfig {
   florenceUrl: string;
   ollamaUrl: string;
-  temporalHost: string;
+  pipelineUrl: string;
   intervalMs?: number;
   probeTimeoutMs?: number;
 }
 
 /**
  * Periodic health probes for downstream dependencies consumed by
- * `/v1/health`. Runs as a simple in-process timer; independent of
- * Temporal so it can report honest status even when Temporal itself
- * is unreachable. State is cached; callers read `snapshot()`
- * synchronously.
+ * `/v1/health`. Runs as a simple in-process timer; independent of the
+ * pipeline-service so it can report honest status even when the
+ * pipeline itself is unreachable. State is cached; callers read
+ * `snapshot()` synchronously.
  */
 export class ProviderHealthService {
   private state: HealthSnapshot;
@@ -46,7 +46,7 @@ export class ProviderHealthService {
     this.state = {
       florence: { ...empty },
       ollama: { ...empty },
-      temporal: { ...empty },
+      pipeline: { ...empty },
     };
   }
 
@@ -69,7 +69,7 @@ export class ProviderHealthService {
     return {
       florence: { ...this.state.florence },
       ollama: { ...this.state.ollama },
-      temporal: { ...this.state.temporal },
+      pipeline: { ...this.state.pipeline },
     };
   }
 
@@ -77,11 +77,14 @@ export class ProviderHealthService {
     await Promise.all([
       this.probeHttp('florence', `${this.cfg.florenceUrl}/`),
       this.probeHttp('ollama', `${this.cfg.ollamaUrl}/api/tags`),
-      this.probeTemporal(),
+      this.probeHttp('pipeline', `${this.cfg.pipelineUrl}/health`),
     ]);
   }
 
-  private async probeHttp(name: 'florence' | 'ollama', url: string): Promise<void> {
+  private async probeHttp(
+    name: 'florence' | 'ollama' | 'pipeline',
+    url: string,
+  ): Promise<void> {
     const start = Date.now();
     try {
       const res = await fetch(url, {
@@ -91,33 +94,6 @@ export class ProviderHealthService {
       this.record(name, 'up', Date.now() - start, null);
     } catch (err) {
       this.record(name, 'down', Date.now() - start, (err as Error).message);
-    }
-  }
-
-  private async probeTemporal(): Promise<void> {
-    const start = Date.now();
-    try {
-      const [host, port] = this.cfg.temporalHost.split(':');
-      const { Socket } = await import('node:net');
-      await new Promise<void>((resolve, reject) => {
-        const s = new Socket();
-        const t = setTimeout(() => {
-          s.destroy();
-          reject(new Error('timeout'));
-        }, this.cfg.probeTimeoutMs ?? 3000);
-        s.connect(Number(port || 7233), host, () => {
-          clearTimeout(t);
-          s.end();
-          resolve();
-        });
-        s.on('error', (e) => {
-          clearTimeout(t);
-          reject(e);
-        });
-      });
-      this.record('temporal', 'up', Date.now() - start, null);
-    } catch (err) {
-      this.record('temporal', 'down', Date.now() - start, (err as Error).message);
     }
   }
 

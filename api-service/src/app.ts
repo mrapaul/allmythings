@@ -14,9 +14,8 @@ import { errorHandler, notFoundHandler } from './middleware/error.middleware';
 import { detectRoute } from './routes/detect.route';
 import { detectStatusRoute } from './routes/detect-status.route';
 import { healthRoute } from './routes/health.route';
+import { readyRoute } from './routes/ready.route';
 import { metricsRoute } from './routes/metrics.route';
-import { getTemporalClient, closeTemporalClient } from './temporal/client';
-import { createWorker, runWorker, closeWorker } from './temporal/worker';
 import { ProviderHealthService } from './services/provider-health.service';
 import { advertiseService } from './utils/bonjour-advertiser';
 import { CircuitBreaker } from './utils/circuit-breaker';
@@ -44,7 +43,7 @@ export async function buildApp(options?: { disableRateLimit?: boolean }): Promis
   app.setNotFoundHandler(notFoundHandler);
 
   await app.register(cors, { origin: true, credentials: true });
-  await app.register(multipart, { limits: { fileSize: 10 * 1024 * 1024, files: 1 } });
+  await app.register(multipart, { limits: { fileSize: 10 * 1024 * 1024, files: 3 } });
 
   if (!options?.disableRateLimit) {
     await app.register(rateLimit, { max: 100, timeWindow: '1 minute' });
@@ -59,35 +58,27 @@ export async function buildApp(options?: { disableRateLimit?: boolean }): Promis
     decorateReply: false,
   });
 
-  // Temporal client (lazy-connects; becomes workflow orchestration surface)
-  const temporal = await getTemporalClient();
+  // Pipeline-service client. Section-10 made this the only path; the
+  // route layer 503's fast if it isn't configured.
+  const breaker = new CircuitBreaker('pipeline-service', {
+    failureThreshold: 5,
+    resetTimeout: 30_000,
+    halfOpenRequests: 1,
+  });
+  const pipeline = createPipelineClient({
+    baseUrl: envConfig.pipelineUrl,
+    circuitBreaker: breaker,
+    longPollTimeoutS: envConfig.pipelineLongPollTimeoutS,
+    maxRpsPerRun: envConfig.pipelineMaxRps,
+  });
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  (app as any).temporal = temporal;
+  (app as any).pipeline = pipeline;
 
-  // Pipeline-service client (section-02). Wired here so detect.route.ts and
-  // detect-status.route.ts can flag-gate on USE_PIPELINE_SERVICE without
-  // each route file constructing its own client.
-  if (envConfig.usePipelineService) {
-    const breaker = new CircuitBreaker('pipeline-service', {
-      failureThreshold: 5,
-      resetTimeout: 30_000,
-      halfOpenRequests: 1,
-    });
-    const pipeline = createPipelineClient({
-      baseUrl: envConfig.pipelineUrl,
-      circuitBreaker: breaker,
-      longPollTimeoutS: envConfig.pipelineLongPollTimeoutS,
-      maxRpsPerRun: envConfig.pipelineMaxRps,
-    });
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    (app as any).pipeline = pipeline;
-  }
-
-  // Provider health service (periodic probes, independent of workflows)
+  // Provider health service (periodic probes against pipeline + tier-1 LLM)
   const health = new ProviderHealthService({
     florenceUrl: envConfig.florenceUrl,
     ollamaUrl: envConfig.ollamaBaseUrl,
-    temporalHost: envConfig.temporalHost,
+    pipelineUrl: envConfig.pipelineUrl,
   });
   health.start();
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -100,6 +91,7 @@ export async function buildApp(options?: { disableRateLimit?: boolean }): Promis
   await app.register(detectRoute);
   await app.register(detectStatusRoute);
   await app.register(healthRoute);
+  await app.register(readyRoute);
   await app.register(metricsRoute);
 
   app.get('/', () => ({
@@ -109,6 +101,7 @@ export async function buildApp(options?: { disableRateLimit?: boolean }): Promis
       detection: 'POST /v1/detect',
       detectionStatus: 'GET /v1/detect/status/:workflowId',
       health: 'GET /v1/health',
+      ready: 'GET /v1/ready',
       photos: 'GET /photos/:filename',
     },
   }));
@@ -122,10 +115,6 @@ async function start(): Promise<void> {
     const address = await app.listen({ port: envConfig.port, host: '0.0.0.0' });
     logger.info({ address, port: envConfig.port, nodeEnv: envConfig.nodeEnv }, 'Server started');
 
-    // Start Temporal worker in-process (same lifecycle as HTTP server)
-    await createWorker();
-    void runWorker();
-
     const stopBonjour = advertiseService(envConfig.port);
     logger.info({ name: 'allmythings-server', port: envConfig.port }, 'Bonjour advertisement started');
 
@@ -133,8 +122,6 @@ async function start(): Promise<void> {
       logger.info({ signal }, 'Shutting down');
       stopBonjour();
       await app.close();
-      await closeWorker();
-      await closeTemporalClient();
       await shutdownOtel();
       process.exit(0);
     };

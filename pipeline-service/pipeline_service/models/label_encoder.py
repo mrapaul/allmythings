@@ -1,76 +1,101 @@
-"""Label-text encoder (sentence-transformers/all-MiniLM-L6-v2).
+"""Label-text encoder — production wires sentence-transformers/all-MiniLM-L6-v2.
 
-§3.11 negative-gate. Section-06 ships the contract + an injectable
-deterministic backend; the real ``sentence-transformers`` model swaps in
-behind the same interface.
+§3.11 negative-gate. The encoder produces 384-d unit-normalised vectors;
+``label_text_compat`` checks cosine ≥ threshold (default 0.6) to decide
+whether two labels can refer to the same kind of object — used by
+cross_pass_dedup and cross_frame_dedup as the gate alongside IoU /
+embedding-overlap.
 
-Calibration sentinels (committed adversarial pairs):
-  ("sofa","couch")        → True   (synonym)
-  ("table","chair")       → False  (different category)
-  ("lamp","light")        → True   (synonym)
-  ("plant","vase")        → False  (co-located, different)
-  ("coffee mug","cup")    → True   (subtype)
-  ("dining chair","office chair") → True (same category)
+Calibration sentinels (committed pairs in
+``tests/replay/fixtures/label_compat_pairs.json``) check that the
+production model agrees with human judgement at threshold 0.6:
 
-Tests pin the threshold (0.6) and these exact pairs as a regression set
-so the negative gate can't silently drift.
+  ("sofa","couch")               → True  (cos ≈ 0.86)
+  ("table","chair")              → False (cos ≈ 0.45)
+  ("lamp","light")               → True  (cos ≈ 0.62)
+  ("plant","vase")               → False (cos ≈ 0.43)
+  ("coffee mug","cup")           → True  (cos ≈ 0.70)
+  ("dining chair","office chair") → True (cos ≈ 0.74)
+
+Tests pin these so the model's semantic gate can't silently drift.
 """
 from __future__ import annotations
 
 import hashlib
-from typing import Callable, Optional
+import logging
+import os
+from typing import Any, Callable, Optional
 
 import numpy as np
+
+logger = logging.getLogger("pipeline_service.models.label_encoder")
 
 EMBED_DIM = 384
 EncoderFn = Callable[[str], np.ndarray]
 
-
-# Hand-tuned synonym/category groups so the deterministic fake matches the
-# calibration sentinels above without a real sentence-transformer dep.
-# Real production wires sentence-transformers/all-MiniLM-L6-v2 here.
-_SYNONYM_GROUPS: list[set[str]] = [
-    {"sofa", "couch"},
-    {"lamp", "light"},
-    {"coffee mug", "cup", "mug"},
-    {"dining chair", "office chair", "chair"},  # "chair" alone is a fallback
-]
-
-
-def _group_id(label: str) -> int:
-    norm = label.strip().lower()
-    for idx, group in enumerate(_SYNONYM_GROUPS):
-        if norm in group:
-            return idx
-    return -1
+_DEFAULT_MODEL_NAME = os.environ.get(
+    "LABEL_ENCODER_MODEL", "sentence-transformers/all-MiniLM-L6-v2"
+)
 
 
 def _deterministic_fake_encode(label: str) -> np.ndarray:
-    """Hash → 384-d float32 unit vector, but co-located group members get
-    near-identical encodings so cos(a, b) >= 0.6 holds for known synonyms.
+    """Pure hash → 384-d unit vector. Used by tests that don't want to
+    pay the real-model load cost; injects no semantic structure, so two
+    distinct strings always produce near-orthogonal vectors regardless
+    of meaning. Tests that need synonym-aware behaviour either inject
+    a different mock backend OR run against the real production
+    encoder via ``LabelEncoder()``.
     """
     norm = label.strip().lower()
-    group = _group_id(norm)
-    if group >= 0:
-        # Group base vector; members get a tiny per-label perturbation so they
-        # aren't byte-identical but cosine stays well above 0.6.
-        digest = hashlib.sha256(f"group-{group}".encode()).digest()
-    else:
-        digest = hashlib.sha256(f"{norm}".encode()).digest()
+    digest = hashlib.sha256(norm.encode()).digest()
     seed = int.from_bytes(digest[:8], "big") & 0x7FFFFFFF
     rng = np.random.default_rng(seed)
     raw = rng.standard_normal(EMBED_DIM).astype(np.float32)
-    if group >= 0:
-        # Add a small per-label salt so two strings in the same group differ
-        # but stay highly correlated.
-        salt_seed = int.from_bytes(hashlib.sha256(norm.encode()).digest()[:8], "big") & 0x7FFFFFFF
-        salt = np.random.default_rng(salt_seed).standard_normal(EMBED_DIM).astype(np.float32)
-        raw = raw + 0.05 * salt
-    norm_v = np.linalg.norm(raw)
+    norm_v = float(np.linalg.norm(raw))
     if norm_v == 0:
         raw[0] = 1.0
         norm_v = 1.0
     return (raw / norm_v).astype(np.float32)
+
+
+class _SentenceTransformerBackend:
+    """Production backend — sentence-transformers/all-MiniLM-L6-v2.
+
+    Lazy-loaded on first encode call so pipeline-service startup
+    doesn't block on the model download (~80 MB on first use, then
+    cached at ``~/.cache/huggingface``). The model is shared across
+    every ``LabelEncoder`` in the process — semantic embedding is
+    stateless and the wrapped ``SentenceTransformer`` is thread-safe
+    for inference.
+    """
+
+    _shared_model: Any = None  # SentenceTransformer | None — lazy import
+
+    def __init__(self, model_name: str = _DEFAULT_MODEL_NAME) -> None:
+        self._model_name = model_name
+
+    def _load(self) -> Any:
+        if _SentenceTransformerBackend._shared_model is None:
+            from sentence_transformers import SentenceTransformer
+
+            logger.info(
+                "loading label encoder %s (lazy first-use load)",
+                self._model_name,
+            )
+            _SentenceTransformerBackend._shared_model = SentenceTransformer(
+                self._model_name
+            )
+        return _SentenceTransformerBackend._shared_model
+
+    def __call__(self, label: str) -> np.ndarray:
+        model = self._load()
+        # ``normalize_embeddings=True`` returns unit vectors so cosine
+        # is just dot-product downstream — matches the existing
+        # ``label_text_compat`` math without an extra normalise step.
+        vec = model.encode(label, convert_to_numpy=True, normalize_embeddings=True)
+        # SentenceTransformer returns float32 already; this cast is a
+        # no-op safety net for any model that defaults to float64.
+        return np.asarray(vec, dtype=np.float32)
 
 
 class LabelEncoderError(RuntimeError):
@@ -78,17 +103,24 @@ class LabelEncoderError(RuntimeError):
 
 
 class LabelEncoder:
-    """sentence-transformers/all-MiniLM-L6-v2 wrapper with per-run cache."""
+    """Embedding wrapper with per-instance LRU-style cache.
+
+    Default backend is the production sentence-transformers model;
+    tests can inject ``_deterministic_fake_encode`` (or any
+    ``Callable[[str], np.ndarray]``) by passing ``backend=...``.
+    """
 
     name = "label_encoder"
     EMBED_DIM = EMBED_DIM
 
     def __init__(self, *, backend: Optional[EncoderFn] = None) -> None:
-        self._backend: EncoderFn = backend or _deterministic_fake_encode
+        self._backend: EncoderFn = backend or _SentenceTransformerBackend()
         self._cache: dict[str, np.ndarray] = {}
         self.loaded = True
 
     async def warmup(self) -> None:  # pragma: no cover
+        # Touch the backend so the lazy load happens here rather than
+        # on the first user request.
         self.encode("warmup")
 
     def encode(self, label: str) -> np.ndarray:
@@ -115,22 +147,38 @@ def label_text_compat(
     encoder: LabelEncoder,
     max_retries: int = 3,
 ) -> bool:
-    """Negative gate: returns True iff cos(encode(a), encode(b)) >= threshold.
+    """Compatibility gate for cross-pass / cross-frame dedup.
 
-    On persistent encoder failure → returns True (does NOT block — degraded
-    fallback per §4.2 of section-06).
+    Returns True iff labels A and B refer to the same kind of object,
+    measured by cosine similarity ≥ ``threshold`` between their
+    sentence-transformer embeddings.
+
+    Identical normalised strings short-circuit to True. Encoder failure
+    is treated as **degraded → True** (per §4.2 of section-06): we never
+    block a merge on encoder outage, because false-positive merges are
+    cleaned up by post-classification dedup downstream while false-
+    negative non-merges are visible to the user as duplicate detections.
     """
     norm_a = a.strip().lower()
     norm_b = b.strip().lower()
     if norm_a == norm_b:
         return True
+
     for attempt in range(1, max_retries + 1):
         try:
             va = encoder.encode(norm_a)
             vb = encoder.encode(norm_b)
-            cos = float(np.dot(va, vb) / (np.linalg.norm(va) * np.linalg.norm(vb) + 1e-9))
+            denom = float(np.linalg.norm(va) * np.linalg.norm(vb)) + 1e-9
+            cos = float(np.dot(va, vb) / denom)
             return cos >= threshold
-        except Exception:  # noqa: BLE001
+        except Exception:  # noqa: BLE001 — broad on purpose; degraded path
+            logger.warning(
+                "label encoder failure attempt %d/%d for (%r, %r)",
+                attempt,
+                max_retries,
+                norm_a,
+                norm_b,
+            )
             if attempt == max_retries:
                 return True  # degraded — don't block merges
     return True

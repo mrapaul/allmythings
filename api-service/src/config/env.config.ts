@@ -26,11 +26,7 @@ export interface EnvConfig {
   florenceUrl: string;
   photoDir: string;
 
-  // Temporal
-  temporalHost: string;
-  temporalNamespace: string;
-  temporalTaskQueue: string;
-  workflowExecutionTimeoutMs: number;
+  // HTTP request envelope (request-side timeout in front of pipeline-service)
   httpResponseTimeoutMs: number;
 
   // Pipeline discipline
@@ -43,12 +39,10 @@ export interface EnvConfig {
   tier2Model: string;
   tier3Model: string;
 
-  // Pipeline-service sidecar (section-02)
+  // Pipeline-service sidecar (single path post section-10)
   pipelineUrl: string;
-  usePipelineService: boolean;
   pipelineLongPollTimeoutS: number;
   pipelineMaxRps: number;
-  legacyResponseShape: boolean;
 }
 
 export const envConfig: EnvConfig = {
@@ -78,10 +72,6 @@ export const envConfig: EnvConfig = {
   multiPassQuadrantOverlap: parseFloat(process.env.MULTI_PASS_QUADRANT_OVERLAP || '0.55'),
   florenceUrl: process.env.FLORENCE_URL ?? process.env.DETECTION_SERVICE_URL ?? 'http://localhost:14001',
   photoDir: (process.env.PHOTO_DIR ?? `${process.env.HOME}/allmythings-data`).replace(/^~/, process.env.HOME || ''),
-  temporalHost: process.env.TEMPORAL_HOST || 'localhost:7233',
-  temporalNamespace: process.env.TEMPORAL_NAMESPACE || 'default',
-  temporalTaskQueue: process.env.TEMPORAL_TASK_QUEUE || 'inventory-pipeline',
-  workflowExecutionTimeoutMs: parseInt(process.env.WORKFLOW_EXECUTION_TIMEOUT_MS || '120000', 10),
   httpResponseTimeoutMs: parseInt(process.env.HTTP_RESPONSE_TIMEOUT_MS || '90000', 10),
   pipelineMaxConcurrency: parseInt(process.env.PIPELINE_MAX_CONCURRENCY || '1', 10),
   enrichmentBudgetMs: parseInt(process.env.ENRICHMENT_BUDGET_MS || '45000', 10),
@@ -90,8 +80,6 @@ export const envConfig: EnvConfig = {
   tier2Model: process.env.TIER_2_MODEL || 'qwen2.5vl:3b',
   tier3Model: process.env.TIER_3_MODEL || 'moondream',
   pipelineUrl: process.env.PIPELINE_URL || 'http://127.0.0.1:14101',
-  usePipelineService: process.env.USE_PIPELINE_SERVICE === 'true',
   pipelineLongPollTimeoutS: parseInt(process.env.PIPELINE_LONGPOLL_TIMEOUT_S || '25', 10),
   pipelineMaxRps: parseInt(process.env.PIPELINE_MAX_RPS || '5', 10),
-  legacyResponseShape: process.env.LEGACY_RESPONSE_SHAPE === 'true',
 };

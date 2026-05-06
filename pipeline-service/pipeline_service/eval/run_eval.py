@@ -354,9 +354,196 @@ def _check_gt_floors(headline: dict, gating_bucket: dict) -> list[str]:
     return out
 
 
+def _build_gt_eval_inputs():
+    """Construct the orchestrator collaborators from env config.
+
+    Lazy-imports gt_eval modules so the legacy agreement-only path does
+    not pay the cost of importing pycocotools, sentence-transformers,
+    etc. when ``EVAL_RUN_GT=false``.
+    """
+    from pipeline_service.eval.gt_eval.datasets.lvis import LvisConfig, LvisDataset
+    from pipeline_service.eval.gt_eval.judges.qwen_local import QwenLocalJudge
+    from pipeline_service.eval.gt_eval.matchers.label_cosine import CosineLabelMatcher
+    from pipeline_service.eval.gt_eval.run import GtEvalConfig
+    from pipeline_service.eval.gt_eval.runner import single_image_pipeline_runner
+
+    sample_size = int(os.environ.get("EVAL_SAMPLE_SIZE", "500"))
+    seed = int(os.environ.get("EVAL_SEED", "0"))
+    label_theta = float(os.environ.get("EVAL_LABEL_MATCH_THETA", "0.6"))
+    iou_threshold = float(os.environ.get("EVAL_IOU_THRESHOLD", "0.5"))
+    apply_skip_sahi = _env_bool("EVAL_SKIP_SAHI", default=False)
+    top_k_raw = os.environ.get("CLASSIFICATION_TOP_K")
+    top_k = int(top_k_raw) if top_k_raw else None
+    judge_max_calls_raw = os.environ.get("HALLUCINATION_JUDGE_MAX_CALLS")
+    judge_max_calls = int(judge_max_calls_raw) if judge_max_calls_raw else None
+
+    use_judge = _env_bool("EVAL_USE_JUDGE", default=True)
+    judge = QwenLocalJudge() if use_judge else None
+
+    dataset = LvisDataset(
+        LvisConfig(
+            sample_size=sample_size,
+            seed=seed,
+            expected_archive_sha256=os.environ.get("EVAL_LVIS_SHA256") or None,
+        )
+    )
+    label_matcher = CosineLabelMatcher(threshold=label_theta)
+    config = GtEvalConfig(
+        sample_size=sample_size,
+        label_match_threshold=label_theta,
+        iou_threshold=iou_threshold,
+        judge=judge,
+        judge_max_calls=judge_max_calls,
+        write_baseline=_env_bool("EVAL_BASELINE_AUTOCOMMIT", default=False),
+        apply_eval_skip_sahi=apply_skip_sahi,
+        apply_eval_top_k=top_k,
+    )
+
+    def _runner(image_path):
+        return single_image_pipeline_runner(
+            image_path,
+            apply_eval_skip_sahi=config.apply_eval_skip_sahi,
+            apply_eval_top_k=config.apply_eval_top_k,
+        )
+
+    def _health_check() -> None:
+        url = os.environ.get(
+            "DETECTION_SERVICE_URL", "http://127.0.0.1:14001"
+        )
+        try:
+            import httpx
+        except ImportError:
+            return None
+        try:
+            with httpx.Client(timeout=5.0) as client:
+                resp = client.get(f"{url.rstrip('/')}/health")
+                if resp.status_code >= 400:
+                    from pipeline_service.eval.gt_eval.run import PreflightFailed
+
+                    raise PreflightFailed(
+                        f"detection-service /health returned {resp.status_code}"
+                    )
+        except httpx.RequestError as exc:
+            from pipeline_service.eval.gt_eval.run import PreflightFailed
+
+            raise PreflightFailed(
+                f"detection-service /health unreachable at {url}: {exc}"
+            ) from exc
+        return None
+
+    return config, dataset, _runner, _health_check, label_matcher
+
+
+def _build_current_stamps():
+    """Build the ``Stamps`` for baseline diff/commit."""
+    import sys as _sys
+    from datetime import datetime, timezone
+
+    from pipeline_service.eval.gt_eval.baseline import Stamps
+
+    return Stamps(
+        lvis_dataset_sha256=os.environ.get("EVAL_LVIS_SHA256", "unknown"),
+        label_encoder_model_id=os.environ.get(
+            "LABEL_ENCODER_MODEL", "sentence-transformers/all-MiniLM-L6-v2"
+        ),
+        python_version=_sys.version.split()[0],
+        created_at=datetime.now(timezone.utc).isoformat().replace("+00:00", "Z"),
+    )
+
+
 def main(argv: Iterable[str] | None = None) -> int:
-    code, payload = run()
-    if payload["corpus_empty"]:
+    try:
+        _ensure_thresholds_file(THRESHOLDS)
+    except json.JSONDecodeError as exc:
+        print(f"[runner] FATAL: malformed thresholds.json: {exc}", file=sys.stderr)
+        return 2
+
+    run_agreement = _env_bool("EVAL_RUN_AGREEMENT", default=True)
+    run_gt = _env_bool("EVAL_RUN_GT", default=True)
+
+    gt_block = None
+    gt_diff_obj = None
+
+    if run_gt:
+        try:
+            (
+                config,
+                dataset,
+                runner_fn,
+                health_check,
+                label_matcher,
+            ) = _build_gt_eval_inputs()
+        except Exception as exc:
+            print(
+                f"[runner] FATAL: GT-eval setup failed: {type(exc).__name__}: {exc}",
+                file=sys.stderr,
+            )
+            return 2
+
+        from pipeline_service.eval.gt_eval.baseline import (
+            diff_and_check,
+            maybe_commit_baseline,
+        )
+        from pipeline_service.eval.gt_eval.run import (
+            PipelineFailureRateExceeded,
+            PreflightFailed,
+            run_gt_eval,
+        )
+
+        try:
+            gt_block = run_gt_eval(
+                config,
+                dataset,
+                runner_fn,
+                detection_health_check=health_check,
+                label_matcher=label_matcher,
+            )
+        except PreflightFailed as exc:
+            print(f"[runner] FATAL: preflight: {exc}", file=sys.stderr)
+            return 2
+        except PipelineFailureRateExceeded as exc:
+            print(f"[runner] FAIL: {exc}", file=sys.stderr)
+            return 1
+        except Exception as exc:
+            print(
+                f"[runner] FATAL: GT-eval crashed: {type(exc).__name__}: {exc}",
+                file=sys.stderr,
+            )
+            return 2
+
+        stamps = _build_current_stamps()
+        gt_diff_obj = diff_and_check(
+            gt_block,
+            BASELINE,
+            THRESHOLDS,
+            current_stamps=stamps,
+        )
+        committed = maybe_commit_baseline(
+            gt_diff_obj,
+            gt_block,
+            BASELINE,
+            autocommit_enabled=config.write_baseline,
+            current_stamps=stamps,
+        )
+        from dataclasses import replace
+
+        gt_diff_obj = replace(gt_diff_obj, baseline_committed=committed)
+
+    if run_agreement:
+        code, payload = run(
+            gt_metrics_block=gt_block,
+            gt_diff=gt_diff_obj,
+        )
+    else:
+        code, payload = run(
+            observations=[],
+            pairs=[],
+            gating=False,
+            gt_metrics_block=gt_block,
+            gt_diff=gt_diff_obj,
+        )
+
+    if payload.get("corpus_empty"):
         print("[runner] corpus empty - informational mode (no gating).", file=sys.stderr)
     if os.environ.get("EVAL_MOCK_BACKENDS") == "1":
         print(
@@ -365,9 +552,12 @@ def main(argv: Iterable[str] | None = None) -> int:
         )
     for w in payload.get("warnings", []):
         print(f"[runner] WARN: {w}", file=sys.stderr)
-    for v in payload["violations"]:
+    for v in payload.get("violations", []):
         print(f"[runner] FAIL: {v}", file=sys.stderr)
-    print(json.dumps(payload["metrics"], indent=2))
+    if gt_block is not None and "gt_metrics" in payload:
+        print(json.dumps({"gt_metrics": payload["gt_metrics"]}, indent=2))
+    else:
+        print(json.dumps(payload.get("metrics", {}), indent=2))
     return code
 
 

@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import asyncio
+import json
 
 import httpx
 import pytest
@@ -30,6 +31,61 @@ async def test_generate_happy_path_returns_parsed_dict(httpx_mock_strict) -> Non
     client = OllamaClient()
     out = await client.generate(model="qwen2.5vl:7b", prompt="x", images=[b"\x00"], format="json")
     assert out == {"name": "Brass desk lamp", "category": "lighting"}
+
+
+@pytest.mark.asyncio
+async def test_generate_passes_keep_alive_to_ollama(httpx_mock_strict) -> None:
+    """``keep_alive`` lets callers control how long Ollama holds the model
+    in memory after the response. ``0`` unloads immediately — used by
+    ``vlm_prompt_expansion`` to free MPS for the next pipeline stage.
+    The parameter must reach Ollama's request body verbatim."""
+    httpx_mock_strict.add_response(
+        method="POST",
+        url="http://127.0.0.1:11434/api/generate",
+        json={"response": '{"x": 1}'},
+    )
+    client = OllamaClient()
+    await client.generate(
+        model="qwen2.5vl:3b", prompt="x", images=[b"\x00"], format="json", keep_alive=0
+    )
+    requests = httpx_mock_strict.get_requests()
+    assert len(requests) == 1
+    body = json.loads(requests[0].content.decode())
+    assert body["keep_alive"] == 0
+
+
+@pytest.mark.asyncio
+async def test_generate_omits_keep_alive_when_unset(httpx_mock_strict) -> None:
+    """No ``keep_alive`` arg → no key in the request body, so Ollama uses
+    its default 5-minute hold."""
+    httpx_mock_strict.add_response(
+        method="POST",
+        url="http://127.0.0.1:11434/api/generate",
+        json={"response": '{"x": 1}'},
+    )
+    client = OllamaClient()
+    await client.generate(
+        model="qwen2.5vl:3b", prompt="x", images=[b"\x00"], format="json"
+    )
+    body = json.loads(httpx_mock_strict.get_requests()[0].content.decode())
+    assert "keep_alive" not in body
+
+
+@pytest.mark.asyncio
+async def test_generate_accepts_string_keep_alive(httpx_mock_strict) -> None:
+    """Ollama's keep_alive accepts duration strings like ``"60s"`` or
+    ``"10m"``; classification_refine uses ``"60s"`` to span the burst."""
+    httpx_mock_strict.add_response(
+        method="POST",
+        url="http://127.0.0.1:11434/api/generate",
+        json={"response": '{"x": 1}'},
+    )
+    client = OllamaClient()
+    await client.generate(
+        model="qwen2.5vl:3b", prompt="x", images=[b""], format="json", keep_alive="60s"
+    )
+    body = json.loads(httpx_mock_strict.get_requests()[0].content.decode())
+    assert body["keep_alive"] == "60s"
 
 
 @pytest.mark.asyncio

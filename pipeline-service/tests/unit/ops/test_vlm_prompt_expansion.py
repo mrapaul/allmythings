@@ -112,7 +112,7 @@ async def test_cache_miss_runs_both_seeds_returns_union(mock_ollama, cache) -> N
         florence_detections=flos,
     )
     assert out.cached is False
-    assert set(out.source_models) == {"qwen2.5vl:7b", "florence-2"}
+    assert set(out.source_models) == {"qwen2.5vl:3b", "florence-2"}
     # Union of Qwen + Florence captions, sanitised + sorted.
     assert "lamp" in out.prompts
     assert "sofa" in out.prompts
@@ -164,13 +164,87 @@ async def test_qwen_fail_florence_success(mock_ollama, cache) -> None:
         cache=cache,
         florence_detections=[_flo("F0", ["sofa"])],
     )
+    # Florence contributed; no hardcoded fallback — scene-specific only.
     assert out.source_models == ["florence-2"]
     assert out.degraded is False
     assert "sofa" in out.prompts
 
 
 @pytest.mark.asyncio
+async def test_qwen_3b_fails_falls_through_to_7b(mock_ollama, cache) -> None:
+    """3B is the default tier (fits alongside Florence + Grounding DINO
+    on MPS); if 3B parses incorrectly, 7B is the upgrade fallback —
+    must not silently degrade to florence-only."""
+    mock_ollama.generate.side_effect = [
+        OllamaServerError(500, "qwen 3b crashed"),
+        {"prompts": ["pillow", "rug", "blanket"]},
+    ]
+    out = await vlm_prompt_expansion_impl(
+        [_frame("F0")],
+        [_emb("F0", 1)],
+        ollama=mock_ollama,
+        cache=cache,
+        florence_detections=[],
+    )
+    assert "qwen2.5vl:3b" in out.source_models  # canonical tier name reported
+    assert out.degraded is False
+    for word in ("pillow", "rug", "blanket"):
+        assert word in out.prompts
+    # 3B was tried first then 7B — two ollama calls.
+    assert mock_ollama.generate.await_count == 2
+
+
+@pytest.mark.asyncio
+async def test_qwen_calls_pass_keep_alive_zero(mock_ollama, cache) -> None:
+    """Qwen-VL prompt-expansion calls must pass keep_alive=0 so Ollama
+    unloads the model right after the response — frees MPS memory for
+    the next pipeline stage (Grounding DINO + SAHI). Without this the
+    Florence + Grounding DINO + Qwen-VL stack OOMs on MPS and Ollama
+    falls back to CPU with a 35 GiB compute graph."""
+    mock_ollama.generate.return_value = {"prompts": ["chair"]}
+    await vlm_prompt_expansion_impl(
+        [_frame("F0")],
+        [_emb("F0", 1)],
+        ollama=mock_ollama,
+        cache=cache,
+        florence_detections=[],
+    )
+    call = mock_ollama.generate.call_args
+    assert call.kwargs.get("keep_alive") == 0
+
+
+@pytest.mark.asyncio
+async def test_florence_caption_split_on_preposition(mock_ollama, cache) -> None:
+    """Verbose Florence captions like "marble coffee table in living room"
+    contribute their head noun-phrase ("marble coffee table") AND their
+    full form (now under the relaxed 8-token cap) to the prompt list.
+    Grounding DINO accepts multi-word phrases as a single category."""
+    mock_ollama.generate.side_effect = OllamaServerError(500, "qwen down")
+    out = await vlm_prompt_expansion_impl(
+        [_frame("F0")],
+        [_emb("F0", 1)],
+        ollama=mock_ollama,
+        cache=cache,
+        florence_detections=[
+            _flo("F0", [
+                "marble coffee table in living room",
+                "marble round side table with black metal base",
+            ]),
+        ],
+    )
+    assert out.degraded is False
+    assert "marble coffee table" in out.prompts
+    assert "marble round side table" in out.prompts
+
+
+@pytest.mark.asyncio
 async def test_both_seeds_fail_returns_degraded(mock_ollama, cache) -> None:
+    """Scene-specific seeds (Qwen, Florence) both empty → degraded=True
+    AND empty prompt list. We deliberately do NOT seed a hardcoded
+    household-objects fallback: that produced hallucinated detections
+    (e.g. "brass table lamp", "wall mirror") in scenes that didn't
+    contain those items. An empty prompt list lets Grounding DINO + SAHI
+    no-op for this burst, which is the honest signal."""
     mock_ollama.generate.side_effect = OllamaServerError(500, "down")
     out = await vlm_prompt_expansion_impl(
         [_frame("F0")],
@@ -180,6 +254,7 @@ async def test_both_seeds_fail_returns_degraded(mock_ollama, cache) -> None:
         florence_detections=[],
     )
     assert out.degraded is True
+    assert out.source_models == []
     assert out.prompts == []
 
 

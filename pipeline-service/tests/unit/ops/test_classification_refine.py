@@ -14,9 +14,14 @@ from pipeline_service.models.ollama_client import (
     OllamaServerError,
     OllamaTimeout,
 )
-from pipeline_service.ops.classification_refine import classification_refine_impl
+from pipeline_service.ops.classification_refine import (
+    _dedupe_by_type,
+    classification_refine_impl,
+)
 from pipeline_service.types import (
+    AlternateLabel,
     BBox,
+    ContributingSignal,
     PipelineConfig,
     PipelineDetection,
     SceneObservation,
@@ -54,7 +59,11 @@ async def test_empty_detections_makes_no_calls(mock_ollama) -> None:
 
 
 @pytest.mark.asyncio
-async def test_happy_path_qwen7b_populates_attributes(mock_ollama) -> None:
+async def test_happy_path_default_tier_populates_attributes(mock_ollama) -> None:
+    """Default tier order is 3B → 7B → moondream (3B fits alongside
+    Florence + Grounding DINO on MPS without OOM-spilling Ollama to CPU).
+    Each call must request keep_alive='60s' so the model stays hot
+    during the burst's parallel calls but unloads soon after."""
     mock_ollama.generate.return_value = {
         "name": "Brass desk lamp",
         "category": "lighting",
@@ -68,7 +77,94 @@ async def test_happy_path_qwen7b_populates_attributes(mock_ollama) -> None:
         "color": "brass",
     }
     args = mock_ollama.generate.call_args
-    assert args.kwargs["model"] == "qwen2.5vl:7b"
+    assert args.kwargs["model"] == "qwen2.5vl:3b"
+    assert args.kwargs.get("keep_alive") == "60s"
+
+
+@pytest.mark.asyncio
+async def test_vlm_type_is_promoted_to_primary_label(mock_ollama) -> None:
+    """When Qwen-VL returns a bare ``type`` ("coffee table"), that becomes
+    the ``primaryLabel`` — replacing the upstream detector's noisy label.
+    Type-only primary labels keep the inventory list scannable AND let
+    post-classification dedup collapse same-type overlapping boxes."""
+    mock_ollama.generate.return_value = {
+        "type": "side table",
+        "name": "Marble side table",
+        "category": "furniture",
+        "color": "gray",
+        "material": "marble",
+    }
+    obs = _scene(1)
+    out = await classification_refine_impl(obs, ollama=mock_ollama, config=PipelineConfig())
+    assert out.detections[0].primaryLabel == "side table"
+
+
+@pytest.mark.asyncio
+async def test_vlm_name_used_when_type_missing(mock_ollama) -> None:
+    """If the VLM omits ``type`` but provides ``name``, fall back to name —
+    we never want to leave the primary as the upstream noisy caption."""
+    mock_ollama.generate.return_value = {
+        "name": "Marble side table",
+        "color": "gray",
+    }
+    obs = _scene(1)
+    out = await classification_refine_impl(obs, ollama=mock_ollama, config=PipelineConfig())
+    assert out.detections[0].primaryLabel == "Marble side table"
+
+
+@pytest.mark.asyncio
+async def test_vlm_attributes_become_alternate_labels(mock_ollama) -> None:
+    """The descriptive ``name`` plus ``category``, ``color``, ``material``
+    and each ``search_tags`` entry all become ``alternateLabels`` so
+    search hits items by attribute (the user explicitly asked for
+    "color, texture, material searchable")."""
+    mock_ollama.generate.return_value = {
+        "type": "side table",
+        "name": "Marble side table",
+        "category": "furniture",
+        "color": "gray",
+        "material": "marble",
+        "search_tags": ["round", "decorative"],
+    }
+    obs = _scene(1)
+    out = await classification_refine_impl(obs, ollama=mock_ollama, config=PipelineConfig())
+    alts = {a.label for a in out.detections[0].alternateLabels}
+    # The descriptive name leads, then category/color/material/search_tags.
+    assert {"Marble side table", "furniture", "gray", "marble", "round", "decorative"} <= alts
+    # The primary type itself is not duplicated.
+    assert "side table" not in alts
+
+
+@pytest.mark.asyncio
+async def test_alternate_labels_dedupe_against_primary_case_insensitive(
+    mock_ollama,
+) -> None:
+    """If a search_tag matches the promoted type (modulo case), don't list
+    it twice."""
+    mock_ollama.generate.return_value = {
+        "type": "side table",
+        "search_tags": ["side table", "SIDE TABLE", "Side Table"],
+    }
+    obs = _scene(1)
+    out = await classification_refine_impl(obs, ollama=mock_ollama, config=PipelineConfig())
+    alts = [a.label for a in out.detections[0].alternateLabels]
+    assert alts == []  # all tags duplicate the promoted type
+
+
+@pytest.mark.asyncio
+async def test_empty_vlm_attrs_preserves_original_primary_label(mock_ollama) -> None:
+    """When every tier fails (attrs={}), the original primaryLabel stays put
+    — we never blank out the only label the detector gave us."""
+    mock_ollama.generate.side_effect = [
+        OllamaServerError(500, "qwen7b 500"),
+        OllamaTimeout("qwen3b timeout"),
+        OllamaParseError("moondream parse"),
+    ]
+    obs = _scene(1)
+    out = await classification_refine_impl(obs, ollama=mock_ollama, config=PipelineConfig())
+    assert out.detections[0].primaryLabel == "lamp"  # untouched
+    assert out.detections[0].alternateLabels == []
+    assert out.detections[0].vlmStructuredAttributes == {}
 
 
 @pytest.mark.asyncio
@@ -232,3 +328,155 @@ async def test_concurrent_calls_serialised_via_ollama_semaphore() -> None:
         classification_refine_impl(obs_b, ollama=fake, config=cfg),
     )
     assert peak == 1
+
+
+# ---------------------------------------------------------------------------
+# _dedupe_by_type — post-classification same-type dedup
+# ---------------------------------------------------------------------------
+
+
+def _det(
+    det_id: str,
+    primary: str,
+    bbox: BBox,
+    *,
+    signals: list[ContributingSignal] | None = None,
+    alts: list[AlternateLabel] | None = None,
+) -> PipelineDetection:
+    return PipelineDetection(
+        id=det_id,
+        bbox=bbox,
+        primaryLabel=primary,
+        contributingSignals=signals or [],
+        alternateLabels=alts or [],
+    )
+
+
+def test_dedupe_merges_same_type_when_iou_above_threshold() -> None:
+    """Three detections all labelled "coffee table" with overlapping
+    bboxes (IoU ≥ 0.5) collapse to one — the classic post-classification
+    duplicate from florence + gdino + gdino-sahi all spotting the same
+    object."""
+    a = _det(
+        "a", "coffee table", BBox(x=0, y=0, width=100, height=100),
+        signals=[ContributingSignal(detector="florence", frameId="F0", rawConfidence=None)],
+    )
+    b = _det(
+        "b", "coffee table", BBox(x=10, y=10, width=100, height=100),
+        signals=[ContributingSignal(detector="gdino", frameId="F0", rawConfidence=0.4)],
+    )
+    c = _det(
+        "c", "coffee table", BBox(x=5, y=5, width=100, height=100),
+        signals=[ContributingSignal(detector="gdino-sahi", frameId="F0", rawConfidence=0.35)],
+    )
+    out = _dedupe_by_type([a, b, c])
+    assert len(out) == 1
+    detectors = {s.detector for s in out[0].contributingSignals}
+    assert detectors == {"florence", "gdino", "gdino-sahi"}
+
+
+def test_dedupe_keeps_distinct_locations() -> None:
+    """Two "lamp" detections in different parts of the room (no bbox
+    overlap) must NOT be merged — that's two real lamps, not a duplicate."""
+    a = _det("a", "lamp", BBox(x=0, y=0, width=50, height=50))
+    b = _det("b", "lamp", BBox(x=200, y=200, width=50, height=50))
+    out = _dedupe_by_type([a, b])
+    assert len(out) == 2
+
+
+def test_dedupe_does_not_cross_type_boundaries() -> None:
+    """A "coffee table" and a "side table" with overlapping boxes are
+    different items — different ``primaryLabel`` blocks the merge."""
+    a = _det("a", "coffee table", BBox(x=0, y=0, width=100, height=100))
+    b = _det("b", "side table", BBox(x=10, y=10, width=100, height=100))
+    out = _dedupe_by_type([a, b])
+    assert len(out) == 2
+
+
+def test_dedupe_unions_alternate_labels() -> None:
+    """When two same-type boxes merge, alternateLabels from the loser
+    join the survivor's (case-insensitive dedup, primary excluded)."""
+    a = _det(
+        "a", "coffee table", BBox(x=0, y=0, width=100, height=100),
+        signals=[ContributingSignal(detector="florence", frameId="F0", rawConfidence=None)],
+        alts=[AlternateLabel(label="furniture", confidence=0.85)],
+    )
+    b = _det(
+        "b", "coffee table", BBox(x=10, y=10, width=100, height=100),
+        signals=[ContributingSignal(detector="gdino", frameId="F0", rawConfidence=0.4)],
+        alts=[
+            AlternateLabel(label="marble", confidence=0.80),
+            AlternateLabel(label="FURNITURE", confidence=0.85),  # case-dup of survivor's
+        ],
+    )
+    out = _dedupe_by_type([a, b])
+    assert len(out) == 1
+    labels = [a.label for a in out[0].alternateLabels]
+    assert "furniture" in labels
+    assert "marble" in labels
+    # Case-duplicate should not be added a second time.
+    assert sum(1 for l in labels if l.casefold() == "furniture") == 1
+
+
+def test_dedupe_picks_survivor_with_most_signals() -> None:
+    """Survivor selection: most contributingSignals wins, ties broken by
+    largest area, then lexicographic id."""
+    # Boxes are 20×20, offset by 2 → IoU ≈ 0.68, well above the 0.5 cutoff.
+    weak = _det(
+        "z-id", "lamp", BBox(x=0, y=0, width=20, height=20),
+        signals=[ContributingSignal(detector="gdino", frameId="F0", rawConfidence=0.3)],
+    )
+    strong = _det(
+        "a-id", "lamp", BBox(x=2, y=2, width=20, height=20),
+        signals=[
+            ContributingSignal(detector="florence", frameId="F0", rawConfidence=None),
+            ContributingSignal(detector="gdino", frameId="F0", rawConfidence=0.5),
+        ],
+    )
+    out = _dedupe_by_type([weak, strong])
+    assert len(out) == 1
+    assert out[0].id == "a-id"  # strong wins on signal count
+
+
+def test_dedupe_preserves_singletons() -> None:
+    """Detections with unique types pass through untouched."""
+    a = _det("a", "lamp", BBox(x=0, y=0, width=10, height=10))
+    b = _det("b", "rug", BBox(x=20, y=20, width=10, height=10))
+    out = _dedupe_by_type([a, b])
+    assert {d.id for d in out} == {"a", "b"}
+
+
+def test_dedupe_empty_input_returns_empty() -> None:
+    assert _dedupe_by_type([]) == []
+
+
+def test_dedupe_merges_when_smaller_box_contained_in_larger() -> None:
+    """Real failure mode from the bedroom photo: Grounding DINO emitted
+    a near-whole-frame "coffee table" box (905K area) and Florence
+    emitted a tight one (180K area). IoU ≈ 0.20 (low because of the size
+    mismatch) but containment of the smaller inside the larger is ≈
+    0.99 — they're the same object. Must collapse."""
+    tight = _det(
+        "tight", "coffee table",
+        BBox(x=1, y=387, width=512, height=351),  # area 179_712
+        signals=[ContributingSignal(detector="florence", frameId="F0", rawConfidence=None)],
+    )
+    oversized = _det(
+        "oversized", "coffee table",
+        BBox(x=3, y=6, width=714, height=1267),   # area 904_938
+        signals=[ContributingSignal(detector="gdino", frameId="F0", rawConfidence=0.32)],
+    )
+    out = _dedupe_by_type([tight, oversized])
+    assert len(out) == 1
+    detectors = {s.detector for s in out[0].contributingSignals}
+    assert detectors == {"florence", "gdino"}
+
+
+def test_dedupe_does_not_merge_neighbouring_objects() -> None:
+    """Two pillows side-by-side with non-overlapping boxes (IoU=0,
+    containment=0) must stay separate even though they share a
+    primaryLabel — they're different physical pillows."""
+    p1 = _det("p1", "pillow", BBox(x=42, y=351, width=162, height=117))
+    p2 = _det("p2", "pillow", BBox(x=236, y=362, width=192, height=126))
+    out = _dedupe_by_type([p1, p2])
+    assert len(out) == 2

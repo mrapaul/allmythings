@@ -1,9 +1,21 @@
 {
-  "agreement_coverage_min": 0.70,
-  "dedup_precision_min": 0.40,
-  "op_failure_rate_max": 0.05,
-  "single_source_run_rate_max": 0.05,
-  "empty_detection_set_rate_max": 0.02,
-  "self_diagnosis_trigger_rate_max": 0.30,
-  "multi_frame_stability_min": 0.0
+  "gating": {
+    "agreement_coverage_min": 0.7,
+    "class_agnostic_map_50_95_min": 0.3,
+    "class_aware_map_50_95_min": 0.2,
+    "dedup_precision_min": 0.88,
+    "hallucination_rate_max": 0.15,
+    "label_f1_min": 0.5,
+    "op_failure_rate_max": 0.05
+  },
+  "version": 1,
+  "warn": {
+    "agreement_precision_min": 0.4,
+    "box_f1_50_min": 0.45,
+    "class_aware_map_50_min": 0.3,
+    "empty_detection_set_rate_max": 0.02,
+    "novel_likely_correct_min": 0,
+    "self_diagnosis_trigger_rate_max": 0.3,
+    "single_source_run_rate_max": 0.05
+  }
 }

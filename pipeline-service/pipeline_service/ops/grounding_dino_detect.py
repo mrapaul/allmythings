@@ -118,6 +118,12 @@ def grounding_dino_detect_impl(
     else:
         prompt_list = list(prompts or [])
 
+    # Eval/CI mode: short-circuit when no explicit loader was wired AND
+    # EVAL_MOCK_BACKENDS=1 is set. Bypasses GPU model load entirely.
+    from pipeline_service.ops._synthetic import is_mock_mode, synthetic_frame_detections
+    if loader is None and is_mock_mode():
+        return synthetic_frame_detections("gdino", sorted_frames)
+
     cfg = config or PipelineConfig()
     score_thr = cfg.thresholds.detectionConfidenceMin
     gd = loader or GroundingDinoLoader()

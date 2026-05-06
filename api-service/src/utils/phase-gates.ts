@@ -1,23 +1,19 @@
 /**
- * Phase-gate lints for the structural pipeline rewrite.
+ * Phase-gate lints — post section-10 invariant set.
  *
- * Section-02 introduced the flag-vs-temporal coherence rule:
+ * Section-10 deletion removed the Temporal orchestration path. The flag
+ * `USE_PIPELINE_SERVICE` is gone, the pipeline-service sidecar is the
+ * only path. These lints make sure none of the deleted artifacts get
+ * accidentally re-introduced by a future PR.
  *
- *   USE_PIPELINE_SERVICE referenced  AND  src/temporal/ exists  → OK (pre-Phase-5)
- *   USE_PIPELINE_SERVICE removed     AND  src/temporal/ missing → OK (post-Phase-5)
- *   USE_PIPELINE_SERVICE removed     AND  src/temporal/ exists  → FAIL
- *   USE_PIPELINE_SERVICE referenced  AND  src/temporal/ missing → FAIL
- *
- * Section-10 EXTENDS this with deletion-coherence rules. Either the whole
- * Phase-5 set is removed together, or none of it is:
- *
- *   src/temporal/                    must be removed when flag is removed
- *   src/providers/                   must be removed when flag is removed
- *   src/schemas/detection.schema.ts  must be removed when flag is removed
- *   src/services/image-quality.service.ts  must be removed when flag is removed
- *   src/services/translation/        must be removed when flag is removed
- *   src/utils/circuit-breaker.ts     MUST CONTINUE TO EXIST (kept for the
- *                                    pipeline.client wrapper)
+ *   src/temporal/                          must stay deleted
+ *   src/providers/                         must stay deleted
+ *   src/schemas/detection.schema.ts        must stay deleted
+ *   src/services/image-quality.service.ts  must stay deleted (mobile owns it)
+ *   src/services/translation/              must stay deleted
+ *   USE_PIPELINE_SERVICE references in src must stay deleted
+ *   @temporalio/* imports                  must stay deleted
+ *   src/utils/circuit-breaker.ts           MUST CONTINUE TO EXIST
  */
 
 import * as fs from 'node:fs';
@@ -55,18 +51,32 @@ function* walkTs(root: string): Generator<string> {
   }
 }
 
-function flagReferenced(rootDir: string): boolean {
-  const NEEDLE = 'USE_PIPELINE_SERVICE';
+// The phase-gate utility itself, and its test, both contain the regex
+// patterns as string literals. Skip them — they're the lint, not the
+// lint target.
+const SELF_REFERENCE_FILES = new Set([
+  'utils/phase-gates.ts',
+  '__tests__/unit/phase-gates.test.ts',
+]);
+
+function findReferences(rootDir: string, needles: RegExp[]): Array<{ file: string; needle: string }> {
+  const hits: Array<{ file: string; needle: string }> = [];
   for (const file of walkTs(rootDir)) {
+    const rel = path.relative(rootDir, file);
+    if (SELF_REFERENCE_FILES.has(rel)) continue;
     let body = '';
     try {
       body = readFileSync(file, 'utf8');
     } catch {
       continue;
     }
-    if (body.includes(NEEDLE)) return true;
+    for (const needle of needles) {
+      if (needle.test(body)) {
+        hits.push({ file, needle: needle.source });
+      }
+    }
   }
-  return false;
+  return hits;
 }
 
 interface PathSet {
@@ -91,89 +101,51 @@ function _paths(src: string): PathSet {
 
 export function runPhaseGates(opts?: {
   srcDir?: string;
-  temporalDir?: string;
 }): GateResult {
   const src = opts?.srcDir ?? DEFAULT_SRC_DIR;
   const paths = _paths(src);
-  const temporal = opts?.temporalDir ?? paths.temporal;
-
-  const flagOn = flagReferenced(src);
-  const temporalOn = existsSync(temporal);
-  const providersOn = existsSync(paths.providers);
-  const detectionSchemaOn = existsSync(paths.detectionSchema);
-  const imageQualitySvcOn = existsSync(paths.imageQualitySvc);
-  const translationSvcOn = existsSync(paths.translationSvc);
-  const circuitBreakerOn = existsSync(paths.circuitBreaker);
 
   const failures: string[] = [];
   const warnings: string[] = [];
 
-  // Flag/temporal coherence (section-02).
-  if (flagOn && !temporalOn) {
-    failures.push(
-      'USE_PIPELINE_SERVICE is still referenced in src/ but src/temporal/ ' +
-        "has been removed. Section-10 has run; section-02's flag must be " +
-        'removed too. Remove the env-var references and any flag-gated branches.',
-    );
-  }
-  if (!flagOn && temporalOn) {
-    failures.push(
-      'src/temporal/ still exists but USE_PIPELINE_SERVICE has been removed ' +
-        'from src/. Section-10 was incomplete — either re-introduce the flag ' +
-        'or delete src/temporal/.',
-    );
+  // Forbidden directory/file presence.
+  const FORBIDDEN_DIRS_FILES: Array<[string, string]> = [
+    [paths.temporal, 'src/temporal/ — section-10 deleted Temporal orchestration; do not reintroduce'],
+    [paths.providers, 'src/providers/ — section-10 deleted legacy provider adapters'],
+    [paths.detectionSchema, 'src/schemas/detection.schema.ts — section-10 deleted'],
+    [paths.imageQualitySvc, 'src/services/image-quality.service.ts — section-08 moved to mobile'],
+    [paths.translationSvc, 'src/services/translation/ — section-10 deleted (legacy-shape translator)'],
+  ];
+  for (const [target, msg] of FORBIDDEN_DIRS_FILES) {
+    if (existsSync(target)) failures.push(msg);
   }
 
-  // circuit-breaker.ts is KEPT — wired around pipeline.client.ts. If it
-  // disappears at any point, the pipeline-service path loses its
-  // fast-fail surface and Fastify will time out per-request on sidecar
-  // outages instead of returning 503 quickly.
-  if (!circuitBreakerOn) {
+  // Required files that must NOT disappear.
+  if (!existsSync(paths.circuitBreaker)) {
     failures.push(
-      'src/utils/circuit-breaker.ts is missing. It is KEPT in section-10 ' +
-        '(wired around pipeline.client.ts). Restore the file or fix the ' +
-        'import path.',
+      'src/utils/circuit-breaker.ts is missing. It is KEPT for the ' +
+        'pipeline.client wrapper. Restore the file.',
     );
   }
 
-  // Section-10 deletion-coherence: when the flag is gone (Phase 5 done),
-  // every deletion target must also be gone. When the flag remains,
-  // deletion targets may still be present (pre-Phase-5).
-  if (!flagOn) {
-    if (providersOn) {
-      failures.push(
-        'src/providers/ still exists but USE_PIPELINE_SERVICE has been ' +
-          'removed. Section-10 deletion-coherence: delete src/providers/ ' +
-          'or re-introduce the flag.',
-      );
-    }
-    if (detectionSchemaOn) {
-      failures.push(
-        'src/schemas/detection.schema.ts still exists but USE_PIPELINE_SERVICE ' +
-          'has been removed. Section-10 deletion-coherence violated.',
-      );
-    }
-    if (imageQualitySvcOn) {
-      failures.push(
-        'src/services/image-quality.service.ts still exists but ' +
-          'USE_PIPELINE_SERVICE has been removed (image quality moved to ' +
-          'mobile per section-08).',
-      );
-    }
-    if (translationSvcOn) {
-      failures.push(
-        'src/services/translation/ still exists but USE_PIPELINE_SERVICE has ' +
-          'been removed. The legacy-shape translator was a Phase-6→Phase-5 ' +
-          'window-only file; it must be deleted by section-10.',
-      );
-    }
+  // Forbidden import / symbol references.
+  const FORBIDDEN_NEEDLES = [
+    /from ['"]@temporalio\//,
+    /require\(['"]@temporalio\//,
+    /\bUSE_PIPELINE_SERVICE\b/,
+    /from ['"][^'"]*\/temporal\//,
+    /\bEnrichedItem\b/,
+    /\bDetectResult\b/,
+  ];
+  const refHits = findReferences(src, FORBIDDEN_NEEDLES);
+  for (const { file, needle } of refHits) {
+    failures.push(
+      `Forbidden reference /${needle}/ in ${path.relative(src, file)} — section-10 invariant violated`,
+    );
   }
 
-  if (flagOn && temporalOn) {
-    warnings.push('Pre-Phase-5 state detected: dual code paths active.');
-  }
-  if (!flagOn && !temporalOn) {
-    warnings.push('Post-Phase-5 state detected: pipeline-service is the only path.');
+  if (failures.length === 0) {
+    warnings.push('Section-10 post-state: pipeline-service is the only path, Temporal removed.');
   }
 
   return { ok: failures.length === 0, failures, warnings };

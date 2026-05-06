@@ -120,20 +120,37 @@ class OllamaClient:
         format: Optional[Literal["json"]] = None,
         options: Optional[dict[str, Any]] = None,
         timeout_s: Optional[float] = None,
+        keep_alive: Optional[float | str] = None,
     ) -> dict[str, Any]:
         """POST /api/generate. Holds the per-model semaphore for the whole call.
 
         Returns parsed JSON dict from Ollama's ``response`` field. Raises
         ``OllamaParseError`` on malformed JSON, ``OllamaServerError`` on 5xx,
         ``OllamaClientError`` on 4xx, ``OllamaTimeout`` on per-call timeout.
+
+        ``keep_alive`` overrides Ollama's default 5-minute hold on the
+        loaded model. Set to ``0`` to unload immediately after the call
+        — used by ``vlm_prompt_expansion`` and ``classification_refine``
+        on a memory-pressured stack so the next pipeline stage's Metal
+        allocation (Florence / Grounding DINO) doesn't fight Qwen-VL's
+        GPU buffers. Accepts the same values as Ollama's API:
+        ``"10m"``, ``-1`` (keep forever), seconds as int.
         """
         timeout = timeout_s if timeout_s is not None else self._default_timeout_s
         sem = await self._sem_for(model)
+        # Default temperature depends on output mode: JSON-format calls
+        # (structured attribute extraction) want deterministic output —
+        # any randomness flips "couch" to "bed" or "sofa" to "ottoman" on
+        # ambiguous crops with bedding on top. Free-text generation
+        # (prompt expansion) tolerates light temperature for diversity.
+        if options is None:
+            default_temp = 0.0 if format == "json" else 0.2
+            options = {"num_ctx": 4096, "temperature": default_temp}
         body: dict[str, Any] = {
             "model": model,
             "prompt": prompt,
             "stream": False,
-            "options": options or {"num_ctx": 4096, "temperature": 0.2},
+            "options": options,
         }
         if images is not None:
             # Ollama expects base64-encoded images.
@@ -142,6 +159,8 @@ class OllamaClient:
             body["images"] = [base64.b64encode(img).decode("ascii") for img in images]
         if format is not None:
             body["format"] = format
+        if keep_alive is not None:
+            body["keep_alive"] = keep_alive
 
         async with sem:
             try:

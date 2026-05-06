@@ -72,6 +72,59 @@ async function main(): Promise<void> {
     addResult('happy_path_status_200', false, `got ${res1.status}: ${body1Text.slice(0, 200)}`, dur1);
   }
 
+  // Section-08 §9.1: 3-part burst upload smoke. The route accepts 1-3
+  // multipart parts; we send 3 copies of the same fixture so the
+  // idempotency hash is stable across re-runs (concat of identical
+  // sha256s). On usePipelineService=true the response is a
+  // SceneObservation; on flag-off it falls back to the legacy shape.
+  const burstForm = new FormData();
+  for (let i = 0; i < 3; i++) {
+    burstForm.append(
+      'photo',
+      new Blob([imgBuf], { type: 'image/jpeg' }),
+      `burst-${i}.jpg`,
+    );
+  }
+  const tBurst = Date.now();
+  const burstRes = await fetch(`${apiUrl}/v1/detect`, {
+    method: 'POST',
+    body: burstForm,
+  });
+  const burstBodyText = await burstRes.text();
+  let burstBody: Record<string, unknown>;
+  try {
+    burstBody = JSON.parse(burstBodyText) as Record<string, unknown>;
+  } catch {
+    burstBody = {};
+  }
+  const burstDur = Date.now() - tBurst;
+  if (burstRes.status === 200 || burstRes.status === 202) {
+    const isScene = typeof burstBody.sceneId === 'string';
+    const isLegacy = typeof burstBody.photoId === 'string';
+    addResult(
+      'burst_upload_status',
+      true,
+      `${burstRes.status} in ${burstDur}ms (shape=${isScene ? 'scene' : isLegacy ? 'legacy' : 'unknown'})`,
+      burstDur,
+    );
+    if (isScene) {
+      const dets =
+        (burstBody.detections as Array<unknown> | undefined)?.length ?? 0;
+      addResult(
+        'burst_scene_observation',
+        Array.isArray(burstBody.frameIds),
+        `frameIds=${(burstBody.frameIds as unknown[] | undefined)?.length ?? '?'} detections=${dets}`,
+      );
+    }
+  } else {
+    addResult(
+      'burst_upload_status',
+      false,
+      `got ${burstRes.status}: ${burstBodyText.slice(0, 200)}`,
+      burstDur,
+    );
+  }
+
   // Idempotency (same image again)
   const form2 = new FormData();
   form2.append('file', new Blob([imgBuf], { type: 'image/jpeg' }), path.basename(absFixture));

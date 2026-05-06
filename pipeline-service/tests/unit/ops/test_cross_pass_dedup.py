@@ -109,12 +109,21 @@ def test_non_overlapping_pass_through_unchanged() -> None:
 
 
 def test_label_encoder_failure_does_not_abort_op() -> None:
-    """Encoder failure → label_text_compat returns True (degraded), op succeeds."""
+    """Encoder failure must keep the op running. The pure-embedding
+    ``label_text_compat`` returns the degraded ``True`` after retries,
+    so an encoder outage flips into "merge if IoU passes" rather than
+    raising out of the op — false-positive merges are caught downstream
+    by post-classification dedup, while a raised exception would hard-
+    abort the burst."""
 
     def boom(label: str) -> np.ndarray:
         raise RuntimeError("encoder dead")
 
     enc = LabelEncoder(backend=boom)
+
+    # Both labels' encodings raise; degraded fallback returns True; if
+    # IoU passes, the dets merge. The contract this test guards is
+    # *no exception out of the op* — the merge count is a side effect.
     fused = FusedFrame(
         frame_id="F0",
         fused=[
@@ -125,6 +134,21 @@ def test_label_encoder_failure_does_not_abort_op() -> None:
     out = cross_pass_dedup_impl(
         fused, EmbeddedFrame(frame_id="F0"), encoder=enc
     )
-    # Op succeeds (no exception).  With degraded label_compat=True and
-    # high IoU, the two get merged.
+    # Op produced output without raising — that's the load-bearing
+    # invariant. With degraded encoder + overlapping IoU, the boxes
+    # collapse to one cluster.
     assert len(out.detections) == 1
+
+    # Same contract on stop-word-only labels: degraded → True → merge,
+    # no exception.
+    fused2 = FusedFrame(
+        frame_id="F0",
+        fused=[
+            _det("d3", label="the with"),
+            _det("d4", label="of in"),
+        ],
+    )
+    out2 = cross_pass_dedup_impl(
+        fused2, EmbeddedFrame(frame_id="F0"), encoder=enc
+    )
+    assert len(out2.detections) == 1

@@ -10,14 +10,22 @@
 /// detection_repository's multipart upload.  The coordinator surfaces
 /// the per-frame quality so the screen can prompt a retake when the
 /// whole burst is blurry.
+///
+/// Encode runs in a background isolate (compute()) so 12MP captures
+/// don't block the main isolate's UI thread during JPEG re-encoding.
 library;
 
 import 'dart:typed_data';
+
+import 'package:flutter/foundation.dart' show compute;
+import 'package:logging/logging.dart';
 
 import 'burst_capture.dart';
 import 'face_redaction.dart';
 import 'image_quality.dart';
 import 'upload_encoder.dart';
+
+final _log = Logger('BurstCaptureCoordinator');
 
 class BurstUpload {
   const BurstUpload({
@@ -75,15 +83,50 @@ class BurstCaptureCoordinator {
   /// uploading; the burst itself is still returned so the UI can surface
   /// the blurry-shake feedback.
   Future<BurstUpload> capture() async {
+    final captureStart = DateTime.now();
     final result = await _capture.capture();
+    final captureMs =
+        DateTime.now().difference(captureStart).inMilliseconds;
+
+    final blurryCount = result.qualities.where((q) => q.blurry).length;
+    _log.info(
+      'burst captured: frames=${result.frames.length} '
+      'capture_ms=$captureMs blurry=$blurryCount/${result.frames.length} '
+      'allBlurry=${result.allBlurry}',
+    );
+
     final processed = <Uint8List>[];
-    for (final frame in result.frames) {
+    for (var i = 0; i < result.frames.length; i++) {
+      final frame = result.frames[i];
+      final frameStart = DateTime.now();
       // FaceRedactor zeroes the original buffer; we keep a working copy of
       // the redacted bytes that UploadEncoder will then re-zero after
-      // encoding.  No un-redacted bytes survive past this method.
+      // encoding. No un-redacted bytes survive past this method.
       final redacted = await _faceRedactor.redact(frame);
-      final encoded = _uploadEncoder.encode(redacted);
-      processed.add(encoded.bytes);
+      final redactMs =
+          DateTime.now().difference(frameStart).inMilliseconds;
+      final encStart = DateTime.now();
+      // Run encode in a background isolate so high-res JPEG re-encode
+      // doesn't block the UI thread. The isolate copies bytes across so
+      // the main-isolate redacted buffer is no longer the source of
+      // truth — we still zero it here for defence-in-depth.
+      final encoded = await compute(
+        _encodeIsolate,
+        _EncodeRequest(
+          bytes: redacted,
+          longestEdge: _uploadEncoder.longestEdge,
+          quality: _uploadEncoder.quality,
+        ),
+      );
+      // Defence-in-depth: zero the redacted buffer in the main isolate.
+      // The isolate copy is also zeroed by UploadEncoder.encode internals.
+      for (var b = 0; b < redacted.length; b++) redacted[b] = 0;
+      final encMs = DateTime.now().difference(encStart).inMilliseconds;
+      _log.fine(
+        'frame $i processed: redact_ms=$redactMs '
+        'encode_ms=$encMs out_bytes=${encoded.length}',
+      );
+      processed.add(encoded);
     }
     return BurstUpload(
       frames: processed,
@@ -91,4 +134,30 @@ class BurstCaptureCoordinator {
       allBlurry: result.allBlurry,
     );
   }
+}
+
+/// Top-level (isolate-callable) encode request payload.
+class _EncodeRequest {
+  const _EncodeRequest({
+    required this.bytes,
+    required this.longestEdge,
+    required this.quality,
+  });
+  final Uint8List bytes;
+  final int longestEdge;
+  final int quality;
+}
+
+/// Top-level (isolate-callable) entry point used by [compute]. Must be
+/// a top-level or static function — closures don't survive isolate
+/// transport. Returns the encoded bytes (the inner UploadEncoder.encode
+/// already zeroes the input buffer in-place inside the isolate).
+Uint8List _encodeIsolate(_EncodeRequest req) {
+  final encoder = UploadEncoder(
+    longestEdge: req.longestEdge,
+    quality: req.quality,
+  );
+  // The isolate gets its own copy of the bytes — modifying it here
+  // doesn't affect the main isolate's redacted buffer.
+  return encoder.encode(req.bytes).bytes;
 }

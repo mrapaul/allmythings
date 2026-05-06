@@ -1,6 +1,10 @@
 # CocoaPods analytics sends network stats synchronously affecting flutter build latency.
 ENV['COCOAPODS_DISABLE_STATS'] = 'true'
 
+# google_mlkit_face_detection requires iOS 15.5+ — keep this in lockstep
+# with IPHONEOS_DEPLOYMENT_TARGET in Runner.xcodeproj/project.pbxproj.
+platform :ios, '15.5'
+
 project 'Runner', {
   'Debug' => :debug,
   'Profile' => :release,
@@ -36,10 +40,12 @@ end
 post_install do |installer|
   installer.pods_project.targets.each do |target|
     flutter_additional_ios_build_settings(target)
-    
+
     # Fix for rsync error 23
     target.build_configurations.each do |config|
       config.build_settings['ENABLE_USER_SCRIPT_SANDBOXING'] = 'NO'
+      # Allow arm64 simulator builds for iOS 26+ compatibility
+      config.build_settings['EXCLUDED_ARCHS[sdk=iphonesimulator*]'] = 'x86_64'
     end
   end
 end

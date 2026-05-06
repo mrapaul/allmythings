@@ -1,287 +1,267 @@
-import 'dart:async';
 import 'dart:io';
 
 import 'package:all_my_things/application/providers/inventory_providers.dart';
-import 'package:all_my_things/data/database/app_database.dart' as db;
-import 'package:all_my_things/presentation/theme/app_theme.dart';
+import 'package:all_my_things/data/database/app_database.dart';
+import 'package:all_my_things/presentation/theme/app_colors.dart';
+import 'package:all_my_things/presentation/theme/app_typography.dart';
+import 'package:all_my_things/presentation/utils/inventory_summary.dart';
+import 'package:all_my_things/presentation/widgets/glow_backdrop.dart';
+import 'package:all_my_things/presentation/widgets/primary_button.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-/// Highly refined Detail screen for a single inventory item
-class ItemDetailScreen extends ConsumerWidget {
-  const ItemDetailScreen({required this.itemId, super.key});
+/// Item detail: hero photo + Fraunces-headline label (tap to edit) +
+/// catalogue date + tag chips + notes card. Mirrors design's
+/// app/item/[id].tsx layout, scoped to the data shape we actually have.
+class ItemDetailScreen extends ConsumerStatefulWidget {
+  const ItemDetailScreen({super.key, required this.itemId});
 
   final String itemId;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final itemAsync = ref.watch(inventoryItemProvider(itemId));
-    final labelsAsync = ref.watch(itemLabelsProvider(itemId));
+  ConsumerState<ItemDetailScreen> createState() => _ItemDetailScreenState();
+}
+
+class _ItemDetailScreenState extends ConsumerState<ItemDetailScreen> {
+  @override
+  Widget build(BuildContext context) {
+    final p = context.palette;
+    final itemAsync = ref.watch(inventoryItemProvider(widget.itemId));
+    final labelsAsync = ref.watch(itemLabelsProvider(widget.itemId));
+    final mq = MediaQuery.of(context);
 
     return Scaffold(
-      backgroundColor: Colors.white,
-      appBar: AppBar(
-        backgroundColor: Colors.white,
-        elevation: 0,
-        foregroundColor: Colors.black,
-        title: const Text('Item Details', style: TextStyle(fontWeight: FontWeight.w900)),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.more_horiz_rounded),
-            onPressed: () => _showOptions(context, ref),
+      backgroundColor: p.background,
+      body: Stack(
+        children: [
+          const Positioned.fill(child: GlowBackdrop()),
+          SafeArea(
+            child: itemAsync.when(
+              loading: () =>
+                  const Center(child: CircularProgressIndicator()),
+              error: (e, _) => Center(
+                child: Text(
+                  'Could not load item.\n$e',
+                  textAlign: TextAlign.center,
+                  style: AppTypography.inter(size: 14, color: p.mutedForeground),
+                ),
+              ),
+              data: (item) {
+                if (item == null) return const _NotFound();
+                final summary = InventorySummary.fromItem(item);
+                final labels = labelsAsync.value ?? const <Label>[];
+                return _Body(
+                  item: item,
+                  summary: summary,
+                  labels: labels,
+                  bottomInset: mq.padding.bottom,
+                );
+              },
+            ),
           ),
         ],
       ),
-      body: itemAsync.when(
-        data: (item) {
-          if (item == null) return const Center(child: Text('Item not found'));
+    );
+  }
+}
 
-          return SingleChildScrollView(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // Hero Image
-                Hero(
-                  tag: 'item-$itemId',
-                  child: AspectRatio(
-                    aspectRatio: 1,
-                    child: Stack(
-                      fit: StackFit.expand,
-                      children: [
-                        Image.file(
-                          File(item.photoPath),
-                          fit: BoxFit.cover,
-                        ),
-                        if (item.status == 'unconfirmed')
-                          Positioned(
-                            bottom: 20,
-                            left: 20,
-                            right: 20,
-                            child: ElevatedButton.icon(
-                              onPressed: () async {
-                                await ref.read(inventoryItemsProvider.notifier).confirmItem(itemId);
-                                if (context.mounted) {
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    const SnackBar(content: Text('Item confirmed and saved to vault')),
-                                  );
-                                }
-                              },
-                              icon: const Icon(Icons.check_circle_outline_rounded),
-                              label: const Text('CONFIRM & SAVE TO VAULT', style: TextStyle(fontWeight: FontWeight.w900, letterSpacing: 1)),
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: AppTheme.accentGreen,
-                                foregroundColor: Colors.white,
-                                padding: const EdgeInsets.symmetric(vertical: 16),
-                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                                elevation: 8,
-                                shadowColor: Colors.black45,
+class _Body extends ConsumerWidget {
+  const _Body({
+    required this.item,
+    required this.summary,
+    required this.labels,
+    required this.bottomInset,
+  });
+
+  final InventoryItem item;
+  final InventorySummary summary;
+  final List<Label> labels;
+  final double bottomInset;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final p = context.palette;
+    final width = MediaQuery.sizeOf(context).width;
+    final gallerySize = (width - 64).clamp(220.0, 320.0);
+
+    return Column(
+      children: [
+        _Header(
+          category: summary.category,
+          onBack: () => context.pop(),
+          onDelete: () => _confirmDelete(context, ref),
+        ),
+        Expanded(
+          child: ListView(
+            padding: EdgeInsets.fromLTRB(0, 8, 0, bottomInset + 40),
+            children: [
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: 16),
+                child: Center(
+                  child: Hero(
+                    tag: 'item-${item.id}',
+                    child: Container(
+                      width: gallerySize,
+                      height: gallerySize,
+                      clipBehavior: Clip.antiAlias,
+                      decoration: BoxDecoration(
+                        color: p.card,
+                        border: Border.all(color: p.border),
+                        borderRadius: BorderRadius.circular(28),
+                        boxShadow: [
+                          BoxShadow(
+                            color: const Color(0xFF2A1F2E).withValues(alpha: 0.10),
+                            offset: const Offset(0, 8),
+                            blurRadius: 18,
+                          ),
+                        ],
+                      ),
+                      child: item.photoPath.isNotEmpty &&
+                              File(item.photoPath).existsSync()
+                          ? Image.file(File(item.photoPath), fit: BoxFit.cover)
+                          : ColoredBox(
+                              color: p.muted,
+                              child: Center(
+                                child: Icon(Icons.image_not_supported_outlined,
+                                    color: p.mutedForeground, size: 36),
                               ),
                             ),
-                          ),
-                      ],
                     ),
                   ),
                 ),
-
-                Padding(
-                  padding: const EdgeInsets.all(20),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Text(
-                        'CLASSIFIED LABELS',
-                        style: TextStyle(
-                          fontSize: 12,
-                          fontWeight: FontWeight.w800,
-                          letterSpacing: 1.2,
-                          color: Colors.grey,
-                        ),
+              ),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 24),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      summary.label.isEmpty ? 'Untitled' : summary.label,
+                      style: AppTypography.fraunces(
+                        size: 30,
+                        weight: FontWeight.w700,
+                        color: p.foreground,
+                        letterSpacing: -0.6,
+                        height: 1.2,
                       ),
-                      const SizedBox(height: 12),
-                      labelsAsync.when(
-                        data: (labels) {
-                          // §9.5 null-audit: when classification_refine fails
-                          // through (vlmStructuredAttributes={}), there are
-                          // no labels for this item — show a hint instead of
-                          // an empty Wrap so the user gets a clear signal.
-                          if (labels.isEmpty) {
-                            return Row(
-                              children: [
-                                const Expanded(
-                                  child: Text(
-                                    'No attributes detected yet — tap edit to add manually.',
-                                    style: TextStyle(
-                                      color: Colors.grey,
-                                      fontStyle: FontStyle.italic,
-                                    ),
-                                  ),
-                                ),
-                                const SizedBox(width: 8),
-                                _EditButton(onTap: () {
-                                  unawaited(
-                                    _showEditLabelsDialog(context, ref, labels),
-                                  );
-                                }),
-                              ],
-                            );
-                          }
-                          return Wrap(
-                            spacing: 8,
-                            runSpacing: 8,
-                            children: [
-                              ...labels.map((l) => _LabelChip(label: l)),
-                              _EditButton(onTap: () {
-                                unawaited(
-                                  _showEditLabelsDialog(context, ref, labels),
-                                );
-                              }),
-                            ],
-                          );
-                        },
-                        loading: () => const LinearProgressIndicator(),
-                        error: (e, _) => Text('Error loading labels: $e'),
+                    ),
+                    const SizedBox(height: 6),
+                    Text(
+                      'Catalogued ${_formatDate(item.createdAt)}',
+                      style: AppTypography.inter(
+                        size: 12,
+                        color: p.mutedForeground,
+                        letterSpacing: 0.2,
                       ),
-                      const SizedBox(height: 32),
-                      const Text(
-                        'METADATA',
-                        style: TextStyle(
-                          fontSize: 12,
-                          fontWeight: FontWeight.w800,
-                          letterSpacing: 1.2,
-                          color: Colors.grey,
-                        ),
+                    ),
+                    if (labels.isNotEmpty) ...[
+                      const SizedBox(height: 14),
+                      Wrap(
+                        spacing: 8,
+                        runSpacing: 8,
+                        children: [
+                          for (final l in labels.take(24))
+                            _TagChip(value: l.value),
+                        ],
                       ),
-                      const SizedBox(height: 12),
-                      _MetadataRow(label: 'Captured', value: item.createdAt.toString()),
-                      _MetadataRow(label: 'Status', value: item.status.toUpperCase()),
-                      if (item.isFlagged)
-                        const _MetadataRow(
-                          label: 'Flagged',
-                          value: 'Self-diagnosis flagged this run — review attributes',
-                        ),
                     ],
-                  ),
+                    const SizedBox(height: 24),
+                    _NotesCard(
+                      text: summary.label.isEmpty
+                          ? 'No detection notes yet.'
+                          : 'Detected as a ${summary.label.toLowerCase()}'
+                              '${summary.category != 'Other' ? ' (${summary.category})' : ''}.',
+                    ),
+                  ],
                 ),
-                const SizedBox(height: 40),
-                Center(
-                  child: TextButton.icon(
-                    icon: const Icon(Icons.delete_outline_rounded, color: Colors.red),
-                    label: const Text('Delete from Vault', style: TextStyle(color: Colors.red)),
-                    onPressed: () {
-                      unawaited(_showDeleteDialog(context, ref));
-                    },
-                  ),
-                ),
-                const SizedBox(height: 20),
-              ],
-            ),
-          );
-        },
-        loading: () => const Center(child: CircularProgressIndicator()),
-        error: (e, _) => Center(child: Text('Error: $e')),
-      ),
+              ),
+            ],
+          ),
+        ),
+      ],
     );
   }
 
-  void _showOptions(BuildContext context, WidgetRef ref) {
-    unawaited(showModalBottomSheet<void>(
-      context: context,
-      backgroundColor: Colors.transparent,
-      builder: (context) => Container(
-        decoration: const BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-        ),
-        padding: const EdgeInsets.symmetric(vertical: 20),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            ListTile(
-              leading: const Icon(Icons.edit_outlined),
-              title: const Text('Edit Labels'),
-              onTap: () {
-                Navigator.pop(context);
-                final labels = ref.read(itemLabelsProvider(itemId)).value ?? [];
-                unawaited(_showEditLabelsDialog(context, ref, labels));
-              },
-            ),
-            ListTile(
-              leading: const Icon(Icons.delete_outline, color: Colors.red),
-              title: const Text('Delete Item', style: TextStyle(color: Colors.red)),
-              onTap: () {
-                Navigator.pop(context);
-                unawaited(_showDeleteDialog(context, ref));
-              },
-            ),
-          ],
-        ),
-      ),
-    ));
-  }
-
-  Future<void> _showEditLabelsDialog(BuildContext context, WidgetRef ref, List<db.Label> currentLabels) async {
-    final labels = currentLabels.map((l) => LabelEntry(l.key, l.value)).toList();
-    await showModalBottomSheet<void>(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (context) => _EditLabelsSheet(itemId: itemId, initialLabels: labels),
-    );
-  }
-
-  Future<void> _showDeleteDialog(BuildContext context, WidgetRef ref) async {
+  Future<void> _confirmDelete(BuildContext context, WidgetRef ref) async {
     final confirmed = await showDialog<bool>(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Delete Item?'),
-        content: const Text('This will permanently remove the item and its labels from your vault.'),
+      builder: (ctx) => AlertDialog(
+        title: const Text('Delete item?'),
+        content: const Text('This cannot be undone.'),
         actions: [
           TextButton(
+            onPressed: () => Navigator.of(ctx).pop(false),
             child: const Text('Cancel'),
-            onPressed: () => Navigator.pop(context, false),
           ),
           TextButton(
-            child: const Text('Delete', style: TextStyle(color: Colors.red)),
-            onPressed: () => Navigator.pop(context, true),
+            onPressed: () => Navigator.of(ctx).pop(true),
+            child: Text(
+              'Delete',
+              style: TextStyle(color: ctx.palette.destructive),
+            ),
           ),
         ],
       ),
     );
-
-    if (confirmed == true) {
+    if (confirmed == true && context.mounted) {
       final repo = await ref.read(inventoryRepositoryProvider.future);
-      await repo.deleteItem(itemId);
+      await repo.deleteItem(item.id);
       ref.invalidate(inventoryItemsProvider);
-      if (context.mounted) {
-        context.pop();
-      }
+      ref.invalidate(inventoryStatsProvider);
+      if (context.mounted) context.pop();
     }
   }
+
+  String _formatDate(DateTime d) {
+    const months = [
+      'January', 'February', 'March', 'April', 'May', 'June',
+      'July', 'August', 'September', 'October', 'November', 'December',
+    ];
+    return '${months[d.month - 1]} ${d.day}, ${d.year}';
+  }
 }
 
-class _LabelChip extends StatelessWidget {
-  const _LabelChip({required this.label});
-  final db.Label label;
+class _Header extends StatelessWidget {
+  const _Header({
+    required this.category,
+    required this.onBack,
+    required this.onDelete,
+  });
+  final String category;
+  final VoidCallback onBack;
+  final VoidCallback onDelete;
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-      decoration: BoxDecoration(
-        color: AppTheme.surfaceMedium,
-        borderRadius: BorderRadius.circular(20),
-      ),
+    final p = context.palette;
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 4, 16, 12),
       child: Row(
-        mainAxisSize: MainAxisSize.min,
         children: [
-          Text(
-            '${label.key}: ',
-            style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.grey),
+          _CircleBtn(
+            icon: Icons.chevron_left,
+            onTap: onBack,
+            tooltip: 'Back',
           ),
-          Text(
-            label.value,
-            style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
+          Expanded(
+            child: Center(
+              child: Text(
+                category.toUpperCase(),
+                style: AppTypography.inter(
+                  size: 12,
+                  weight: FontWeight.w500,
+                  color: p.mutedForeground,
+                  letterSpacing: 0.8,
+                ),
+              ),
+            ),
+          ),
+          _CircleBtn(
+            icon: Icons.delete_outline,
+            iconColor: p.destructive,
+            onTap: onDelete,
+            tooltip: 'Delete',
           ),
         ],
       ),
@@ -289,133 +269,161 @@ class _LabelChip extends StatelessWidget {
   }
 }
 
-class _EditButton extends StatelessWidget {
-  const _EditButton({required this.onTap});
+class _CircleBtn extends StatelessWidget {
+  const _CircleBtn({
+    required this.icon,
+    required this.onTap,
+    required this.tooltip,
+    this.iconColor,
+  });
+  final IconData icon;
   final VoidCallback onTap;
+  final String tooltip;
+  final Color? iconColor;
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-        decoration: BoxDecoration(
-          border: Border.all(color: Colors.blueAccent),
-          borderRadius: BorderRadius.circular(20),
-        ),
-        child: const Text(
-          'EDIT',
-          style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.blueAccent),
+    final p = context.palette;
+    return Tooltip(
+      message: tooltip,
+      child: SizedBox(
+        width: 44,
+        height: 44,
+        child: Material(
+          color: p.card,
+          shape: CircleBorder(side: BorderSide(color: p.border)),
+          child: InkWell(
+            customBorder: const CircleBorder(),
+            onTap: onTap,
+            child: Center(
+              child: Icon(icon, size: 18, color: iconColor ?? p.foreground),
+            ),
+          ),
         ),
       ),
     );
   }
 }
 
-class _MetadataRow extends StatelessWidget {
-  const _MetadataRow({required this.label, required this.value});
-  final String label;
+class _TagChip extends StatelessWidget {
+  const _TagChip({required this.value});
   final String value;
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 4),
-      child: Row(
+    final p = context.palette;
+    return ConstrainedBox(
+      constraints: const BoxConstraints(maxWidth: 200),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+        decoration: BoxDecoration(
+          color: p.muted,
+          borderRadius: BorderRadius.circular(15),
+          border: Border.all(color: p.border),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              '#',
+              style: AppTypography.inter(
+                size: 12,
+                weight: FontWeight.w600,
+                color: p.primary,
+              ),
+            ),
+            const SizedBox(width: 3),
+            Flexible(
+              child: Text(
+                value,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: AppTypography.inter(
+                  size: 13,
+                  weight: FontWeight.w500,
+                  color: p.foreground,
+                  letterSpacing: 0.1,
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _NotesCard extends StatelessWidget {
+  const _NotesCard({required this.text});
+  final String text;
+
+  @override
+  Widget build(BuildContext context) {
+    final p = context.palette;
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: p.card,
+        borderRadius: BorderRadius.circular(22),
+        border: Border.all(color: p.border),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          SizedBox(width: 80, child: Text(label, style: const TextStyle(color: Colors.grey, fontSize: 13))),
-          Expanded(child: Text(value, style: const TextStyle(fontWeight: FontWeight.w500, fontSize: 13))),
+          Text(
+            'NOTES',
+            style: AppTypography.inter(
+              size: 11,
+              weight: FontWeight.w600,
+              color: p.mutedForeground,
+              letterSpacing: 0.5,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            text,
+            style: AppTypography.fraunces(
+              size: 16,
+              weight: FontWeight.w400,
+              color: p.foreground,
+              height: 1.5,
+            ),
+          ),
         ],
       ),
     );
   }
 }
 
-class _EditLabelsSheet extends StatefulWidget {
-  const _EditLabelsSheet({required this.itemId, required this.initialLabels});
-  final String itemId;
-  final List<LabelEntry> initialLabels;
-
-  @override
-  State<_EditLabelsSheet> createState() => _EditLabelsSheetState();
-}
-
-class _EditLabelsSheetState extends State<_EditLabelsSheet> {
-  late List<LabelEntry> _labels;
-  final _keyController = TextEditingController();
-  final _valueController = TextEditingController();
-
-  @override
-  void initState() {
-    super.initState();
-    _labels = List<LabelEntry>.from(widget.initialLabels);
-  }
+class _NotFound extends StatelessWidget {
+  const _NotFound();
 
   @override
   Widget build(BuildContext context) {
-    return Consumer(builder: (context, ref, _) {
-      return Container(
-        decoration: const BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-        ),
-        padding: EdgeInsets.fromLTRB(20, 20, 20, MediaQuery.of(context).viewInsets.bottom + 20),
+    final p = context.palette;
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(32),
         child: Column(
           mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                const Text('Edit Labels', style: TextStyle(fontSize: 20, fontWeight: FontWeight.w900)),
-                IconButton(
-                  icon: const Icon(Icons.check_circle_rounded, color: Colors.green, size: 32),
-                  onPressed: () async {
-                    await ref.read(inventoryItemsProvider.notifier).updateLabels(widget.itemId, _labels);
-                    if (context.mounted) Navigator.pop(context);
-                  },
-                ),
-              ],
+            Text(
+              'Item not found',
+              style: AppTypography.fraunces(
+                size: 22,
+                weight: FontWeight.w600,
+                color: p.foreground,
+              ),
             ),
-            const SizedBox(height: 20),
-            ..._labels.asMap().entries.map((entry) {
-              final idx = entry.key;
-              final label = entry.value;
-              return Padding(
-                padding: const EdgeInsets.only(bottom: 8),
-                child: Row(
-                  children: [
-                    Expanded(child: Text('${label.key}: ${label.value}', style: const TextStyle(fontWeight: FontWeight.w600))),
-                    IconButton(
-                      icon: const Icon(Icons.remove_circle_outline, color: Colors.red),
-                      onPressed: () => setState(() => _labels.removeAt(idx)),
-                    ),
-                  ],
-                ),
-              );
-            }),
-            const Divider(height: 32),
-            const Text('ADD NEW LABEL', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.grey)),
-            const SizedBox(height: 12),
-            Row(
-              children: [
-                Expanded(child: TextField(controller: _keyController, decoration: const InputDecoration(hintText: 'Key (e.g. brand)', isDense: true))),
-                const SizedBox(width: 12),
-                Expanded(child: TextField(controller: _valueController, decoration: const InputDecoration(hintText: 'Value', isDense: true))),
-                IconButton(
-                  icon: const Icon(Icons.add_circle_outline, color: Colors.blueAccent),
-                  onPressed: () {
-                    if (_keyController.text.isNotEmpty && _valueController.text.isNotEmpty) {
-                      setState(() => _labels.add(LabelEntry(_keyController.text, _valueController.text)));
-                      _keyController.clear(); _valueController.clear();
-                    }
-                  },
-                ),
-              ],
+            const SizedBox(height: 16),
+            PrimaryButton(
+              label: 'Go back',
+              expand: false,
+              onPressed: () => Navigator.of(context).maybePop(),
             ),
           ],
         ),
-      );
-    });
+      ),
+    );
   }
 }

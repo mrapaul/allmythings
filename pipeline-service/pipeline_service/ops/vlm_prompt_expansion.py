@@ -38,9 +38,30 @@ _PROMPT_EXPANSION_TEMPLATE = (
 )
 
 _DEFAULT_MAX_PROMPTS = 80
-_DEFAULT_MAX_TOKENS_PER_PROMPT = 4
-_QWEN_MODEL = "qwen2.5vl:7b"
+# Per-prompt token cap. Florence's dense-region captions are sometimes
+# verbose ("marble coffee table"); Grounding DINO accepts multi-word
+# phrases as a single category, so we let up to 8 tokens through. Above
+# that, the caption is almost always a scene description rather than an
+# object name (e.g. "living room with sheer curtains and blue blanket")
+# and the head-phrase splitter (_split_florence_caption) extracts the
+# object portion separately.
+_DEFAULT_MAX_TOKENS_PER_PROMPT = 8
+# Tier order: 3B first (fits in MPS alongside Florence + Grounding DINO),
+# 7B as upgrade target when memory permits. The 3B-first default avoids
+# the OOM-on-7B-then-fall-through latency penalty under typical load.
+_QWEN_MODELS_BY_PREFERENCE: tuple[str, ...] = ("qwen2.5vl:3b", "qwen2.5vl:7b")
+_QWEN_MODEL = _QWEN_MODELS_BY_PREFERENCE[0]  # kept for tests asserting the default
 _FLORENCE_SOURCE = "florence-2"
+
+# Conjunctions/prepositions used to split a verbose Florence caption like
+# "marble coffee table in living room" into a head noun-phrase ("marble
+# coffee table") and a context tail ("living room"). Both halves become
+# Grounding DINO prompts; the head phrase is the object query, the tail
+# is sometimes a useful scene anchor.
+_FLORENCE_HEAD_SPLIT_TOKENS: tuple[str, ...] = (
+    " in ", " with ", " on ", " of ", " at ", " by ", " near ",
+    " under ", " above ", " behind ", " between ",
+)
 
 
 def _frame_jpeg(frame: Frame) -> bytes:
@@ -123,17 +144,74 @@ async def _seed_qwen(
     ollama: OllamaClient,
     image_bytes: bytes,
 ) -> Optional[list[str]]:
-    try:
-        payload = await ollama.generate(
-            model=_QWEN_MODEL,
-            prompt=_PROMPT_EXPANSION_TEMPLATE,
-            images=[image_bytes],
-            format="json",
-        )
-        return _qwen_response_to_lines(payload)
-    except OllamaError as exc:
-        logger.warning("qwen seed failed: %s", exc)
-        return None
+    """Try each Qwen-VL tier in order; first non-empty result wins.
+
+    3B is the default tier (fits alongside Florence + Grounding DINO on
+    MPS). 7B is tried as a quality upgrade only after 3B succeeds — the
+    other way around the 7B OOM bursts cost ~30s per call.
+
+    ``keep_alive=0`` is passed so Ollama unloads the model immediately
+    after the response; downstream Florence / Grounding DINO need the
+    Metal allocation back, and the next prompt-expansion call (next
+    burst) re-loads in ~1s anyway. This is the fix for the "compute
+    graph 35 GiB on CPU" failure mode where Ollama falls back to CPU
+    when MPS is fragmented.
+    """
+    for model in _QWEN_MODELS_BY_PREFERENCE:
+        try:
+            payload = await ollama.generate(
+                model=model,
+                prompt=_PROMPT_EXPANSION_TEMPLATE,
+                images=[image_bytes],
+                format="json",
+                keep_alive=0,
+                # Prompt EXPANSION wants diversity in the suggested
+                # noun-phrase list (different runs can legitimately
+                # surface different objects to look for). temperature
+                # 0.0 collapses the list. Override the format=json
+                # default with a small but non-zero value here while
+                # classification_refine inherits the deterministic
+                # default for structured attribute extraction.
+                options={"num_ctx": 4096, "temperature": 0.2},
+            )
+            lines = _qwen_response_to_lines(payload)
+            if lines:
+                return lines
+        except OllamaError as exc:
+            logger.warning("qwen seed (%s) failed: %s", model, exc)
+            continue
+    return None
+
+
+def _split_florence_caption(caption: str) -> list[str]:
+    """Extract head noun-phrases from a verbose Florence caption.
+
+    Florence-2's dense-region head emits captions that mix the object
+    with its scene context: "marble coffee table in living room". The
+    sanitiser drops anything > 4 tokens, so passing the raw caption
+    starves Grounding DINO of prompts. Split on the leading preposition
+    /conjunction so the object phrase ("marble coffee table") survives,
+    and emit the trailing scene phrase too — both are useful prompts
+    for the open-vocabulary detector.
+    """
+    if not caption:
+        return []
+    s = caption.strip()
+    if not s:
+        return []
+    out: list[str] = [s]
+    lower = s.lower()
+    for tok in _FLORENCE_HEAD_SPLIT_TOKENS:
+        idx = lower.find(tok)
+        if idx > 0:
+            head = s[:idx].strip()
+            tail = s[idx + len(tok):].strip()
+            if head:
+                out.append(head)
+            if tail:
+                out.append(tail)
+            break  # only split on the first preposition; captions rarely have two
+    return out
 
 
 def _seed_florence(detections: list[FrameDetections]) -> list[str]:
@@ -143,7 +221,7 @@ def _seed_florence(detections: list[FrameDetections]) -> list[str]:
             continue
         for det in fd.detections:
             if det.label:
-                out.append(det.label)
+                out.extend(_split_florence_caption(det.label))
     return out
 
 
@@ -233,6 +311,12 @@ async def _live_run(
         pool.extend(florence_lines)
 
     sanitised = _sanitise(pool, max_tokens=max_tokens_per_prompt, cap=max_prompts)
+    # Degraded means the run had no scene-specific signal at all. The
+    # downstream Grounding DINO / SAHI ops handle empty PromptList
+    # gracefully (no detections recovered) — far better than poisoning
+    # the pipeline with hardcoded household guesses that cause
+    # hallucinations like "brass table lamp" or "wall mirror" in scenes
+    # where neither exists.
     degraded = len(source_models) == 0
     result = PromptList(
         prompts=sanitised,

@@ -9,7 +9,6 @@ import {
   QueueFullError,
 } from '../../../clients/pipeline.client';
 import type { SceneObservation } from '../../../types/pipeline';
-import { envConfig } from '../../../config/env.config';
 
 const SCENE: SceneObservation = {
   sceneId: 's-1',
@@ -37,18 +36,11 @@ interface MockPipeline extends PipelineClient {
   waitForCompletion: ReturnType<typeof vi.fn>;
 }
 
-async function makeApp(opts: {
-  pipeline?: MockPipeline;
-  temporal?: unknown;
-} = {}): Promise<FastifyInstance> {
+async function makeApp(opts: { pipeline?: MockPipeline } = {}): Promise<FastifyInstance> {
   const app = Fastify({ logger: false });
   await app.register(multipart, {
-    limits: { fileSize: 10 * 1024 * 1024, files: 1 },
+    limits: { fileSize: 10 * 1024 * 1024, files: 3 },
   });
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  (app as any).temporal = opts.temporal ?? {
-    workflow: { start: vi.fn(), getHandle: vi.fn() },
-  };
   if (opts.pipeline) {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     (app as any).pipeline = opts.pipeline;
@@ -67,12 +59,31 @@ async function postOne(app: FastifyInstance, image: Buffer = TINY_JPEG, mime = '
   });
 }
 
-describe('POST /v1/detect — flag-on (USE_PIPELINE_SERVICE=true)', () => {
+async function postBurst(
+  app: FastifyInstance,
+  frames: Buffer[],
+  { mime = 'image/jpeg' }: { mime?: string } = {},
+) {
+  const form = new FormData();
+  for (let i = 0; i < frames.length; i++) {
+    form.append('photo', frames[i], {
+      filename: `frame-${i}.jpg`,
+      contentType: mime,
+    });
+  }
+  return app.inject({
+    method: 'POST',
+    url: '/v1/detect',
+    payload: form.getBuffer(),
+    headers: { ...form.getHeaders(), 'x-api-key': 'test-key' },
+  });
+}
+
+describe('POST /v1/detect — pipeline-service single path', () => {
   let app: FastifyInstance;
   let pipeline: MockPipeline;
 
   beforeEach(async () => {
-    vi.spyOn(envConfig, 'usePipelineService', 'get').mockReturnValue(true);
     pipeline = {
       launchRun: vi.fn(),
       getRun: vi.fn(),
@@ -171,44 +182,55 @@ describe('POST /v1/detect — flag-on (USE_PIPELINE_SERVICE=true)', () => {
     expect(args.idempotencyKey).toMatch(/^[0-9a-f]{64}$/);
     expect(args.photoPaths).toHaveLength(1);
   });
-});
 
-describe('POST /v1/detect — flag-off (legacy Temporal path)', () => {
-  let app: FastifyInstance;
-  let temporal: { workflow: { start: ReturnType<typeof vi.fn>; getHandle: ReturnType<typeof vi.fn> } };
-  let mockHandle: { result: ReturnType<typeof vi.fn> };
+  it('3-part burst upload → photoPaths length 3, idempotency = sha256(concat(sha256(f0..2)))', async () => {
+    pipeline.launchRun.mockResolvedValue({
+      runId: 'r-burst',
+      startedAt: 'x',
+      idempotentHit: false,
+    });
+    pipeline.waitForCompletion.mockResolvedValue({
+      runId: 'r-burst',
+      status: 'succeeded',
+      startedAt: 'x',
+      result: SCENE,
+    });
 
-  beforeEach(async () => {
-    vi.spyOn(envConfig, 'usePipelineService', 'get').mockReturnValue(false);
-    mockHandle = { result: vi.fn() };
-    temporal = {
-      workflow: {
-        start: vi.fn().mockResolvedValue(mockHandle),
-        getHandle: vi.fn(),
-      },
-    };
-    app = await makeApp({ temporal });
-    await app.register(detectRoute);
-  });
-  afterEach(async () => {
-    vi.restoreAllMocks();
-    await app.close();
-  });
+    const f0 = Buffer.concat([TINY_JPEG, Buffer.from('A')]);
+    const f1 = Buffer.concat([TINY_JPEG, Buffer.from('B')]);
+    const f2 = Buffer.concat([TINY_JPEG, Buffer.from('C')]);
 
-  it('flag-off does NOT call pipeline.client at all (regression)', async () => {
-    const pipeline = {
-      launchRun: vi.fn(),
-      getRun: vi.fn(),
-      waitForCompletion: vi.fn(),
-    } as unknown as MockPipeline;
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    (app as any).pipeline = pipeline;
-    mockHandle.result.mockResolvedValue({ photoId: 'p1', items: [] });
-
-    const res = await postOne(app);
+    const res = await postBurst(app, [f0, f1, f2]);
     expect(res.statusCode).toBe(200);
-    expect(pipeline.launchRun).not.toHaveBeenCalled();
-    expect(pipeline.getRun).not.toHaveBeenCalled();
-    expect(pipeline.waitForCompletion).not.toHaveBeenCalled();
+
+    const args = pipeline.launchRun.mock.calls[0][0];
+    expect(args.photoPaths).toHaveLength(3);
+
+    // idempotency formula: sha256(concat(sha256(f0)|sha256(f1)|sha256(f2)))
+    // matched against the canonical Node implementation here so the
+    // mobile client can mirror it byte-for-byte.
+    const crypto = await import('node:crypto');
+    const hashes = [f0, f1, f2].map((b) =>
+      crypto.createHash('sha256').update(b).digest(),
+    );
+    const expected = crypto
+      .createHash('sha256')
+      .update(Buffer.concat(hashes))
+      .digest('hex');
+    expect(args.idempotencyKey).toBe(expected);
+  });
+
+  it('rejects 0-frame upload as 400', async () => {
+    const res = await postBurst(app, []);
+    expect(res.statusCode).toBe(400);
+  });
+
+  it('returns 503 when no pipeline client is wired', async () => {
+    const bare = await makeApp(); // no pipeline
+    await bare.register(detectRoute);
+    const res = await postOne(bare);
+    expect(res.statusCode).toBe(503);
+    expect(res.json().error).toBe('pipeline_unavailable');
+    await bare.close();
   });
 });

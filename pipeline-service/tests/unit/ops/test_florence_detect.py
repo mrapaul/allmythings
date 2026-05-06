@@ -39,7 +39,7 @@ async def test_emits_raw_detection_with_none_confidence(httpx_mock_strict) -> No
     httpx_mock_strict.add_response(
         method="POST",
         url="http://127.0.0.1:14001/detect/florence",
-        json=_flo([{"caption": "lamp", "x": 1.0, "y": 2.0, "width": 10.0, "height": 11.0}]),
+        json=_flo([{"caption": "lamp", "x": 0.1, "y": 0.2, "width": 0.1, "height": 0.11}]),
     )
     out = await florence_detect_impl([_frame("F0")])
     assert len(out) == 1
@@ -67,7 +67,7 @@ async def test_per_frame_partial_failure(httpx_mock_strict) -> None:
     httpx_mock_strict.add_response(
         method="POST",
         url="http://127.0.0.1:14001/detect/florence",
-        json=_flo([{"caption": "chair", "x": 0, "y": 0, "width": 1, "height": 1}]),
+        json=_flo([{"caption": "chair", "x": 0.0, "y": 0.0, "width": 0.3, "height": 0.4}]),
     )
     out = await florence_detect_impl([_frame("F0"), _frame("F1")])
     by_id = {fd.frame_id: fd for fd in out}
@@ -98,7 +98,7 @@ async def test_5xx_then_success_on_retry(httpx_mock_strict) -> None:
     httpx_mock_strict.add_response(
         method="POST",
         url="http://127.0.0.1:14001/detect/florence",
-        json=_flo([{"caption": "vase", "x": 0, "y": 0, "width": 1, "height": 1}]),
+        json=_flo([{"caption": "vase", "x": 0.0, "y": 0.0, "width": 0.3, "height": 0.4}]),
     )
     out = await florence_detect_impl([_frame("F0")])
     assert out[0].detector_error is False
@@ -124,7 +124,7 @@ async def test_caption_maps_to_label_lowercased_via_florence_emission(
     httpx_mock_strict.add_response(
         method="POST",
         url="http://127.0.0.1:14001/detect/florence",
-        json=_flo([{"caption": "Brass Desk Lamp", "x": 1, "y": 2, "width": 3, "height": 4}]),
+        json=_flo([{"caption": "Brass Desk Lamp", "x": 0.1, "y": 0.2, "width": 0.3, "height": 0.4}]),
     )
     out = await florence_detect_impl([_frame("F0")])
     assert out[0].detections[0].label == "Brass Desk Lamp"
@@ -135,12 +135,12 @@ async def test_deterministic_ordering_by_label_x_y(httpx_mock_strict) -> None:
     """Sorted (label, x, y) before emit so byte-equal under any Florence
     response order."""
     regions_a = _flo([
-        {"caption": "lamp", "x": 5, "y": 5, "width": 1, "height": 1},
-        {"caption": "chair", "x": 1, "y": 1, "width": 1, "height": 1},
+        {"caption": "lamp", "x": 0.5, "y": 0.5, "width": 0.1, "height": 0.1},
+        {"caption": "chair", "x": 0.1, "y": 0.1, "width": 0.1, "height": 0.1},
     ])
     regions_b = _flo([
-        {"caption": "chair", "x": 1, "y": 1, "width": 1, "height": 1},
-        {"caption": "lamp", "x": 5, "y": 5, "width": 1, "height": 1},
+        {"caption": "chair", "x": 0.1, "y": 0.1, "width": 0.1, "height": 0.1},
+        {"caption": "lamp", "x": 0.5, "y": 0.5, "width": 0.1, "height": 0.1},
     ])
     httpx_mock_strict.add_response(
         method="POST", url="http://127.0.0.1:14001/detect/florence", json=regions_a
@@ -160,7 +160,7 @@ async def test_detector_field_is_florence(httpx_mock_strict) -> None:
     httpx_mock_strict.add_response(
         method="POST",
         url="http://127.0.0.1:14001/detect/florence",
-        json=_flo([{"caption": "x", "x": 0, "y": 0, "width": 1, "height": 1}]),
+        json=_flo([{"caption": "x", "x": 0.0, "y": 0.0, "width": 0.3, "height": 0.4}]),
     )
     out = await florence_detect_impl([_frame("F0")])
     for det in out[0].detections:
@@ -177,3 +177,80 @@ async def test_4xx_does_not_retry(httpx_mock_strict) -> None:
     assert out[0].detector_error is True
     # Only one HTTP call should have happened.
     assert len(httpx_mock_strict.get_requests()) == 1
+
+
+@pytest.mark.asyncio
+async def test_full_frame_region_is_dropped(httpx_mock_strict) -> None:
+    """A region covering the whole frame (1.0 × 1.0) is dropped — that's
+    Florence's classic whole-scene caption."""
+    httpx_mock_strict.add_response(
+        method="POST",
+        url="http://127.0.0.1:14001/detect/florence",
+        json=_flo([
+            {  # whole-frame caption — drop
+                "caption": "room with sheer white curtains and patterned bedding",
+                "x": 0.0, "y": 0.0, "width": 1.0, "height": 1.0,
+            },
+            {  # legitimate object — keep
+                "caption": "lamp",
+                "x": 0.1, "y": 0.1, "width": 0.2, "height": 0.3,
+            },
+        ]),
+    )
+    out = await florence_detect_impl([_frame("F0")])
+    assert [d.label for d in out[0].detections] == ["lamp"]
+
+
+@pytest.mark.asyncio
+async def test_full_width_scene_strip_is_dropped(httpx_mock_strict) -> None:
+    """The pattern that motivated the fix: Florence emits a region
+    spanning ~full width with ~half height and a scene-style caption.
+    Drop when one axis ≥95% AND combined area ≥30%."""
+    httpx_mock_strict.add_response(
+        method="POST",
+        url="http://127.0.0.1:14001/detect/florence",
+        json=_flo([
+            {
+                "caption": "living room with sheer white curtains and blue blanket",
+                "x": 0.001, "y": 0.0, "width": 0.999, "height": 0.488,
+            },
+            {
+                "caption": "marble coffee table",
+                "x": 0.002, "y": 0.272, "width": 0.712, "height": 0.333,
+            },
+        ]),
+    )
+    out = await florence_detect_impl([_frame("F0")])
+    assert [d.label for d in out[0].detections] == ["marble coffee table"]
+
+
+@pytest.mark.asyncio
+async def test_thin_full_width_object_is_kept(httpx_mock_strict) -> None:
+    """A thin shelf or trim spanning full width but only 8% height is a
+    real object (area ~0.08, well below the 30% threshold) — keep it."""
+    httpx_mock_strict.add_response(
+        method="POST",
+        url="http://127.0.0.1:14001/detect/florence",
+        json=_flo([{
+            "caption": "wooden shelf",
+            "x": 0.0, "y": 0.4, "width": 0.99, "height": 0.08,
+        }]),
+    )
+    out = await florence_detect_impl([_frame("F0")])
+    assert [d.label for d in out[0].detections] == ["wooden shelf"]
+
+
+@pytest.mark.asyncio
+async def test_tall_thin_floor_lamp_is_kept(httpx_mock_strict) -> None:
+    """A tall floor lamp at 5% × 95% (area ~0.05) is a real object — the
+    full-axis guard only fires when combined area is ≥30%."""
+    httpx_mock_strict.add_response(
+        method="POST",
+        url="http://127.0.0.1:14001/detect/florence",
+        json=_flo([{
+            "caption": "floor lamp",
+            "x": 0.1, "y": 0.02, "width": 0.05, "height": 0.95,
+        }]),
+    )
+    out = await florence_detect_impl([_frame("F0")])
+    assert [d.label for d in out[0].detections] == ["floor lamp"]

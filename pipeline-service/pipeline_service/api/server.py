@@ -49,6 +49,7 @@ from pipeline_service.models.dinov2 import DinoV2Loader
 from pipeline_service.models.effsam import EffSAMLoader
 from pipeline_service.models.florence_client import FlorenceClient
 from pipeline_service.models.grounding_dino import GroundingDinoLoader
+from pipeline_service.models.grounding_dino_http import HttpGroundingDinoBackend
 from pipeline_service.models.label_encoder import LabelEncoder
 from pipeline_service.models.ollama_client import OllamaClient
 from pipeline_service.types import SceneObservation
@@ -219,7 +220,17 @@ async def _lifespan(app: FastAPI):
     app.state.model_warmup_complete = False
     app.state.florence = FlorenceClient()
     app.state.ollama = OllamaClient()
-    app.state.gdino_loader = GroundingDinoLoader()
+    # GroundingDinoLoader.backend defaults to a deterministic fake; in
+    # production we wire the HTTP-backed backend that calls
+    # detection-service. EVAL_MOCK_BACKENDS=1 keeps the deterministic
+    # path. GDINO_HTTP_URL overrides the default.
+    if os.environ.get("EVAL_MOCK_BACKENDS") == "1":
+        app.state.gdino_loader = GroundingDinoLoader()
+    else:
+        gdino_url = os.environ.get("GDINO_HTTP_URL", "http://127.0.0.1:14001")
+        app.state.gdino_loader = GroundingDinoLoader(
+            backend=HttpGroundingDinoBackend(base_url=gdino_url),
+        )
     app.state.effsam_loader = EffSAMLoader()
     app.state.dinov2_loader = DinoV2Loader()
     app.state.label_encoder = LabelEncoder()

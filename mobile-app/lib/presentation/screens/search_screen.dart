@@ -1,143 +1,198 @@
-import 'dart:io';
-
 import 'package:all_my_things/application/providers/inventory_providers.dart';
-import 'package:all_my_things/data/database/app_database.dart' as db;
-import 'package:all_my_things/presentation/theme/app_theme.dart';
+import 'package:all_my_things/data/database/app_database.dart';
+import 'package:all_my_things/presentation/theme/app_colors.dart';
+import 'package:all_my_things/presentation/theme/app_typography.dart';
+import 'package:all_my_things/presentation/utils/inventory_summary.dart';
+import 'package:all_my_things/presentation/widgets/glow_backdrop.dart';
+import 'package:all_my_things/presentation/widgets/item_card.dart';
+import 'package:all_my_things/presentation/widgets/masonry_grid.dart';
+import 'package:all_my_things/presentation/widgets/responsive.dart';
+import 'package:all_my_things/presentation/widgets/search_header.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-/// Notifier for search query state
-class SearchQueryNotifier extends Notifier<String> {
-  @override
-  String build() => '';
-
-  void update(String query) {
-    state = query;
-  }
-}
-
-/// Provider for the current search query
-final searchQueryProvider = NotifierProvider<SearchQueryNotifier, String>(
-  SearchQueryNotifier.new,
-);
-
-/// Modern, slick full-text search screen
-class SearchScreen extends ConsumerWidget {
+/// Standalone search route — focused query field + masonry results.
+/// The home screen has search inline, so this is mostly a deep-link
+/// destination from external triggers (notifications, share sheet…).
+class SearchScreen extends ConsumerStatefulWidget {
   const SearchScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final query = ref.watch(searchQueryProvider);
-    final searchResultsAsync = ref.watch(searchResultsProvider(query));
+  ConsumerState<SearchScreen> createState() => _SearchScreenState();
+}
 
-    return Scaffold(
-      backgroundColor: Colors.white,
-      appBar: AppBar(
-        backgroundColor: Colors.white,
-        elevation: 0,
-        foregroundColor: Colors.black,
-        title: TextField(
-          autofocus: true,
-          decoration: const InputDecoration(
-            hintText: 'Search your vault...',
-            border: InputBorder.none,
-            hintStyle: TextStyle(color: Colors.grey),
-          ),
-          style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w500),
-          onChanged: (val) => ref.read(searchQueryProvider.notifier).update(val),
-        ),
-      ),
-      body: query.isEmpty
-          ? _buildEmptyState()
-          : searchResultsAsync.when(
-              data: _buildResultsList,
-              loading: () => const Center(child: CircularProgressIndicator(color: Colors.black)),
-              error: (error, _) => Center(child: Text('Error: $error')),
-            ),
-    );
+class _SearchScreenState extends ConsumerState<SearchScreen> {
+  final TextEditingController _controller = TextEditingController();
+  final FocusNode _focusNode = FocusNode();
+  String _query = '';
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) _focusNode.requestFocus();
+    });
   }
 
-  Widget _buildEmptyState() {
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
+  @override
+  void dispose() {
+    _controller.dispose();
+    _focusNode.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final p = context.palette;
+    final r = context.responsive;
+    final q = _query.trim();
+    final resultsAsync =
+        q.isEmpty ? null : ref.watch(searchResultsProvider(q));
+
+    return Scaffold(
+      backgroundColor: p.background,
+      body: Stack(
         children: [
-          Icon(Icons.search_rounded, size: 80, color: Colors.grey.shade200),
-          const SizedBox(height: 16),
-          const Text(
-            'Type to search labels, types, or categories',
-            style: TextStyle(color: Colors.grey, fontWeight: FontWeight.w500),
+          const Positioned.fill(child: GlowBackdrop()),
+          SafeArea(
+            child: Center(
+              child: ConstrainedBox(
+                constraints: BoxConstraints(maxWidth: r.contentMaxWidth),
+                child: Column(
+                  children: [
+                    Padding(
+                      padding: EdgeInsets.fromLTRB(r.gutter, 4, r.gutter, 12),
+                      child: Row(
+                        children: [
+                          SizedBox(
+                            width: 44,
+                            height: 44,
+                            child: Material(
+                              color: p.card,
+                              shape: CircleBorder(
+                                  side: BorderSide(color: p.border)),
+                              child: InkWell(
+                                customBorder: const CircleBorder(),
+                                onTap: () => context.canPop()
+                                    ? context.pop()
+                                    : context.go('/items'),
+                                child: Center(
+                                  child: Icon(Icons.chevron_left,
+                                      size: 20, color: p.foreground),
+                                ),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: SearchHeader(
+                              controller: _controller,
+                              focusNode: _focusNode,
+                              onChanged: (v) => setState(() => _query = v),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    Expanded(
+                      child: resultsAsync == null
+                          ? _IdleHint()
+                          : resultsAsync.when(
+                              loading: () => const Center(
+                                child: CircularProgressIndicator(),
+                              ),
+                              error: (e, _) => Center(
+                                child: Text(
+                                  'Search failed: $e',
+                                  style: AppTypography.inter(
+                                    size: 14,
+                                    color: p.mutedForeground,
+                                  ),
+                                ),
+                              ),
+                              data: (items) => _Results(items: items),
+                            ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
           ),
         ],
       ),
     );
   }
+}
 
-  Widget _buildResultsList(List<db.InventoryItem> items) {
-    if (items.isEmpty) {
-      return const Center(child: Text('No matching items found.'));
-    }
-
-    return ListView.builder(
-      itemCount: items.length,
-      itemBuilder: (context, index) {
-        return _SearchResultTile(item: items[index]);
-      },
+class _IdleHint extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    final p = context.palette;
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 36),
+        child: Text(
+          'Search for an item, room, or detail — color, brand, anything tagged.',
+          textAlign: TextAlign.center,
+          style: AppTypography.inter(
+            size: 14,
+            color: p.mutedForeground,
+            height: 1.5,
+          ),
+        ),
+      ),
     );
   }
 }
 
-class _SearchResultTile extends ConsumerWidget {
-  const _SearchResultTile({required this.item});
-
-  final db.InventoryItem item;
+class _Results extends StatelessWidget {
+  const _Results({required this.items});
+  final List<InventoryItem> items;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final labelsAsync = ref.watch(itemLabelsProvider(item.id));
-
-    return ListTile(
-      onTap: () => context.push('/item/${item.id}'),
-      leading: Container(
-        width: 50,
-        height: 50,
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(8),
-          color: AppTheme.surfaceMedium,
+  Widget build(BuildContext context) {
+    final p = context.palette;
+    final r = context.responsive;
+    if (items.isEmpty) {
+      return Center(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 36),
+          child: Text(
+            'Nothing matches that search.',
+            textAlign: TextAlign.center,
+            style: AppTypography.inter(size: 14, color: p.mutedForeground),
+          ),
         ),
-        clipBehavior: Clip.antiAlias,
-        child: item.thumbnailPath.isNotEmpty
-            ? Image.file(File(item.thumbnailPath), fit: BoxFit.cover)
-            : const Icon(Icons.image),
+      );
+    }
+
+    final summaries = {
+      for (final it in items) it.id: InventorySummary.fromItem(it)
+    };
+    return Padding(
+      padding: EdgeInsets.symmetric(horizontal: r.gutter),
+      child: SingleChildScrollView(
+        child: MasonryGrid<InventoryItem>(
+          items: items,
+          columns: r.columns,
+          gap: r.cardGap,
+          aspectRatioFor: (it) => summaries[it.id]?.aspectRatio ?? 1,
+          tileBuilder: (ctx, item, _) {
+            final s = summaries[item.id] ?? const InventorySummary(
+                label: '', category: 'Other', aspectRatio: 1, tagCount: 0);
+            return ItemCard(
+              heroTag: 'search-${item.id}',
+              thumbnailPath: item.thumbnailPath,
+              label: s.label,
+              category: s.category,
+              status: ItemCardStatus.completed,
+              onTap: () => ctx.push('/item/${item.id}'),
+              onLongPress: () {},
+            );
+          },
+        ),
       ),
-      title: labelsAsync.when(
-        data: (labels) {
-          final typeLabel = labels.where((l) => l.key == 'type').firstOrNull;
-          return Text(
-            typeLabel?.value ?? 'Unnamed Item',
-            style: const TextStyle(fontWeight: FontWeight.bold),
-          );
-        },
-        loading: () => const Text('Loading...'),
-        error: (_, _) => const Text('Unnamed Item'),
-      ),
-      subtitle: labelsAsync.when(
-        data: (labels) {
-          final categoryLabel = labels.where((l) => l.key == 'category').firstOrNull;
-          final brandLabel = labels.where((l) => l.key == 'brand').firstOrNull;
-          
-          final parts = [
-            if (categoryLabel != null) categoryLabel.value,
-            if (brandLabel != null) brandLabel.value,
-          ];
-          
-          return Text(parts.join(' • '));
-        },
-        loading: () => const SizedBox.shrink(),
-        error: (_, _) => const SizedBox.shrink(),
-      ),
-      trailing: const Icon(Icons.chevron_right_rounded, color: Colors.grey),
     );
   }
 }

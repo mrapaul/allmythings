@@ -8,7 +8,7 @@ class AppConfig {
   static String? _resolvedApiBaseUrl;
 
   /// Call once at app startup to resolve the Mac server URL via mDNS.
-  /// Falls back to Gemini cloud endpoint if Mac is not found within 2 seconds.
+  /// Falls back to localhost if Mac is not found within the timeout.
   static Future<void> initialize() async {
     if (kIsWeb) {
       _resolvedApiBaseUrl = 'http://localhost:14000';
@@ -24,6 +24,21 @@ class AppConfig {
       return;
     }
     _resolvedApiBaseUrl = 'http://localhost:14000';
+  }
+
+  /// Force a fresh mDNS browse and replace the cached URL. Called by
+  /// the API client when an HTTP request fails with a connection error
+  /// — the Mac's Bonjour SRV record can rot across sleep/wake (the
+  /// `.local` suffix increments) and the previously cached URL points
+  /// at a hostname that no longer resolves. A re-browse picks up the
+  /// current advertisement without forcing the user to restart the app.
+  static Future<String?> refresh() async {
+    if (!Platform.isIOS) return _resolvedApiBaseUrl;
+    final discovered = await MacServerDiscovery.resolve();
+    if (discovered != null) {
+      _resolvedApiBaseUrl = discovered;
+    }
+    return _resolvedApiBaseUrl;
   }
 
   /// Resolved API base URL. Returns localhost fallback if initialize() hasn't run.
