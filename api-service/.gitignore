@@ -40,5 +40,8 @@ temp/
 # Service account keys
 *.json
 !package.json
+!package-lock.json
 !tsconfig.json
 !src/__tests__/**/*.json
+# OpenAPI spec is the contract source-of-truth for mobile codegen — must be tracked.
+!openapi.json
