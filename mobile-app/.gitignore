@@ -11,4 +11,3 @@ android/app/build/
 .DS_Store
 coverage/
 api/generated/
-db/migrations/
