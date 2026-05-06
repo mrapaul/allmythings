@@ -53,6 +53,7 @@ export function ActionCapsule({ onCamera, onLibrary, onSearchToggle, searchActiv
         </Pressable>
 
         <Pressable
+          testID="action-capsule-camera"
           accessibilityLabel="Take photo"
           onPress={() => {
             heavy();

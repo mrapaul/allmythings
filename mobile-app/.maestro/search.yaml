@@ -1,0 +1,34 @@
+appId: com.codesparktech.homeinventory
+tags:
+  - regression
+---
+# Search flow: confirm the search input accepts focus + typing.
+#
+# NOTE: A clean install has zero inventory items, so we cannot assert any
+# filter results without pre-seeding the DB (Maestro can't reach our SQLite
+# layer directly). This flow therefore validates the input plumbing only —
+# focus, typing, and the empty-state copy switching from "A blank canvas"
+# to "Nothing matches" once a query is active.
+#
+# When seeded fixtures land (tracked in the rewrite plan as a follow-up),
+# extend this flow with `assertVisible:` against expected result rows.
+
+- launchApp:
+    clearState: true
+
+- assertVisible: "A blank canvas"
+
+# Focus and type into the search input (testID added in SearchHeader).
+- tapOn:
+    id: "search-input"
+- inputText: "leather"
+
+# With a non-empty query and no items, the empty-state swaps to the
+# "Nothing matches" headline.
+- assertVisible: "Nothing matches"
+
+# Clear the field via the clearButton dot to return to the empty canvas.
+- tapOn:
+    text: "Clear filters"
+
+- assertVisible: "A blank canvas"

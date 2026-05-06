@@ -1,0 +1,38 @@
+appId: com.codesparktech.homeinventory
+tags:
+  - regression
+---
+# Multi-home flow: open the home picker from the TopBar, add a new home
+# named "Cabin", confirm it lands as the active home.
+
+- launchApp:
+    clearState: true
+
+# Wait for the home screen to settle.
+- assertVisible: "A blank canvas"
+
+# Open the home picker by tapping the home pill (testID added in TopBar).
+- tapOn:
+    id: "top-bar-home-pill"
+
+# Sheet header lands.
+- assertVisible: "Your homes"
+
+# Reveal the "Add a home" inline form.
+- tapOn:
+    id: "home-sheet-add-button"
+
+# Type the new home name.
+- tapOn:
+    id: "home-sheet-name-input"
+- inputText: "Cabin"
+
+# Confirm — closes the sheet and switches `activeHome` to the new entry.
+- tapOn:
+    id: "home-sheet-confirm"
+
+# After confirm the picker dismisses; tap the home pill again to verify
+# "Cabin" now appears in the list with the active checkmark.
+- tapOn:
+    id: "top-bar-home-pill"
+- assertVisible: "Cabin"

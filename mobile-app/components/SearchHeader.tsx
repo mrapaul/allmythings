@@ -24,6 +24,7 @@ export const SearchHeader = forwardRef<TextInput, Props>(function SearchHeader(
       <Feather name="search" size={16} color={colors.mutedForeground} />
       <TextInput
         ref={ref}
+        testID="search-input"
         value={value}
         onChangeText={onChange}
         placeholder={placeholder}

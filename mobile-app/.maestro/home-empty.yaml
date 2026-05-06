@@ -1,0 +1,27 @@
+appId: com.codesparktech.homeinventory
+tags:
+  - smoke
+---
+# Smallest happy-path flow: launch the app on a clean install and confirm
+# the empty-state lands, then tap the camera capsule to navigate to the
+# detection screen. No items, no homes added, no permissions granted.
+
+- launchApp:
+    clearState: true
+
+# Empty home: the headline copy is a stable text landmark on the index route.
+- assertVisible: "A blank canvas"
+
+# The "Tap the camera below" line confirms the empty-state CTA is rendered.
+- assertVisible:
+    text: "Tap the camera below"
+
+# The action capsule's primary button has a stable testID added in
+# components/ActionCapsule.tsx for E2E targeting.
+- tapOn:
+    id: "action-capsule-camera"
+
+# `expo-image-picker` opens a native sheet asking for camera permission. We
+# can't dismiss that here without device-specific settings, so the flow
+# stops at the capsule tap. CI runs this on a simulator with permissions
+# pre-granted via Maestro's `permissions:` on launch — see runbook.

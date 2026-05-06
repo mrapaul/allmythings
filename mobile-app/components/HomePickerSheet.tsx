@@ -98,6 +98,7 @@ export function HomePickerSheet({
             >
               <Text style={[styles.addLabel, { color: colors.mutedForeground }]}>Name</Text>
               <TextInput
+                testID="home-sheet-name-input"
                 value={newName}
                 onChangeText={setNewName}
                 placeholder="Beach House"
@@ -137,6 +138,7 @@ export function HomePickerSheet({
                   <Text style={[styles.secondaryText, { color: colors.foreground }]}>Cancel</Text>
                 </Pressable>
                 <Pressable
+                  testID="home-sheet-confirm"
                   onPress={handleAdd}
                   style={({ pressed }) => [
                     styles.primaryBtn,
@@ -151,6 +153,7 @@ export function HomePickerSheet({
             </View>
           ) : (
             <Pressable
+              testID="home-sheet-add-button"
               onPress={() => setAdding(true)}
               style={({ pressed }) => [
                 styles.addRow,

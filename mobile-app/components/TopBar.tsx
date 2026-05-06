@@ -45,6 +45,7 @@ export function TopBar({ onPickHome }: { onPickHome: () => void }) {
       </Pressable>
 
       <Pressable
+        testID="top-bar-home-pill"
         accessibilityLabel={`Switch home, currently ${activeHome?.name ?? 'My Home'} with ${items.length} items`}
         onPress={() => {
           tap();
@@ -71,6 +72,7 @@ export function TopBar({ onPickHome }: { onPickHome: () => void }) {
       </Pressable>
 
       <Pressable
+        testID="top-bar-settings"
         accessibilityLabel="Settings"
         onPress={() => {
           tap();
