@@ -43,6 +43,7 @@ vi.mock('@testing-library/react-native', async () => {
         update: (next: unknown) => instance.update(next),
       };
     },
+    act: TestRenderer.act,
   };
 });
 
