@@ -11,6 +11,7 @@ export interface Responsive {
   capsuleMaxWidth: number;
   width: number;
   height: number;
+  isCompact: boolean;
   isWide: boolean;
 }
 
@@ -25,6 +26,7 @@ export function resolveResponsive(width: number, height = 0): Responsive {
   const cardGap = breakpoint === 'sm' ? 10 : 14;
   const contentMaxWidth = breakpoint === 'xl' ? 1100 : breakpoint === 'lg' ? 920 : width;
   const capsuleMaxWidth = Math.min(width - 24, 460);
+  const isCompact = breakpoint === 'sm';
   const isWide = breakpoint === 'lg' || breakpoint === 'xl';
 
   return {
@@ -36,6 +38,7 @@ export function resolveResponsive(width: number, height = 0): Responsive {
     capsuleMaxWidth,
     width,
     height,
+    isCompact,
     isWide,
   };
 }
