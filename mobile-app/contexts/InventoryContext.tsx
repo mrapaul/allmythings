@@ -17,6 +17,13 @@ interface InventoryContextValue {
   deleteAllInActiveHome: () => Promise<void>;
   refresh: () => Promise<void>;
   isLoading: boolean;
+  /**
+   * Direct access to the underlying repository for read-only flows that
+   * benefit from TanStack Query (e.g. FTS search). Mutations should still
+   * go through the typed helpers above so the in-memory cache stays in
+   * sync.
+   */
+  repo: Repo;
 }
 
 const InventoryContext = createContext<InventoryContextValue | undefined>(undefined);
@@ -121,6 +128,7 @@ export function InventoryProvider({ repo, photoStorage, children }: ProviderProp
       deleteAllInActiveHome,
       refresh,
       isLoading,
+      repo,
     }),
     [
       items,
@@ -132,6 +140,7 @@ export function InventoryProvider({ repo, photoStorage, children }: ProviderProp
       deleteAllInActiveHome,
       refresh,
       isLoading,
+      repo,
     ],
   );
 
