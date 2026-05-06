@@ -58,9 +58,50 @@ vi.mock('react-native-reanimated', () => {
     withTiming: (v: number) => v,
     withSpring: (v: number) => v,
     withDelay: (_d: number, v: number) => v,
-    FadeIn: { delay: () => ({}), duration: () => ({}) },
-    FadeOut: { delay: () => ({}), duration: () => ({}) },
+    withRepeat: (v: number) => v,
+    withSequence: (...vs: unknown[]) => vs[vs.length - 1],
+    runOnJS: <T extends (...args: unknown[]) => unknown>(fn: T): T => fn,
+    FadeIn: { delay: () => ({ duration: () => ({}) }), duration: () => ({}) },
+    FadeOut: { delay: () => ({ duration: () => ({}) }), duration: () => ({}) },
     Layout: { springify: () => ({ damping: () => ({}) }) },
+  };
+});
+
+// `react-native-svg` ships native bindings + Flow source. Stub primitives
+// used by BoundingBoxOverlay/BoxThumbnail so test renderer can walk the tree.
+vi.mock('react-native-svg', () => ({
+  default: 'Svg',
+  Svg: 'Svg',
+  Rect: 'Rect',
+  G: 'G',
+  Text: 'SvgText',
+  Path: 'Path',
+  Circle: 'Circle',
+  Line: 'Line',
+  Polygon: 'Polygon',
+  Polyline: 'Polyline',
+  Defs: 'Defs',
+  ClipPath: 'ClipPath',
+  LinearGradient: 'LinearGradient',
+  Stop: 'Stop',
+}));
+
+// `react-native-gesture-handler` exports `Gesture.Pan()` builders + a
+// `GestureDetector` HOC. Tests don't trigger gestures, so a chainable
+// no-op surface is enough.
+vi.mock('react-native-gesture-handler', () => {
+  const builder = () => {
+    const proxy: Record<string, unknown> = {};
+    const chain = new Proxy(proxy, {
+      get: () => () => chain,
+    });
+    return chain;
+  };
+  return {
+    GestureDetector: ({ children }: { children: unknown }) => children,
+    Gesture: { Pan: builder, Tap: builder, LongPress: builder },
+    GestureHandlerRootView: 'GestureHandlerRootView',
+    Pressable: 'Pressable',
   };
 });
 
