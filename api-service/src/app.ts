@@ -14,6 +14,7 @@ import { envConfig } from './config/env.config';
 import { logger } from './utils/logger';
 import { errorHandler, notFoundHandler } from './middleware/error.middleware';
 import { detectRoute } from './routes/detect.route';
+import { detectStreamRoute } from './routes/detect-stream.route';
 import { detectStatusRoute } from './routes/detect-status.route';
 import { healthRoute } from './routes/health.route';
 import { readyRoute } from './routes/ready.route';
@@ -105,6 +106,7 @@ export async function buildApp(options?: { disableRateLimit?: boolean }): Promis
   await app.register(swaggerUi, { routePrefix: '/docs' });
 
   await app.register(detectRoute);
+  await app.register(detectStreamRoute);
   await app.register(detectStatusRoute);
   await app.register(healthRoute);
   await app.register(readyRoute);
