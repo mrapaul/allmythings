@@ -1,0 +1,24 @@
+{
+  "cli": { "version": ">= 14.0.0" },
+  "build": {
+    "development": {
+      "developmentClient": true,
+      "distribution": "internal",
+      "channel": "preview"
+    },
+    "preview": {
+      "distribution": "internal",
+      "channel": "preview",
+      "ios": { "simulator": true }
+    },
+    "production": {
+      "channel": "production",
+      "autoIncrement": true
+    }
+  },
+  "submit": { "production": {} },
+  "update": {
+    "preview": { "channel": "preview" },
+    "production": { "channel": "production" }
+  }
+}

@@ -1,27 +1,20 @@
-# Maestro Configuration
-# Home Inventory Mobile App E2E Tests
+# Maestro configuration for the RN/Expo Home Inventory app.
+#
+# `appId` matches `expo.ios.bundleIdentifier` / `expo.android.package` from
+# `app.json` so `maestro test` resolves the running build automatically.
 
-# App configuration
-appId: allmythings
+appId: com.codesparktech.homeinventory
 
-# Test settings
 flows:
-  - "*_test.yaml"
+  - "*.yaml"
 
-# Screenshot settings
 screenshots:
   enabled: true
   format: png
 
-# Timeouts
 timeout: 30000
+retries: 1
 
-# Retry settings
-retries: 2
-
-# Tags for selective test execution
 tags:
   - smoke
   - regression
-  - detection
-  - inventory

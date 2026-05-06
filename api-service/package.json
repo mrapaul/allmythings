@@ -15,7 +15,8 @@
     "lint:fix": "eslint src --ext .ts --fix",
     "format": "prettier --write \"src/**/*.ts\"",
     "format:check": "prettier --check \"src/**/*.ts\"",
-    "type-check": "tsc --noEmit"
+    "type-check": "tsc --noEmit",
+    "export:openapi": "tsx scripts/export-openapi.ts"
   },
   "license": "ISC",
   "dependencies": {
@@ -23,6 +24,8 @@
     "@fastify/multipart": "^8.0.0",
     "@fastify/rate-limit": "^9.1.0",
     "@fastify/static": "^7.0.4",
+    "@fastify/swagger": "^8.15.0",
+    "@fastify/swagger-ui": "^4.2.0",
     "@opentelemetry/api": "^1.9.0",
     "@opentelemetry/auto-instrumentations-node": "^0.55.1",
     "@opentelemetry/exporter-metrics-otlp-grpc": "^0.57.1",

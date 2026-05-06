@@ -12,7 +12,22 @@ const SCENE: SceneObservation = {
   sceneId: 's',
   runId: 'r-9',
   frameIds: [],
-  detections: [],
+  detections: [
+    {
+      id: 'd-1',
+      bbox: { x: 0.1, y: 0.2, width: 0.3, height: 0.4 },
+      primaryLabel: 'Sofa',
+      alternateLabels: [],
+      vlmStructuredAttributes: {
+        category: 'Furniture',
+        description: 'leather couch',
+        color: 'brown',
+      },
+      agreementScore: 1,
+      contributingSignals: [],
+      confidence: 0.9,
+    },
+  ],
   agreementCoverage: 0,
   agreementPrecision: 0,
   selfDiagnosisTriggered: false,
@@ -49,7 +64,7 @@ describe('GET /v1/detect/status/:workflowId — pipeline-service single path', (
     await app.close();
   });
 
-  it('succeeded → 200 with SceneObservation', async () => {
+  it('succeeded → 200 with mapped DetectedItem[]', async () => {
     pipeline.getRun.mockResolvedValue({
       runId: 'r-9',
       status: 'succeeded',
@@ -58,8 +73,28 @@ describe('GET /v1/detect/status/:workflowId — pipeline-service single path', (
     });
     const res = await app.inject({ method: 'GET', url: '/v1/detect/status/r-9' });
     expect(res.statusCode).toBe(200);
+    const body = res.json();
+    expect(body.status).toBe('completed');
+    expect(body.workflowId).toBe('r-9');
+    expect(body.result.items).toHaveLength(1);
+    expect(body.result.items[0].label).toBe('Sofa');
+    expect(body.result.items[0].category).toBe('Furniture');
+    expect(body.result.items[0].description).toBe('leather couch');
+    expect(body.result.items[0].tags).toContain('brown');
+    expect(body.result.items[0].box).toEqual({ x: 0.1, y: 0.2, width: 0.3, height: 0.4 });
+  });
+
+  it('succeeded with no result → 200 with undefined result', async () => {
+    pipeline.getRun.mockResolvedValue({
+      runId: 'r-9',
+      status: 'succeeded',
+      startedAt: 's',
+      // result: undefined
+    });
+    const res = await app.inject({ method: 'GET', url: '/v1/detect/status/r-9' });
+    expect(res.statusCode).toBe(200);
     expect(res.json().status).toBe('completed');
-    expect(res.json().result).toEqual(SCENE);
+    expect(res.json().result).toBeUndefined();
   });
 
   it('running → 202', async () => {

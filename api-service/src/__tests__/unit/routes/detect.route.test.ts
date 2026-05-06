@@ -9,6 +9,7 @@ import {
   QueueFullError,
 } from '../../../clients/pipeline.client';
 import type { SceneObservation } from '../../../types/pipeline';
+import { detectedItemSchema } from '../../../schemas/detected-item.schema';
 
 const SCENE: SceneObservation = {
   sceneId: 's-1',
@@ -25,6 +26,27 @@ const SCENE: SceneObservation = {
   tileErrors: [],
 };
 
+const SCENE_WITH_DETECTION: SceneObservation = {
+  ...SCENE,
+  detections: [
+    {
+      id: 'd1',
+      bbox: { x: 0.1, y: 0.2, width: 0.3, height: 0.4 },
+      primaryLabel: 'Sofa',
+      alternateLabels: [],
+      vlmStructuredAttributes: {
+        description: 'Brown leather two-seater',
+        category: 'Furniture',
+        color: 'brown',
+        material: 'leather',
+      },
+      agreementScore: 0.9,
+      contributingSignals: [],
+      confidence: 0.85,
+    },
+  ],
+};
+
 const TINY_JPEG = Buffer.from(
   '/9j/4AAQSkZJRgABAQEAYABgAAD//gA7Q1JFQVRPUjogZ2QtanBlZyB2MS4wICh1c2luZyBJSkcgSlBFRyB2NjIp/9sAQwAIBgYHBgUIBwcHCQkICgwUDQwLCwwZEhMPFB0aHx4dGhwcICQuJyAiLCMcHCg3KSwwMTQ0NB8nOT04MjwuMzI/wAARCAABAAEDASIAAhEBAxEB/wAACwgABAACAQERAP/EABUAAQEAAAAAAAAAAAAAAAAAAAAJ/8QAFBABAAAAAAAAAAAAAAAAAAAAAP/aAAgBAQAAPwA/8H/2Q==',
   'base64',
@@ -38,6 +60,7 @@ interface MockPipeline extends PipelineClient {
 
 async function makeApp(opts: { pipeline?: MockPipeline } = {}): Promise<FastifyInstance> {
   const app = Fastify({ logger: false });
+  app.addSchema(detectedItemSchema);
   await app.register(multipart, {
     limits: { fileSize: 10 * 1024 * 1024, files: 3 },
   });
@@ -97,21 +120,29 @@ describe('POST /v1/detect — pipeline-service single path', () => {
     await app.close();
   });
 
-  it('idempotent_hit + status=succeeded → 200 with result, no waitForCompletion', async () => {
+  it('idempotent_hit + status=succeeded → 200 with mapped items, no waitForCompletion', async () => {
     pipeline.launchRun.mockResolvedValue({
       runId: 'r-1',
       startedAt: 'x',
       idempotentHit: true,
       status: 'succeeded',
-      result: SCENE,
+      result: SCENE_WITH_DETECTION,
     });
     const res = await postOne(app);
     expect(res.statusCode).toBe(200);
-    expect(res.json()).toEqual(SCENE);
+    const body = res.json();
+    expect(body.items).toHaveLength(1);
+    expect(body.items[0]).toMatchObject({
+      label: 'Sofa',
+      description: 'Brown leather two-seater',
+      category: 'Furniture',
+      box: { x: 0.1, y: 0.2, width: 0.3, height: 0.4 },
+    });
+    expect(Array.isArray(body.items[0].tags)).toBe(true);
     expect(pipeline.waitForCompletion).not.toHaveBeenCalled();
   });
 
-  it('202 launch + waitForCompletion succeeded → 200', async () => {
+  it('202 launch + waitForCompletion succeeded → 200 with mapped items', async () => {
     pipeline.launchRun.mockResolvedValue({
       runId: 'r-2',
       startedAt: 'x',
@@ -121,11 +152,13 @@ describe('POST /v1/detect — pipeline-service single path', () => {
       runId: 'r-2',
       status: 'succeeded',
       startedAt: 'x',
-      result: SCENE,
+      result: SCENE_WITH_DETECTION,
     });
     const res = await postOne(app);
     expect(res.statusCode).toBe(200);
-    expect(res.json()).toEqual(SCENE);
+    const body = res.json();
+    expect(body.items).toHaveLength(1);
+    expect(body.items[0].label).toBe('Sofa');
     expect(pipeline.waitForCompletion).toHaveBeenCalledOnce();
   });
 
