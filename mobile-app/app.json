@@ -21,11 +21,7 @@
       },
       "package": "com.codesparktech.homeinventory"
     },
-    "plugins": [
-      "expo-router",
-      "expo-font",
-      "expo-sqlite"
-    ],
+    "plugins": ["expo-router", "expo-font", "expo-sqlite"],
     "experiments": {
       "typedRoutes": true
     }
