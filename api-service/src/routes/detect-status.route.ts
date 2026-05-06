@@ -4,6 +4,7 @@ import {
   PipelineUnavailableError,
   RunNotFoundError,
 } from '../clients/pipeline.client';
+import { mapSceneToItems } from './detect.mapper';
 
 export async function detectStatusRoute(app: FastifyInstance): Promise<void> {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -29,7 +30,7 @@ export async function detectStatusRoute(app: FastifyInstance): Promise<void> {
           return reply.code(200).send({
             status: 'completed',
             workflowId: status.runId,
-            result: status.result,
+            result: status.result ? { items: mapSceneToItems(status.result) } : undefined,
           });
         case 'failed':
         case 'cancelled':
