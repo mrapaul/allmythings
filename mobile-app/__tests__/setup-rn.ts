@@ -118,6 +118,20 @@ vi.mock('expo-image', () => ({
   Image: 'ExpoImage',
 }));
 
+// `expo-image-manipulator` requires `expo-modules-core`'s native event
+// emitter at module init. Stub the surface we use for test-time renders.
+vi.mock('expo-image-manipulator', () => ({
+  manipulateAsync: async (uri: string) => ({ uri, width: 1280, height: 960 }),
+  SaveFormat: { JPEG: 'jpeg', PNG: 'png' },
+}));
+
+// `expo-constants` pulls in `expo-modules-core`'s native bindings. The
+// detection screen + api client read `expoConfig.extra` for base URL/api
+// key — empty config returns the localhost defaults.
+vi.mock('expo-constants', () => ({
+  default: { expoConfig: { extra: {} } },
+}));
+
 vi.mock('expo', () => ({
   reloadAppAsync: () => Promise.resolve(),
 }));

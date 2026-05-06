@@ -9,6 +9,8 @@ const Image = 'Image';
 const TextInput = 'TextInput';
 const TouchableOpacity = 'TouchableOpacity';
 const Modal = 'Modal';
+const ActivityIndicator = 'ActivityIndicator';
+const Alert = { alert: (..._args: unknown[]) => undefined };
 
 // Minimal `Animated` stand-in for tests. Spring/timing/parallel calls just
 // invoke the start callback synchronously; values never actually animate.
@@ -79,6 +81,8 @@ export {
   TextInput,
   TouchableOpacity,
   Modal,
+  ActivityIndicator,
+  Alert,
   Animated,
   StyleSheet,
   Platform,
