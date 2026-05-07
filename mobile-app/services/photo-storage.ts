@@ -10,9 +10,15 @@ export class PhotoStorage {
   constructor(private fs: FileSystemPort) {}
 
   static fromExpo(): PhotoStorage {
-    // biome-ignore lint/correctness/noNodejsModules: dynamic require avoids loading expo-file-system in Vitest
+    interface LegacyFS {
+      documentDirectory: string | null;
+      getInfoAsync(path: string): Promise<{ exists: boolean }>;
+      makeDirectoryAsync(path: string, opts?: { intermediates?: boolean }): Promise<void>;
+      copyAsync(args: { from: string; to: string }): Promise<void>;
+    }
+    // biome-ignore lint/correctness/noNodejsModules: dynamic require keeps expo-file-system out of Vitest
     // biome-ignore lint/suspicious/noExplicitAny: require is intentional for RN-only side-effecting import
-    const FileSystem = (require as any)('expo-file-system') as typeof import('expo-file-system');
+    const FileSystem = (require as any)('expo-file-system/legacy') as LegacyFS;
     return new PhotoStorage({
       documentDirectory: FileSystem.documentDirectory ?? '',
       async ensureDir(path) {

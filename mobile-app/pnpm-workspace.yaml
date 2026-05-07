@@ -1,4 +1,6 @@
 nodeLinker: hoisted
+overrides:
+  '@types/react': ~19.1.10
 allowBuilds:
   '@biomejs/biome': true
   '@sentry/cli': true

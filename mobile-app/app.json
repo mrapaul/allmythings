@@ -21,7 +21,7 @@
       },
       "package": "com.codesparktech.homeinventory"
     },
-    "plugins": ["expo-router", "expo-font", "expo-sqlite"],
+    "plugins": ["expo-router", "expo-font", "expo-sqlite", "@sentry/react-native"],
     "experiments": {
       "typedRoutes": true
     },
@@ -29,7 +29,9 @@
       "url": "https://u.expo.dev/PROJECT_ID_PLACEHOLDER",
       "fallbackToCacheTimeout": 0
     },
-    "runtimeVersion": { "policy": "appVersion" },
+    "runtimeVersion": {
+      "policy": "appVersion"
+    },
     "extra": {
       "apiBaseUrl": "$API_BASE_URL",
       "apiKey": "$API_KEY",
