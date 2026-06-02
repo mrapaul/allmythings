@@ -70,6 +70,7 @@
     "@types/better-sqlite3": "^7.6.13",
     "@types/react": "~19.1.17",
     "@types/react-test-renderer": "~19.0.0",
+    "babel-plugin-inline-import": "^3.0.0",
     "better-sqlite3": "^12.9.0",
     "drizzle-kit": "^0.28.0",
     "jsdom": "^25.0.0",

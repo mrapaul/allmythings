@@ -13,10 +13,13 @@ export function getDb(): ExpoSQLiteDatabase<typeof schema> {
     enableChangeListener: true,
   });
   const db = drizzle(sqlite, { schema, logger: false });
-  void migrate(db, migrations);
+  migrate(db, migrations);
 
+  // FTS5 virtual table + sync triggers. Run via expo-sqlite's execSync, which
+  // handles full DDL statements (including CREATE TRIGGER ... BEGIN ... END);
+  // Drizzle's db.run() prepares a single statement and mangles the trigger body.
   for (const stmt of FTS_STATEMENTS) {
-    void db.run(stmt as unknown as never);
+    sqlite.execSync(stmt);
   }
   _db = db;
   return db;
