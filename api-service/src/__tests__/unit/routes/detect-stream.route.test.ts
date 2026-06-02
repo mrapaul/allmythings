@@ -11,6 +11,7 @@ import multipart from '@fastify/multipart';
 import { detectStreamRoute } from '../../../routes/detect-stream.route';
 import type { PipelineClient, LaunchRunResult } from '../../../clients/pipeline.client';
 import type { RunStatus, SceneObservation } from '../../../types/pipeline';
+import { envConfig } from '../../../config/env.config';
 
 const sceneFixture: SceneObservation = {
   sceneId: 's',
@@ -68,6 +69,7 @@ class FakePipeline implements PipelineClient {
 describe('detectStreamRoute', () => {
   let app: FastifyInstance;
   beforeEach(async () => {
+    envConfig.detector = 'pipeline';
     app = Fastify();
     await app.register(multipart);
     // eslint-disable-next-line @typescript-eslint/no-explicit-any

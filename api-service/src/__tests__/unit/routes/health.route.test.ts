@@ -1,6 +1,7 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import Fastify, { FastifyInstance } from 'fastify';
 import { healthRoute } from '../../../routes/health.route';
+import { envConfig } from '../../../config/env.config';
 import type { ProviderHealthService, HealthSnapshot, ProviderState } from '../../../services/provider-health.service';
 
 function makeState(status: 'unknown' | 'up' | 'down'): ProviderState {
@@ -11,8 +12,14 @@ function makeHealth(snapshot: HealthSnapshot): Pick<ProviderHealthService, 'snap
   return { snapshot: () => snapshot };
 }
 
-describe('GET /v1/health', () => {
+describe('GET /v1/health — pipeline mode', () => {
   let app: FastifyInstance;
+  beforeEach(() => {
+    envConfig.detector = 'pipeline';
+  });
+  afterEach(() => {
+    envConfig.detector = 'vlm';
+  });
 
   async function setup(snapshot: HealthSnapshot) {
     app = Fastify({ logger: false });
@@ -84,5 +91,42 @@ describe('GET /v1/health', () => {
     expect(body.providers).toHaveProperty('florence');
     expect(body.providers).toHaveProperty('ollama');
     expect(body.providers).toHaveProperty('pipeline');
+  });
+});
+
+describe('GET /v1/health — VLM mode', () => {
+  let app: FastifyInstance;
+  afterEach(() => {
+    envConfig.detector = 'vlm';
+  });
+
+  async function setup(snapshot: HealthSnapshot) {
+    envConfig.detector = 'vlm';
+    app = Fastify({ logger: false });
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    (app as any).health = makeHealth(snapshot);
+    await app.register(healthRoute);
+  }
+
+  it('is healthy when Ollama is up, regardless of pipeline/florence', async () => {
+    await setup({
+      florence: makeState('down'),
+      ollama: makeState('up'),
+      pipeline: makeState('down'),
+    });
+    const res = await app.inject({ method: 'GET', url: '/v1/health' });
+    expect(res.statusCode).toBe(200);
+    expect(res.json().status).toBe('healthy');
+  });
+
+  it('is unhealthy only when Ollama is down', async () => {
+    await setup({
+      florence: makeState('up'),
+      ollama: makeState('down'),
+      pipeline: makeState('up'),
+    });
+    const res = await app.inject({ method: 'GET', url: '/v1/health' });
+    expect(res.statusCode).toBe(503);
+    expect(res.json().status).toBe('unhealthy');
   });
 });

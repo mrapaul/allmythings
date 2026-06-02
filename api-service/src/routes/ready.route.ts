@@ -15,8 +15,30 @@ export async function readyRoute(app: FastifyInstance): Promise<void> {
 
   app.get('/v1/ready', async (_request, reply) => {
     const reasons: string[] = [];
+    const snapshot = health?.snapshot();
 
-    // Pipeline reachability — primary load-bearing check.
+    // VLM path: Ollama is the only load-bearing dependency.
+    if (envConfig.detector === 'vlm') {
+      let ollamaReachable = false;
+      try {
+        const r = await fetch(`${envConfig.ollamaBaseUrl}/api/tags`, {
+          signal: AbortSignal.timeout(2000),
+        });
+        ollamaReachable = r.ok;
+        if (!ollamaReachable) reasons.push(`ollama_status_${r.status}`);
+      } catch (e) {
+        reasons.push(`ollama_unreachable: ${(e as Error).message}`);
+      }
+      const ready = reasons.length === 0;
+      return reply.code(ready ? 200 : 503).send({
+        ready,
+        checks: { ollama: ollamaReachable, providers: snapshot ?? null },
+        reasons,
+        timestamp: new Date().toISOString(),
+      });
+    }
+
+    // Pipeline reachability — primary load-bearing check (legacy path).
     let pipelineReachable = false;
     try {
       const r = await fetch(`${envConfig.pipelineUrl}/health`, {
@@ -28,12 +50,7 @@ export async function readyRoute(app: FastifyInstance): Promise<void> {
       reasons.push(`pipeline_unreachable: ${(e as Error).message}`);
     }
 
-    // Provider health snapshot, if wired.
-    let snapshot;
-    if (health) {
-      snapshot = health.snapshot();
-      if (snapshot.florence.status === 'down') reasons.push('florence_down');
-    }
+    if (snapshot && snapshot.florence.status === 'down') reasons.push('florence_down');
 
     const ready = reasons.length === 0;
     return reply.code(ready ? 200 : 503).send({

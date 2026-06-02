@@ -11,6 +11,8 @@ import {
   QueueFullError,
 } from '../clients/pipeline.client';
 import { mapSceneToItems } from './detect.mapper';
+import type { VlmDetector } from '../services/vlm-detector';
+import { OllamaUnavailableError } from '../clients/ollama-vlm.client';
 
 const MAX_IMAGE_SIZE = 10 * 1024 * 1024;
 const SUPPORTED = new Set(['image/jpeg', 'image/png', 'image/webp']);
@@ -19,6 +21,8 @@ const PIPELINE_DEADLINE_BUFFER_MS = 250;
 export async function detectRoute(app: FastifyInstance): Promise<void> {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const pipeline = (app as any).pipeline as PipelineClient | undefined;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const vlmDetector = (app as any).vlmDetector as VlmDetector | undefined;
 
   app.post(
     '/v1/detect',
@@ -96,6 +100,14 @@ export async function detectRoute(app: FastifyInstance): Promise<void> {
         traceparent?.split('-')[1] ?? crypto.randomBytes(16).toString('hex');
       const requestId = request.id;
 
+      // VLM path: synchronous two-pass detection, no sidecar required.
+      if (envConfig.detector === 'vlm') {
+        if (!vlmDetector) {
+          return reply.code(503).send({ error: 'detector_unavailable' });
+        }
+        return runVlmPath({ reply, vlmDetector, frame: frames[0]! });
+      }
+
       if (!pipeline) {
         return reply.code(503).send({ error: 'pipeline_unavailable' });
       }
@@ -110,6 +122,41 @@ export async function detectRoute(app: FastifyInstance): Promise<void> {
       });
     },
   );
+}
+
+// ---------------------------------------------------------------------------
+
+interface VlmPathArgs {
+  reply: FastifyReply;
+  vlmDetector: VlmDetector;
+  frame: { buffer: Buffer; mime: string; sha256: string };
+}
+
+async function persistFrame(frame: {
+  buffer: Buffer;
+  mime: string;
+  sha256: string;
+}): Promise<void> {
+  const photoDir = path.join(envConfig.photoDir, 'photos');
+  await fs.mkdir(photoDir, { recursive: true });
+  const ext =
+    frame.mime === 'image/png' ? 'png' : frame.mime === 'image/webp' ? 'webp' : 'jpg';
+  await fs.writeFile(path.join(photoDir, `${frame.sha256}.${ext}`), frame.buffer);
+}
+
+async function runVlmPath(args: VlmPathArgs) {
+  const { reply, vlmDetector, frame } = args;
+  try {
+    // Persist so /photos/<sha> resolves, matching the pipeline path.
+    await persistFrame(frame);
+    const items = await vlmDetector.detect(frame.buffer);
+    return reply.code(200).send({ items });
+  } catch (err) {
+    if (err instanceof OllamaUnavailableError) {
+      return reply.code(503).send({ error: 'detector_unavailable', message: err.message });
+    }
+    throw err;
+  }
 }
 
 // ---------------------------------------------------------------------------

@@ -10,6 +10,15 @@ import {
 } from '../../../clients/pipeline.client';
 import type { SceneObservation } from '../../../types/pipeline';
 import { detectedItemSchema } from '../../../schemas/detected-item.schema';
+import { envConfig } from '../../../config/env.config';
+
+// These exercise the legacy pipeline-service path; pin the detector accordingly.
+beforeEach(() => {
+  envConfig.detector = 'pipeline';
+});
+afterEach(() => {
+  envConfig.detector = 'vlm';
+});
 
 const SCENE: SceneObservation = {
   sceneId: 's-1',

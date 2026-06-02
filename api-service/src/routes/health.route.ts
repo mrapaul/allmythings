@@ -1,5 +1,6 @@
 import os from 'os';
 import { FastifyInstance } from 'fastify';
+import { envConfig } from '../config/env.config';
 import { ProviderHealthService } from '../services/provider-health.service';
 
 export async function healthRoute(app: FastifyInstance): Promise<void> {
@@ -12,11 +13,17 @@ export async function healthRoute(app: FastifyInstance): Promise<void> {
     const ollamaUp = snapshot.ollama.status === 'up';
     const pipelineUp = snapshot.pipeline.status === 'up';
 
-    // Pipeline is the load-bearing dependency post-section-10. Florence
-    // remains a soft requirement (mock stand-in is OK in dev). Ollama
-    // failure degrades but does not unhealth the service.
-    const isFunctional = pipelineUp && florenceUp;
-    const allUp = pipelineUp && florenceUp && ollamaUp;
+    // The load-bearing dependency depends on the active detector. In VLM mode
+    // (default) it is Ollama; the pipeline/Florence stack is not used.
+    let isFunctional: boolean;
+    let allUp: boolean;
+    if (envConfig.detector === 'vlm') {
+      isFunctional = ollamaUp;
+      allUp = ollamaUp;
+    } else {
+      isFunctional = pipelineUp && florenceUp;
+      allUp = pipelineUp && florenceUp && ollamaUp;
+    }
     const status = allUp ? 'healthy' : isFunctional ? 'degraded' : 'unhealthy';
 
     return reply.code(isFunctional ? 200 : 503).send({

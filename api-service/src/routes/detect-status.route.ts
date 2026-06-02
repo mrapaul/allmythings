@@ -5,6 +5,7 @@ import {
   RunNotFoundError,
 } from '../clients/pipeline.client';
 import { mapSceneToItems } from './detect.mapper';
+import { envConfig } from '../config/env.config';
 
 export async function detectStatusRoute(app: FastifyInstance): Promise<void> {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -12,6 +13,13 @@ export async function detectStatusRoute(app: FastifyInstance): Promise<void> {
 
   app.get<{ Params: { workflowId: string } }>('/v1/detect/status/:workflowId', async (request, reply) => {
     const { workflowId } = request.params;
+
+    // VLM path is synchronous: /v1/detect and /stream return all items inline,
+    // so there is never a pending run to resume. Report not-found so the client
+    // clears any stale pending-run state cleanly.
+    if (envConfig.detector === 'vlm') {
+      return reply.code(404).send({ error: 'run_not_found', workflowId });
+    }
 
     if (!pipeline) {
       return reply.code(503).send({ error: 'pipeline_unavailable' });

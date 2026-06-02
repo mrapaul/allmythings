@@ -11,6 +11,8 @@ import {
 } from '../clients/pipeline.client';
 import { mapPipelineDetectionToItem } from './detect.mapper';
 import { encodeSseEvent, SSE_KEEPALIVE } from '../utils/sse';
+import type { VlmDetector } from '../services/vlm-detector';
+import { OllamaUnavailableError } from '../clients/ollama-vlm.client';
 
 const MAX_IMAGE_SIZE = 10 * 1024 * 1024;
 const SUPPORTED = new Set(['image/jpeg', 'image/png', 'image/webp']);
@@ -19,6 +21,8 @@ const KEEPALIVE_MS = 15_000;
 export async function detectStreamRoute(app: FastifyInstance): Promise<void> {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const pipeline = (app as any).pipeline as PipelineClient | undefined;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const vlmDetector = (app as any).vlmDetector as VlmDetector | undefined;
 
   app.post(
     '/v1/detect/stream',
@@ -58,7 +62,11 @@ export async function detectStreamRoute(app: FastifyInstance): Promise<void> {
         });
       }
       if (frames.length === 0) return reply.code(400).send({ error: 'no_frame' });
-      if (!pipeline) return reply.code(503).send({ error: 'pipeline_unavailable' });
+      const useVlm = envConfig.detector === 'vlm';
+      if (useVlm && !vlmDetector)
+        return reply.code(503).send({ error: 'detector_unavailable' });
+      if (!useVlm && !pipeline)
+        return reply.code(503).send({ error: 'pipeline_unavailable' });
 
       const photoDir = path.join(envConfig.photoDir, 'photos');
       await fs.mkdir(photoDir, { recursive: true });
@@ -100,9 +108,32 @@ export async function detectStreamRoute(app: FastifyInstance): Promise<void> {
       };
 
       try {
+        // VLM path: stream items as each of the two passes completes.
+        if (useVlm) {
+          const runId = crypto.randomBytes(16).toString('hex');
+          writeEvent('meta', { runId, traceId });
+          let total = 0;
+          try {
+            for await (const item of vlmDetector!.detectStream(f.buffer)) {
+              if (aborted) return;
+              writeEvent('item', item);
+              total += 1;
+              if (itemDribbleMs > 0) await new Promise((r) => setTimeout(r, itemDribbleMs));
+            }
+          } catch (err) {
+            if (err instanceof OllamaUnavailableError) {
+              writeEvent('error', { code: 'detector_unavailable', message: err.message });
+              return;
+            }
+            throw err;
+          }
+          writeEvent('done', { runId, totalItems: total });
+          return;
+        }
+
         let launch;
         try {
-          launch = await pipeline.launchRun({
+          launch = await pipeline!.launchRun({
             idempotencyKey,
             photoPaths: [photoPath],
             traceId,
@@ -125,7 +156,7 @@ export async function detectStreamRoute(app: FastifyInstance): Promise<void> {
         const final =
           launch.idempotentHit && launch.status === 'succeeded' && launch.result
             ? { result: launch.result }
-            : await pipeline.waitForCompletion(
+            : await pipeline!.waitForCompletion(
                 launch.runId,
                 Date.now() + envConfig.httpResponseTimeoutMs - 250,
               );

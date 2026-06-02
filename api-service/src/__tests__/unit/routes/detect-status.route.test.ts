@@ -7,6 +7,7 @@ import {
   RunNotFoundError,
 } from '../../../clients/pipeline.client';
 import type { SceneObservation } from '../../../types/pipeline';
+import { envConfig } from '../../../config/env.config';
 
 const SCENE: SceneObservation = {
   sceneId: 's',
@@ -49,6 +50,7 @@ describe('GET /v1/detect/status/:workflowId — pipeline-service single path', (
   let pipeline: MockPipeline;
 
   beforeEach(async () => {
+    envConfig.detector = 'pipeline';
     app = Fastify({ logger: false });
     pipeline = {
       launchRun: vi.fn(),
@@ -60,6 +62,7 @@ describe('GET /v1/detect/status/:workflowId — pipeline-service single path', (
     await app.register(detectStatusRoute);
   });
   afterEach(async () => {
+    envConfig.detector = 'vlm';
     vi.restoreAllMocks();
     await app.close();
   });

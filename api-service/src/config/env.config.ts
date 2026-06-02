@@ -1,6 +1,9 @@
 export interface EnvConfig {
   port: number;
   nodeEnv: string;
+  // Active detector path. 'vlm' = self-hosted two-pass VLM (Ollama) directly
+  // behind /v1/detect; 'pipeline' = legacy Dagster pipeline-service sidecar.
+  detector: 'vlm' | 'pipeline';
   detectionServiceUrl: string;
   detectionTimeoutMs: number;
   detectionBoxThreshold: number;
@@ -13,6 +16,11 @@ export interface EnvConfig {
   ollamaBaseUrl: string;
   ollamaModel: string;
   ollamaEnabled: boolean;
+  // Two-pass VLM detector knobs (DETECTOR=vlm path).
+  vlmTwoPass: boolean;
+  vlmMaxImageSize: number;
+  vlmTimeoutMs: number;
+  vlmCoordMode: 'auto' | 'norm' | 'thousand' | 'pixel';
   owlv2Url: string;
   hybridEnabled: boolean;
   googleProjectId: string;
@@ -48,6 +56,7 @@ export interface EnvConfig {
 export const envConfig: EnvConfig = {
   port: parseInt(process.env.PORT || '14000', 10),
   nodeEnv: process.env.NODE_ENV || 'development',
+  detector: process.env.DETECTOR === 'pipeline' ? 'pipeline' : 'vlm',
   detectionServiceUrl: process.env.DETECTION_SERVICE_URL || 'http://localhost:14001',
   detectionTimeoutMs: parseInt(process.env.DETECTION_TIMEOUT_MS || '30000', 10),
   detectionBoxThreshold: parseFloat(process.env.DETECTION_BOX_THRESHOLD || '0.2'),
@@ -60,6 +69,14 @@ export const envConfig: EnvConfig = {
   ollamaBaseUrl: process.env.OLLAMA_BASE_URL || 'http://localhost:11434',
   ollamaModel: process.env.OLLAMA_MODEL || 'qwen2.5vl:7b',
   ollamaEnabled: process.env.OLLAMA_ENABLED !== 'false',
+  vlmTwoPass: process.env.VLM_TWO_PASS !== 'false',
+  vlmMaxImageSize: parseInt(process.env.VLM_MAX_IMAGE_SIZE || '1024', 10),
+  vlmTimeoutMs: parseInt(process.env.VLM_TIMEOUT_MS || '120000', 10),
+  vlmCoordMode: (['auto', 'norm', 'thousand', 'pixel'] as const).includes(
+    process.env.VLM_COORD_MODE as 'auto' | 'norm' | 'thousand' | 'pixel',
+  )
+    ? (process.env.VLM_COORD_MODE as 'auto' | 'norm' | 'thousand' | 'pixel')
+    : 'auto',
   owlv2Url: process.env.OWLV2_URL || 'http://localhost:14001',
   hybridEnabled: process.env.HYBRID_ENABLED === 'true',
   googleProjectId: process.env.GOOGLE_CLOUD_PROJECT_ID || '',
