@@ -32,6 +32,7 @@ node_modules/
 # IDE + generated reports
 .idea/
 coverage-report/
+eval/runs/
 
 # Model weights — never in git
 *.pt

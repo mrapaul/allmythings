@@ -1,0 +1,83 @@
+{
+  "qwen3-vl:8b-instruct": {
+    "perFixture": [
+      {
+        "fixture": "1776173015803",
+        "recall": 66.7,
+        "itemCount": 11,
+        "expectedMin": 8,
+        "expectedMax": 15,
+        "countWithinRange": true,
+        "matchedCount": 8,
+        "missed": [
+          "wooden stool (plant support)",
+          "dark navy couch / sofa",
+          "framed painting / artwork",
+          "white area rug"
+        ],
+        "elapsedMs": 12290,
+        "attempts": 1
+      },
+      {
+        "fixture": "1776174188547",
+        "recall": 54.5,
+        "itemCount": 7,
+        "expectedMin": 7,
+        "expectedMax": 13,
+        "countWithinRange": true,
+        "matchedCount": 6,
+        "missed": [
+          "small snake plant",
+          "two-tone ceramic planter",
+          "dark navy couch / sofa",
+          "framed painting / artwork",
+          "white area rug"
+        ],
+        "elapsedMs": 7316,
+        "attempts": 1
+      },
+      {
+        "fixture": "1776175427607",
+        "recall": 57.1,
+        "itemCount": 8,
+        "expectedMin": 10,
+        "expectedMax": 16,
+        "countWithinRange": false,
+        "matchedCount": 8,
+        "missed": [
+          "snake plant small",
+          "gold candle holder",
+          "wooden side table",
+          "white venetian window blinds",
+          "framed painting of figures",
+          "decorative wall plate"
+        ],
+        "elapsedMs": 13013,
+        "attempts": 1
+      },
+      {
+        "fixture": "1776176976030",
+        "recall": 76.9,
+        "itemCount": 11,
+        "expectedMin": 8,
+        "expectedMax": 14,
+        "countWithinRange": true,
+        "matchedCount": 10,
+        "missed": [
+          "two-tone ceramic planter",
+          "white venetian window blinds",
+          "framed painting"
+        ],
+        "elapsedMs": 16520,
+        "attempts": 1
+      }
+    ],
+    "aggregate": {
+      "avgRecall": 63.8,
+      "avgItems": 9.3,
+      "avgLatencyMs": 12285,
+      "failures": 0,
+      "n": 4
+    }
+  }
+}

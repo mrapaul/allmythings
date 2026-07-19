@@ -1,0 +1,108 @@
+{
+  "qwen2.5vl:7b": {
+    "perFixture": [
+      {
+        "fixture": "1776173015803",
+        "error": "TimeoutError: The operation was aborted due to timeout",
+        "elapsedMs": 594250
+      },
+      {
+        "fixture": "1776174188547",
+        "error": "TimeoutError: The operation was aborted due to timeout",
+        "elapsedMs": 586484
+      },
+      {
+        "fixture": "1776175427607",
+        "error": "TimeoutError: The operation was aborted due to timeout",
+        "elapsedMs": 587568
+      },
+      {
+        "fixture": "1776176976030",
+        "error": "Error: 500: {\"error\":\"model runner has unexpectedly stopped, this may be due to resource limitations or an internal error, check ollama server logs for details\"}",
+        "elapsedMs": 417153
+      }
+    ],
+    "aggregate": {
+      "avgRecall": 0,
+      "avgItems": 0,
+      "avgLatencyMs": 0,
+      "failures": 4,
+      "n": 4
+    }
+  },
+  "gemma4:31b-cloud": {
+    "perFixture": [
+      {
+        "fixture": "1776173015803",
+        "recall": 75,
+        "itemCount": 10,
+        "expectedMin": 8,
+        "expectedMax": 15,
+        "countWithinRange": true,
+        "matchedCount": 9,
+        "missed": [
+          "wooden stool (plant support)",
+          "decorative wall plate",
+          "white area rug"
+        ],
+        "elapsedMs": 13591,
+        "attempts": 1
+      },
+      {
+        "fixture": "1776174188547",
+        "recall": 81.8,
+        "itemCount": 11,
+        "expectedMin": 7,
+        "expectedMax": 13,
+        "countWithinRange": true,
+        "matchedCount": 9,
+        "missed": [
+          "gold wire plant stand",
+          "dark navy couch / sofa"
+        ],
+        "elapsedMs": 16688,
+        "attempts": 1
+      },
+      {
+        "fixture": "1776175427607",
+        "recall": 71.4,
+        "itemCount": 12,
+        "expectedMin": 10,
+        "expectedMax": 16,
+        "countWithinRange": true,
+        "matchedCount": 10,
+        "missed": [
+          "gold wire plant stand",
+          "wooden stool",
+          "gold candle holder",
+          "wooden side table"
+        ],
+        "elapsedMs": 22498,
+        "attempts": 1
+      },
+      {
+        "fixture": "1776176976030",
+        "recall": 76.9,
+        "itemCount": 11,
+        "expectedMin": 8,
+        "expectedMax": 14,
+        "countWithinRange": true,
+        "matchedCount": 10,
+        "missed": [
+          "gold wire plant stand",
+          "gold candle holder",
+          "wooden sideboard / cabinet"
+        ],
+        "elapsedMs": 22796,
+        "attempts": 1
+      }
+    ],
+    "aggregate": {
+      "avgRecall": 76.3,
+      "avgItems": 11,
+      "avgLatencyMs": 18893,
+      "failures": 0,
+      "n": 4
+    }
+  }
+}

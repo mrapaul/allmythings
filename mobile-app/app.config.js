@@ -9,7 +9,7 @@
 //   API_KEY        Bearer/api key for the backend (dev backend accepts any).
 //   SENTRY_DSN, OTEL_COLLECTOR_URL  Optional observability endpoints.
 
-const DEFAULT_LAN_API = 'http://192.168.178.69:14000';
+const DEFAULT_LAN_API = 'http://192.168.178.14:14000';
 
 module.exports = ({ config }) => ({
   ...config,

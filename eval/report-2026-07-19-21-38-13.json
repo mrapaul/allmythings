@@ -1,0 +1,95 @@
+{
+  "qwen2.5vl:7b": {
+    "perFixture": [
+      {
+        "fixture": "1776173015803",
+        "error": "Error: 500: {\"error\":\"model runner has unexpectedly stopped, this may be due to resource limitations or an internal error, check ollama server logs for details\"}",
+        "elapsedMs": 262464
+      },
+      {
+        "fixture": "1776174188547",
+        "error": "Error: 500: {\"error\":\"model runner has unexpectedly stopped, this may be due to resource limitations or an internal error, check ollama server logs for details\"}",
+        "elapsedMs": 257095
+      },
+      {
+        "fixture": "1776175427607",
+        "error": "TimeoutError: The operation was aborted due to timeout",
+        "elapsedMs": 575725
+      },
+      {
+        "fixture": "1776176976030",
+        "error": "TimeoutError: The operation was aborted due to timeout",
+        "elapsedMs": 414725
+      }
+    ],
+    "aggregate": {
+      "avgRecall": 0,
+      "avgItems": 0,
+      "avgLatencyMs": 0,
+      "failures": 4,
+      "n": 4
+    }
+  },
+  "qwen3-vl:8b-instruct": {
+    "perFixture": [
+      {
+        "fixture": "1776173015803",
+        "error": "TimeoutError: The operation was aborted due to timeout",
+        "elapsedMs": 464471
+      },
+      {
+        "fixture": "1776174188547",
+        "error": "TimeoutError: The operation was aborted due to timeout",
+        "elapsedMs": 461783
+      },
+      {
+        "fixture": "1776175427607",
+        "error": "TimeoutError: The operation was aborted due to timeout",
+        "elapsedMs": 314755
+      },
+      {
+        "fixture": "1776176976030",
+        "error": "Error: 500: {\"error\":\"model runner has unexpectedly stopped, this may be due to resource limitations or an internal error, check ollama server logs for details\"}",
+        "elapsedMs": 304025
+      }
+    ],
+    "aggregate": {
+      "avgRecall": 0,
+      "avgItems": 0,
+      "avgLatencyMs": 0,
+      "failures": 4,
+      "n": 4
+    }
+  },
+  "qwen3-vl:30b-a3b-instruct": {
+    "perFixture": [
+      {
+        "fixture": "1776173015803",
+        "error": "TypeError: fetch failed",
+        "elapsedMs": 373146
+      },
+      {
+        "fixture": "1776174188547",
+        "error": "TypeError: fetch failed",
+        "elapsedMs": 216
+      },
+      {
+        "fixture": "1776175427607",
+        "error": "TypeError: fetch failed",
+        "elapsedMs": 183
+      },
+      {
+        "fixture": "1776176976030",
+        "error": "TypeError: fetch failed",
+        "elapsedMs": 182
+      }
+    ],
+    "aggregate": {
+      "avgRecall": 0,
+      "avgItems": 0,
+      "avgLatencyMs": 0,
+      "failures": 4,
+      "n": 4
+    }
+  }
+}

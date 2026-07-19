@@ -1,0 +1,84 @@
+{
+  "qwen3-vl:30b-a3b-instruct": {
+    "perFixture": [
+      {
+        "fixture": "1776173015803",
+        "recall": 58.3,
+        "itemCount": 9,
+        "expectedMin": 8,
+        "expectedMax": 15,
+        "countWithinRange": true,
+        "matchedCount": 7,
+        "missed": [
+          "two-tone ceramic planter",
+          "wooden stool (plant support)",
+          "dark navy couch / sofa",
+          "framed painting / artwork",
+          "white area rug"
+        ],
+        "elapsedMs": 21349,
+        "attempts": 1
+      },
+      {
+        "fixture": "1776174188547",
+        "recall": 72.7,
+        "itemCount": 11,
+        "expectedMin": 7,
+        "expectedMax": 13,
+        "countWithinRange": true,
+        "matchedCount": 8,
+        "missed": [
+          "two-tone ceramic planter",
+          "dark navy couch / sofa",
+          "white area rug"
+        ],
+        "elapsedMs": 10290,
+        "attempts": 1
+      },
+      {
+        "fixture": "1776175427607",
+        "recall": 71.4,
+        "itemCount": 12,
+        "expectedMin": 10,
+        "expectedMax": 16,
+        "countWithinRange": true,
+        "matchedCount": 10,
+        "missed": [
+          "two-tone ceramic planter",
+          "wooden stool",
+          "wooden side table",
+          "framed painting of figures"
+        ],
+        "elapsedMs": 10988,
+        "attempts": 1
+      },
+      {
+        "fixture": "1776176976030",
+        "recall": 46.2,
+        "itemCount": 9,
+        "expectedMin": 8,
+        "expectedMax": 14,
+        "countWithinRange": true,
+        "matchedCount": 6,
+        "missed": [
+          "two-tone ceramic planter",
+          "gold wire plant stand",
+          "wooden stool",
+          "gold candle holder",
+          "white venetian window blinds",
+          "dark navy couch / sofa",
+          "framed painting"
+        ],
+        "elapsedMs": 9174,
+        "attempts": 1
+      }
+    ],
+    "aggregate": {
+      "avgRecall": 62.2,
+      "avgItems": 10.3,
+      "avgLatencyMs": 12950,
+      "failures": 0,
+      "n": 4
+    }
+  }
+}
