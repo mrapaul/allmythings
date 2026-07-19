@@ -41,7 +41,7 @@ describe('detect routes — VLM path', () => {
     app.addSchema(detectedItemSchema);
     await app.register(multipart, { limits: { fileSize: 10 * 1024 * 1024, files: 3 } });
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    (app as any).vlmDetector = fakeDetector();
+    (app as any).detector = fakeDetector();
     await app.register(detectRoute);
     await app.register(detectStreamRoute);
     await app.register(detectStatusRoute);

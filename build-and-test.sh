@@ -198,60 +198,43 @@ if [ "$API_ALREADY_RUNNING" = false ]; then
 fi
 
 # ============================================
-# PHASE 4: FLUTTER APP TESTS
+# PHASE 4: MOBILE APP TESTS (Expo React Native)
 # ============================================
-print_header "Phase 4: Flutter App Testing"
+print_header "Phase 4: Mobile App Testing"
 
 cd "$MOBILE_DIR"
 
-print_step "Checking Flutter dependencies..."
-if flutter pub get > /tmp/build-flutter-deps.log 2>&1; then
-    print_status 0 "Flutter dependencies"
+print_step "Checking npm packages..."
+if [ -d "node_modules" ]; then
+    print_status 0 "Mobile app dependencies installed"
 else
-    print_status 1 "Flutter dependencies" critical
-    tail -10 /tmp/build-flutter-deps.log
+    echo "Installing dependencies..."
+    pnpm install > /tmp/build-mobile-deps.log 2>&1
+    print_status $? "Mobile app dependencies installation" critical
 fi
 
-print_step "Running Flutter analyze..."
-if flutter analyze > /tmp/build-flutter-analyze.log 2>&1; then
-    print_status 0 "Flutter analyze"
+print_step "Running TypeScript type checking..."
+if npx tsc --noEmit > /tmp/build-mobile-type.log 2>&1; then
+    print_status 0 "TypeScript type checking"
 else
-    # Check if actual errors or just warnings
-    if grep -q "error •" /tmp/build-flutter-analyze.log; then
-        print_status 1 "Flutter analyze"
-        grep "error •" /tmp/build-flutter-analyze.log
-    else
-        print_status 0 "Flutter analyze (warnings only)"
-    fi
+    print_status 1 "TypeScript type checking" critical
+    tail -20 /tmp/build-mobile-type.log
 fi
 
-print_step "Running code generation..."
-if flutter pub run build_runner build --delete-conflicting-outputs > /tmp/build-codegen.log 2>&1; then
-    print_status 0 "Code generation"
+print_step "Running ESLint..."
+if npx biome check --write . > /tmp/build-mobile-lint.log 2>&1; then
+    print_status 0 "Biome/Lint validation"
 else
-    print_status 1 "Code generation"
-    tail -10 /tmp/build-codegen.log
+    print_status 1 "Biome/Lint validation"
+    tail -20 /tmp/build-mobile-lint.log
 fi
 
-print_step "Running Flutter tests..."
-if flutter test > /tmp/build-flutter-tests.log 2>&1; then
-    print_status 0 "Flutter unit tests"
+print_step "Running unit tests..."
+if npx vitest run > /tmp/build-mobile-tests.log 2>&1; then
+    print_status 0 "Mobile app unit tests"
 else
-    if grep -q "No tests found" /tmp/build-flutter-tests.log; then
-        print_status 0 "Flutter tests (none defined yet)"
-    else
-        print_status 1 "Flutter unit tests"
-        tail -20 /tmp/build-flutter-tests.log
-    fi
-fi
-
-print_step "Building Flutter app (macOS release)..."
-if flutter build macos --release > /tmp/build-flutter-build.log 2>&1; then
-    BUILD_SIZE=$(du -sh build/macos/Build/Products/Release/*.app | awk '{print $1}')
-    print_status 0 "Flutter build ($BUILD_SIZE)"
-else
-    print_status 1 "Flutter build" critical
-    tail -30 /tmp/build-flutter-build.log
+    print_status 1 "Mobile app unit tests" critical
+    tail -20 /tmp/build-mobile-tests.log
 fi
 
 # ============================================
@@ -276,7 +259,7 @@ echo ""
 # Build artifacts
 echo "Build Artifacts:"
 echo "  API: $API_DIR/dist/"
-echo "  Flutter: $MOBILE_DIR/build/macos/Build/Products/Release/"
+echo "  Mobile App: $MOBILE_DIR/node_modules/"
 echo ""
 
 # Final status

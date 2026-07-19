@@ -16,7 +16,8 @@
     "format": "prettier --write \"src/**/*.ts\"",
     "format:check": "prettier --check \"src/**/*.ts\"",
     "type-check": "tsc --noEmit",
-    "export:openapi": "tsx scripts/export-openapi.ts"
+    "export:openapi": "tsx scripts/export-openapi.ts",
+    "inference:start": "node inference-server.ts"
   },
   "license": "ISC",
   "dependencies": {

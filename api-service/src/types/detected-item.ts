@@ -4,4 +4,5 @@ export interface DetectedItem {
   category: string;
   tags: string[];
   box: { x: number; y: number; width: number; height: number };
+  confidence?: number;
 }

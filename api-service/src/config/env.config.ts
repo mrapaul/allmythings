@@ -3,12 +3,26 @@ export interface EnvConfig {
   nodeEnv: string;
   // Active detector path. 'vlm' = self-hosted two-pass VLM (Ollama) directly
   // behind /v1/detect; 'pipeline' = legacy Dagster pipeline-service sidecar.
-  detector: 'vlm' | 'pipeline';
+  // 'grounding-dino' = local Grounding DINO detection; 'tiered' = GDINO + VLM cascade.
+  detector: 'vlm' | 'pipeline' | 'grounding-dino' | 'tiered';
+  confidenceThreshold: number;
+  qwenVisionEndpoint: string;
+  qwenVisionApiKey: string;
   detectionServiceUrl: string;
   detectionTimeoutMs: number;
   detectionBoxThreshold: number;
   detectionTextThreshold: number;
   detectionPrompt: string;
+  
+  // Grounding DINO config (DETECTOR=grounding-dino or tiered path)
+  gdEndpoint: string;
+  gdPrompt: string;
+  gdBoxThreshold: number;
+  gdTextThreshold: number;
+  gdMaxImageSize: number;
+  gdCoordMode: 'auto' | 'norm' | 'thousand' | 'pixel';
+  gdConfidenceThreshold: number;
+
   geminiApiKey: string;
   geminiModel: string;
   classificationTimeoutMs: number;
@@ -57,11 +71,26 @@ export const envConfig: EnvConfig = {
   port: parseInt(process.env.PORT || '14000', 10),
   nodeEnv: process.env.NODE_ENV || 'development',
   detector: process.env.DETECTOR === 'pipeline' ? 'pipeline' : 'vlm',
+  confidenceThreshold: parseFloat(process.env.CONFIDENCE_THRESHOLD || '0.6'),
+  qwenVisionEndpoint: process.env.QWEN_VISION_ENDPOINT || 'http://localhost:8000/v1/chat/completions',
+  qwenVisionApiKey: process.env.QWEN_VISION_API_KEY || '',
   detectionServiceUrl: process.env.DETECTION_SERVICE_URL || 'http://localhost:14001',
   detectionTimeoutMs: parseInt(process.env.DETECTION_TIMEOUT_MS || '30000', 10),
   detectionBoxThreshold: parseFloat(process.env.DETECTION_BOX_THRESHOLD || '0.2'),
   detectionTextThreshold: parseFloat(process.env.DETECTION_TEXT_THRESHOLD || '0.2'),
   detectionPrompt: process.env.DETECTION_PROMPT || 'object . item . furniture . household item . appliance . electronic . decor',
+  
+  // Grounding DINO config
+  gdEndpoint: process.env.GD_ENDPOINT || 'http://localhost:14002/detect',
+  gdPrompt: process.env.GD_PROMPT || 'home objects . furniture . decor . appliance . electronic . plant',
+  gdBoxThreshold: parseFloat(process.env.GD_BOX_THRESHOLD || '0.3'),
+  gdTextThreshold: parseFloat(process.env.GD_TEXT_THRESHOLD || '0.25'),
+  gdMaxImageSize: parseInt(process.env.GD_MAX_IMAGE_SIZE || '1024', 10),
+  gdCoordMode: (['auto', 'norm', 'thousand', 'pixel'] as const).includes(
+    process.env.GD_COORD_MODE as 'auto' | 'norm' | 'thousand' | 'pixel',
+  ) ? (process.env.GD_COORD_MODE as 'auto' | 'norm' | 'thousand' | 'pixel') : 'auto',
+  gdConfidenceThreshold: parseFloat(process.env.GD_CONFIDENCE_THRESHOLD || '0.5'),
+
   geminiApiKey: process.env.GEMINI_API_KEY || '',
   geminiModel: process.env.GEMINI_MODEL || 'gemini-1.5-flash',
   classificationTimeoutMs: parseInt(process.env.CLASSIFICATION_TIMEOUT_MS || '300000', 10),

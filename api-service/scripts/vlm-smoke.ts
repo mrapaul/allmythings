@@ -18,7 +18,8 @@ async function main(): Promise<void> {
 
   const baseUrl = process.env.OLLAMA_BASE_URL || 'http://127.0.0.1:11434';
   const model = process.env.OLLAMA_MODEL || 'qwen2.5vl:7b';
-  const coordMode = (process.env.VLM_COORD_MODE as 'auto' | 'norm' | 'thousand' | 'pixel') || 'auto';
+  const coordMode =
+    (process.env.VLM_COORD_MODE as 'auto' | 'norm' | 'thousand' | 'pixel') || 'auto';
 
   const client = new OllamaVlmClient({
     baseUrl,
@@ -31,7 +32,9 @@ async function main(): Promise<void> {
     coordMode,
   });
 
-  console.error(`[smoke] model=${model} ollama=${baseUrl} image=${imagePath} coordMode=${coordMode}`);
+  console.error(
+    `[smoke] model=${model} ollama=${baseUrl} image=${imagePath} coordMode=${coordMode}`
+  );
   const t0 = Date.now();
   const items = await detector.detect(readFileSync(imagePath));
   const ms = Date.now() - t0;
@@ -41,12 +44,18 @@ async function main(): Promise<void> {
     const b = it.box;
     const box = `[${b.x.toFixed(2)},${b.y.toFixed(2)} ${b.width.toFixed(2)}x${b.height.toFixed(2)}]`;
     console.error(
-      `${String(i + 1).padStart(2)}. ${it.label.padEnd(22)} ${it.category.padEnd(16)} ${box.padEnd(22)} ${it.tags.join(', ')}`,
+      `${String(i + 1).padStart(2)}. ${it.label.padEnd(22)} ${it.category.padEnd(16)} ${box.padEnd(22)} ${it.tags.join(', ')}`
     );
   }
   // Sanity: how many boxes are in-bounds and non-degenerate?
   const valid = items.filter(
-    (it) => it.box.width > 0.001 && it.box.height > 0.001 && it.box.x >= 0 && it.box.y >= 0 && it.box.x + it.box.width <= 1.001 && it.box.y + it.box.height <= 1.001,
+    (it) =>
+      it.box.width > 0.001 &&
+      it.box.height > 0.001 &&
+      it.box.x >= 0 &&
+      it.box.y >= 0 &&
+      it.box.x + it.box.width <= 1.001 &&
+      it.box.y + it.box.height <= 1.001
   ).length;
   console.error(`\n[smoke] in-bounds non-degenerate boxes: ${valid}/${items.length}`);
 }

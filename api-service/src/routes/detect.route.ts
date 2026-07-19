@@ -11,7 +11,7 @@ import {
   QueueFullError,
 } from '../clients/pipeline.client';
 import { mapSceneToItems } from './detect.mapper';
-import type { VlmDetector } from '../services/vlm-detector';
+import type { Detector } from '../services/vlm-detector.factory';
 import { OllamaUnavailableError } from '../clients/ollama-vlm.client';
 
 const MAX_IMAGE_SIZE = 10 * 1024 * 1024;
@@ -22,7 +22,7 @@ export async function detectRoute(app: FastifyInstance): Promise<void> {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const pipeline = (app as any).pipeline as PipelineClient | undefined;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const vlmDetector = (app as any).vlmDetector as VlmDetector | undefined;
+  const detector = (app as any).detector as Detector | undefined;
 
   app.post(
     '/v1/detect',
@@ -102,10 +102,10 @@ export async function detectRoute(app: FastifyInstance): Promise<void> {
 
       // VLM path: synchronous two-pass detection, no sidecar required.
       if (envConfig.detector === 'vlm') {
-        if (!vlmDetector) {
+        if (!detector) {
           return reply.code(503).send({ error: 'detector_unavailable' });
         }
-        return runVlmPath({ reply, vlmDetector, frame: frames[0]! });
+        return runVlmPath({ reply, detector, frame: frames[0]! });
       }
 
       if (!pipeline) {
@@ -128,7 +128,7 @@ export async function detectRoute(app: FastifyInstance): Promise<void> {
 
 interface VlmPathArgs {
   reply: FastifyReply;
-  vlmDetector: VlmDetector;
+  detector: Detector;
   frame: { buffer: Buffer; mime: string; sha256: string };
 }
 
@@ -145,11 +145,11 @@ async function persistFrame(frame: {
 }
 
 async function runVlmPath(args: VlmPathArgs) {
-  const { reply, vlmDetector, frame } = args;
+  const { reply, detector, frame } = args;
   try {
     // Persist so /photos/<sha> resolves, matching the pipeline path.
     await persistFrame(frame);
-    const items = await vlmDetector.detect(frame.buffer);
+    const items = await detector.detect(frame.buffer);
     return reply.code(200).send({ items });
   } catch (err) {
     if (err instanceof OllamaUnavailableError) {

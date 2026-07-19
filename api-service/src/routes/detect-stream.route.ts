@@ -11,8 +11,8 @@ import {
 } from '../clients/pipeline.client';
 import { mapPipelineDetectionToItem } from './detect.mapper';
 import { encodeSseEvent, SSE_KEEPALIVE } from '../utils/sse';
-import type { VlmDetector } from '../services/vlm-detector';
 import { OllamaUnavailableError } from '../clients/ollama-vlm.client';
+import type { Detector } from '../services/vlm-detector.factory';
 
 const MAX_IMAGE_SIZE = 10 * 1024 * 1024;
 const SUPPORTED = new Set(['image/jpeg', 'image/png', 'image/webp']);
@@ -22,7 +22,7 @@ export async function detectStreamRoute(app: FastifyInstance): Promise<void> {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const pipeline = (app as any).pipeline as PipelineClient | undefined;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const vlmDetector = (app as any).vlmDetector as VlmDetector | undefined;
+  const detector = (app as any).detector as Detector | undefined;
 
   app.post(
     '/v1/detect/stream',
@@ -63,7 +63,7 @@ export async function detectStreamRoute(app: FastifyInstance): Promise<void> {
       }
       if (frames.length === 0) return reply.code(400).send({ error: 'no_frame' });
       const useVlm = envConfig.detector === 'vlm';
-      if (useVlm && !vlmDetector)
+      if (useVlm && !detector)
         return reply.code(503).send({ error: 'detector_unavailable' });
       if (!useVlm && !pipeline)
         return reply.code(503).send({ error: 'pipeline_unavailable' });
@@ -114,7 +114,7 @@ export async function detectStreamRoute(app: FastifyInstance): Promise<void> {
           writeEvent('meta', { runId, traceId });
           let total = 0;
           try {
-            for await (const item of vlmDetector!.detectStream(f.buffer)) {
+            for await (const item of detector!.detectStream(f.buffer)) {
               if (aborted) return;
               writeEvent('item', item);
               total += 1;

@@ -23,7 +23,7 @@ import { ProviderHealthService } from './services/provider-health.service';
 import { advertiseService } from './utils/bonjour-advertiser';
 import { CircuitBreaker } from './utils/circuit-breaker';
 import { createPipelineClient } from './clients/pipeline.client';
-import { createVlmDetector } from './services/vlm-detector.factory';
+import { createDetector } from './services/vlm-detector.factory';
 import { detectedItemSchema } from './schemas/detected-item.schema';
 
 process.on('uncaughtException', (err) => {
@@ -81,16 +81,18 @@ export async function buildApp(options?: { disableRateLimit?: boolean }): Promis
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   (app as any).pipeline = pipeline;
 
-  // Self-hosted two-pass VLM detector (DETECTOR=vlm path). When active, the
-  // detect routes use this instead of the pipeline-service sidecar — no GPU,
-  // Dagster, or Florence/DINO stack required, just a reachable Ollama.
+  // Self-hosted two-pass detector (DETECTOR=vlm path). When active, the
+  // detect routes use this instead of the pipeline-service sidecar.
+  const detector = createDetector();
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  (app as any).detector = detector;
   if (envConfig.detector === 'vlm') {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    (app as any).vlmDetector = createVlmDetector();
     logger.info(
       { model: envConfig.ollamaModel, ollama: envConfig.ollamaBaseUrl },
       'vlm_detector_active',
     );
+  } else {
+    logger.info({ detector: 'qwen-vision' }, 'qwen_vision_adapter_active');
   }
 
   // Provider health service (periodic probes against pipeline + tier-1 LLM)
