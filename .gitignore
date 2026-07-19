@@ -29,10 +29,19 @@ detection-service/detection*.log
 node_modules/
 .DS_Store
 
-# Env
-/.env
-/.env.local
-!/.env.example
+# IDE + generated reports
+.idea/
+coverage-report/
+
+# Model weights — never in git
+*.pt
+*.onnx
+*.mlpackage
+
+# Env — ignored in every directory, examples allowed
+.env
+.env.local
+!.env.example
 
 # Reference material (design folder is local-only — contains 200+ MB binaries)
 /design/

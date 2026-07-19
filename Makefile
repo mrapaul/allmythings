@@ -1,7 +1,6 @@
 # Project configuration
 API_DIR = api-service
 MOBILE_DIR = mobile-app
-DETECTION_DIR = detection-service
 
 # Colors
 GREEN = \033[0;32m
@@ -16,11 +15,10 @@ help:
 	@echo "  make dev                - Start API and mobile app in parallel"
 	@echo "  make build              - Build both API and mobile app (Verified)"
 	@echo "  make verify             - Run lint and unit tests"
-	@echo "  make guarantee          - Run E2E guarantee suite"
 	@echo "  make test               - Run all tests"
 	@echo "  make lint               - Run all linters"
 	@echo "  make format             - Format all code"
-	@echo "  make generate           - Run Flutter build_runner"
+	@echo "  make generate           - Regenerate mobile API client from openapi.json"
 	@echo "  make clean              - Remove all build artifacts"
 	@echo ""
 	@echo "${GREEN}Service management:${NC}"
@@ -29,10 +27,6 @@ help:
 	@echo "  make stop               - Stop everything"
 	@echo "  make status             - Service status table"
 	@echo "  make logs               - Tail combined /tmp/allmythings logs"
-	@echo ""
-	@echo "${GREEN}Dev (hot reload):${NC}"
-	@echo "  make dev-detection      - uvicorn --reload for detection-service on :14001"
-	@echo "  make dev-full           - api + detection in parallel (use after start-deps)"
 	@echo ""
 	@echo "${GREEN}Ops testing & backup:${NC}"
 	@echo "  make smoke              - Full smoke test (scripts/smoke.sh)"
@@ -51,8 +45,8 @@ install-api:
 	@cd $(API_DIR) && npm install
 
 install-mobile:
-	@echo "${GREEN}Installing Flutter dependencies...${NC}"
-	@cd $(MOBILE_DIR) && flutter pub get
+	@echo "${GREEN}Installing mobile app dependencies...${NC}"
+	@cd $(MOBILE_DIR) && pnpm install
 
 # Development
 dev:
@@ -64,14 +58,14 @@ dev-api:
 	@cd $(API_DIR) && npm run dev
 
 dev-mobile:
-	@echo "${GREEN}Starting Flutter app...${NC}"
-	@cd $(MOBILE_DIR) && flutter run
+	@echo "${GREEN}Starting Expo dev server...${NC}"
+	@cd $(MOBILE_DIR) && pnpm start
 
 ## ── Service Management ────────────────────────────────────────────
 start: ## Full stack — observability + Temporal + Ollama + services + warmup
 	@./scripts/start-all.sh start
 
-start-deps: ## Just the deps (obs + Temporal + Ollama) — you run api/detection yourself
+start-deps: ## Just the deps (obs + Temporal + Ollama) — you run the api yourself
 	@echo "${GREEN}Bringing up observability + Temporal stack...${NC}"
 	@docker compose -f observability/docker-compose.lgtm.yml up -d
 	@if ! pgrep -x ollama >/dev/null; then \
@@ -81,7 +75,7 @@ start-deps: ## Just the deps (obs + Temporal + Ollama) — you run api/detection
 	else \
 		echo "${YELLOW}Ollama already running.${NC}"; \
 	fi
-	@echo "${GREEN}Deps up.${NC} Run 'make dev-full' or 'make dev-detection' to start apps with hot reload."
+	@echo "${GREEN}Deps up.${NC} Run 'make dev-api' to start the API with hot reload."
 
 stop: ## Stop everything
 	@./scripts/start-all.sh stop
@@ -91,15 +85,6 @@ status: ## Service status table
 
 logs: ## Tail combined /tmp/allmythings logs
 	@./scripts/start-all.sh logs
-
-## ── Dev (hot reload) ──────────────────────────────────────────────
-dev-detection: ## detection-service with autoreload on :14001 (requires 'make start-deps' first)
-	@echo "${GREEN}Starting detection-service (uvicorn --reload) on :14001...${NC}"
-	@cd $(DETECTION_DIR) && PYTHONPATH=src ./venv/bin/python -m uvicorn detection_service.main:app --host 0.0.0.0 --port 14001 --reload
-
-dev-full: ## Hot-reload api + detection in parallel (requires 'make start-deps' first)
-	@echo "${YELLOW}Dev mode. Run 'make start-deps' first if obs/Temporal/Ollama not up.${NC}"
-	@$(MAKE) dev-api & $(MAKE) dev-detection & wait
 
 ## ── Smoke & Ops Testing ───────────────────────────────────────────
 smoke: ## Full smoke test (happy path, trace, idempotency, degraded, SLO gate)
@@ -123,74 +108,42 @@ install-supervisor: ## Install launchd plists so services auto-restart across re
 uninstall-supervisor: ## Remove launchd plists
 	@./scripts/uninstall-supervisor.sh
 
-test-ios:
-	@echo "${GREEN}Running automated iOS tests...${NC}"
-	@./scripts/test-ios.sh
-
-guarantee:
-	@echo "${GREEN}Running Quality Guarantee Suite...${NC}"
-	@chmod +x scripts/verify-guarantee.sh
-	@./scripts/verify-guarantee.sh
-
-test-iphone:
-	@echo "${GREEN}Starting automated iPhone deployment...${NC}"
-	@./scripts/test-on-iphone.sh
-
-# Release
-release-ios:
-	@echo "${GREEN}Starting automated iOS release...${NC}"
-	@./scripts/release-ios.sh
-
-
 # Build and Verify
 verify: lint test
-	@echo "${GREEN}Static verification complete. Running E2E guarantee...${NC}"
+	@echo "${GREEN}Static verification complete.${NC}"
 
-build: verify generate
+build: verify
 	@echo "${GREEN}Building all components...${NC}"
 	@$(MAKE) build-api-raw
 	@$(MAKE) build-mobile-raw
-	@$(MAKE) guarantee
 
 build-api: verify
 	@$(MAKE) build-api-raw
-	@$(MAKE) guarantee
 
 build-mobile: verify
 	@$(MAKE) build-mobile-raw
-	@$(MAKE) guarantee
 
 build-api-raw:
 	@echo "${GREEN}Building API service...${NC}"
 	@cd $(API_DIR) && npm run build
 
 build-mobile-raw:
-	@echo "${GREEN}Building Flutter app...${NC}"
-	# Build macOS debug for guarantee tests if on Mac, else APK
-	@if [ "$(shell uname)" = "Darwin" ]; then \
-		cd $(MOBILE_DIR) && flutter build macos --debug; \
-	else \
-		cd $(MOBILE_DIR) && flutter build apk --release; \
-	fi
+	@echo "${GREEN}Type-checking mobile app (native builds via 'pnpm ios' / EAS)...${NC}"
+	@cd $(MOBILE_DIR) && pnpm typecheck
 
 # Test
 test:
 	@echo "${GREEN}Running all tests...${NC}"
 	@$(MAKE) test-api
 	@$(MAKE) test-mobile
-	@$(MAKE) test-detection
 
 test-api:
 	@echo "${GREEN}Running API tests...${NC}"
 	@cd $(API_DIR) && npm test
 
 test-mobile:
-	@echo "${GREEN}Running Flutter tests...${NC}"
-	@cd $(MOBILE_DIR) && flutter test
-
-test-detection:
-	@echo "${GREEN}Running Detection service tests...${NC}"
-	@cd $(DETECTION_DIR) && ./venv/bin/python -m pytest tests/
+	@echo "${GREEN}Running mobile app tests...${NC}"
+	@cd $(MOBILE_DIR) && pnpm test
 
 # Linting
 lint: lint-api lint-mobile
@@ -200,8 +153,8 @@ lint-api:
 	@cd $(API_DIR) && npm run lint
 
 lint-mobile:
-	@echo "${GREEN}Linting Flutter code...${NC}"
-	@cd $(MOBILE_DIR) && flutter analyze --no-fatal-infos
+	@echo "${GREEN}Linting mobile app code...${NC}"
+	@cd $(MOBILE_DIR) && pnpm lint
 
 format:
 	@echo "${GREEN}Formatting all code...${NC}"
@@ -212,12 +165,12 @@ format-api:
 	@cd $(API_DIR) && npm run format
 
 format-mobile:
-	@cd $(MOBILE_DIR) && dart format .
+	@cd $(MOBILE_DIR) && pnpm format
 
 # Code Generation
 generate:
-	@echo "${GREEN}Running code generation...${NC}"
-	@cd $(MOBILE_DIR) && flutter pub run build_runner build --delete-conflicting-outputs
+	@echo "${GREEN}Regenerating mobile API client from openapi.json...${NC}"
+	@cd $(MOBILE_DIR) && pnpm codegen:api
 
 # Cleanup
 clean: clean-api clean-mobile
@@ -227,8 +180,8 @@ clean-api:
 	@cd $(API_DIR) && rm -rf dist node_modules
 
 clean-mobile:
-	@echo "${GREEN}Cleaning Flutter...${NC}"
-	@cd $(MOBILE_DIR) && flutter clean
+	@echo "${GREEN}Cleaning mobile app...${NC}"
+	@cd $(MOBILE_DIR) && rm -rf node_modules .expo
 
 # Database migrations (dbmate)
 DBMATE := docker run --rm --network allmythings-dev_allmythings-dev \
@@ -244,15 +197,12 @@ db-down:
 db-new:
 	$(DBMATE) new $(NAME)
 
-.PHONY: help setup install install-api install-mobile dev dev-api dev-mobile dev-detection dev-full start start-deps stop status logs smoke backup restore install-supervisor uninstall-supervisor build build-api build-mobile test test-api test-mobile test-detection lint lint-api lint-mobile format format-api format-mobile generate clean clean-api clean-mobile build-api-raw build-mobile-raw verify guarantee test-ios release-ios test-iphone db-up db-down db-new
+.PHONY: help setup install install-api install-mobile dev dev-api dev-mobile start start-deps stop status logs smoke backup restore install-supervisor uninstall-supervisor build build-api build-mobile test test-api test-mobile lint lint-api lint-mobile format format-api format-mobile generate clean clean-api clean-mobile build-api-raw build-mobile-raw verify db-up db-down db-new
 
-.PHONY: eval eval-ci eval-baseline eval-pipeline
+.PHONY: eval eval-ci eval-baseline
 
 eval: ## Run eval harness on all configured candidate models
 	node eval/harness.mjs qwen2.5vl:7b florence:qwen7b hybrid:owlv2-qwen7b
-
-eval-pipeline: ## Run section-09 pipeline eval rig (writes pipeline-service/eval/last-metrics.json)
-	cd pipeline-service && uv run python -m pipeline_service.eval.run_eval
 
 eval-ci: ## Run eval gated by eval/baseline.json
 	node eval/harness.mjs qwen2.5vl:7b florence:qwen7b hybrid:owlv2-qwen7b --ci
@@ -260,11 +210,3 @@ eval-ci: ## Run eval gated by eval/baseline.json
 eval-baseline: ## Re-snapshot current results as new baseline (commit after)
 	node eval/harness.mjs qwen2.5vl:7b florence:qwen7b hybrid:owlv2-qwen7b
 	@latest=$$(ls -t eval/report-*.json | head -1); cp "$$latest" eval/baseline.json; echo "Baseline = $$latest"
-
-.PHONY: test-eval test-eval-smoke
-
-test-eval: ## Run GT-based evaluation harness on LVIS-OV indoor subset
-	@cd pipeline-service && uv run python -m pipeline_service.eval.run_eval
-
-test-eval-smoke: ## Faster smoke run, 100 images
-	@cd pipeline-service && EVAL_SAMPLE_SIZE=100 uv run python -m pipeline_service.eval.run_eval

@@ -3,9 +3,9 @@ node_modules/
 dist/
 web-build/
 *.log
-ios/Pods/
-android/.gradle/
-android/app/build/
+# Native projects are generated (expo prebuild / expo run) — never tracked
+ios/
+android/
 .env
 .env.local
 .DS_Store

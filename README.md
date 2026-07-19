@@ -1,53 +1,34 @@
-# Visual Home Inventory Manager
+# allmythings — Visual Home Inventory Manager
 
-An AI-powered mobile application with an Instagram-style UI for comprehensive home inventory management. Features a hybrid detection pipeline combining local YOLO-World, Ollama (LLaVA), and Google Gemini.
+Photograph shelves, drawers, and rooms with your phone; get an accurate, itemized, searchable inventory of everything you own.
 
-## 🌟 Key Features
+## Architecture
 
-- **Hybrid AI Pipeline:** Real-time local detection (YOLO) + deep analysis (Ollama/Gemini).
-- **Instagram-Style Feed:** Polished, infinite-scroll interface for browsing items.
-- **Offline-First:** Full capture and search capabilities without internet, syncing when online.
-- **Smart Tagging:** Automatic attribute extraction (brand, material, condition).
-- **Intelligent Search:** Real-time full-text search across items and labels.
+- **Mobile App (`/mobile-app`):** Expo SDK 54 / React Native 0.81, expo-router, Zustand, Drizzle (SQLite). Captures photos and streams detection results over SSE.
+- **API Service (`/api-service`):** Node.js 20+, Fastify, TypeScript. `/v1/detect` and `/v1/detect/stream` turn a photo into structured items.
+- **Eval Harness (`/eval`):** Scores every detector candidate against human-labeled oracle photos; `eval/baseline.json` gates regressions.
 
-## 🏗 System Architecture
+Detection currently uses a local VLM via Ollama (`qwen2.5vl:7b`, ~57–64% measured recall) and is being replaced with a frontier-VLM structured-output detector.
 
-- **Mobile App (`/mobile-app`):** Flutter + Riverpod + Drift (SQLite). Clean Architecture.
-- **API Service (`/api-service`):** Node.js + Fastify + TypeScript. Orchestrates AI providers.
-- **Detection Service (`/detection-service`):** Python + FastAPI + YOLO-World. Local inference.
+## Quick Start
 
-## 🛠 Tech Stack
+Prerequisites: Node.js 20+, pnpm, Docker.
 
-- **Frontend:** Flutter 3.16+, Riverpod 3.0, Drift 2.29.
-- **Backend:** Node.js 20+, Fastify 4.25, PostgreSQL, Redis.
-- **AI/ML:** Ultralytics YOLO, Ollama (LLaVA), Google Gemini 1.5 Flash.
-- **Infrastructure:** Docker, Terraform, OpenObserve.
-
-## 🚀 Quick Start
-
-### Prerequisites
-- Node.js 20+, Flutter 3.16+, Python 3.12+.
-- Docker & Docker Compose.
-- Ollama (running locally with `llava` model).
-
-### Setup
 ```bash
-# Install all dependencies and set up the project
-make setup
-
-# Start services in development mode
-# Term 1: API
-make dev-api
-# Term 2: Mobile
-make dev-mobile
-# Term 3: Detection Service
-cd detection-service && PYTHONPATH=src venv/bin/python -m uvicorn detection_service.main:app --port 14001
+make install       # dependencies for API + mobile
+make dev-api       # API on http://localhost:14000
+make dev-mobile    # Expo dev server (pnpm ios / pnpm android for native builds)
 ```
 
-## 🧪 Testing
-- **API:** `cd api-service && npm test`
-- **Mobile:** `cd mobile-app && flutter test`
-- **Cleanup & Verify:** `./build-and-test.sh`
+## Testing & Verification
 
-## 📄 License
+```bash
+make test          # unit tests (API + mobile)
+make verify        # lint + tests
+make eval          # detector accuracy vs oracle photos (the metric that matters)
+make smoke         # end-to-end smoke test
+```
+
+## License
+
 Private project. All rights reserved.

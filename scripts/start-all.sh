@@ -12,9 +12,7 @@ log_warn() { echo -e "${YELLOW}[WARN]${NC}   $1"; }
 PROJECT_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 RUN_DIR="/tmp/allmythings"
 mkdir -p "$RUN_DIR"
-DETECTION_PID="$RUN_DIR/detection.pid"
 API_PID="$RUN_DIR/api.pid"
-DETECTION_LOG="$RUN_DIR/detection.log"
 API_LOG="$RUN_DIR/api.log"
 
 COMPOSE="$PROJECT_ROOT/observability/docker-compose.lgtm.yml"
@@ -31,7 +29,7 @@ wait_http() { # url timeout label
 
 cmd_stop() {
   log_info "Stopping all services..."
-  for pidfile in "$DETECTION_PID" "$API_PID"; do
+  for pidfile in "$API_PID"; do
     if [ -f "$pidfile" ]; then
       pid=$(cat "$pidfile")
       kill -TERM "$pid" 2>/dev/null || true
@@ -103,19 +101,8 @@ cmd_start() {
     log_warn "Large model $BIG_MODEL is loaded (>10GB). Consider: ollama stop $BIG_MODEL"
   fi
 
-  # ── Stage 4: detection-service ───────────────────────────────────────────
-  log_info "Stage 4: detection-service (uvicorn :14001)..."
-  (
-    cd "$PROJECT_ROOT/detection-service"
-    PYTHONPATH=src ./venv/bin/python -m uvicorn detection_service.main:app \
-      --host 0.0.0.0 --port 14001
-  ) >>"$DETECTION_LOG" 2>&1 &
-  echo $! > "$DETECTION_PID"
-  log_info "detection-service PID=$(cat "$DETECTION_PID") — logs: $DETECTION_LOG"
-  wait_http http://localhost:14001/health 30 "detection-service" || exit 1
-
-  # ── Stage 5: api-service (Fastify + Temporal worker in-process) ─────────
-  log_info "Stage 5: api-service (Fastify :14000 + Temporal worker)..."
+  # ── Stage 4: api-service (Fastify + Temporal worker in-process) ─────────
+  log_info "Stage 4: api-service (Fastify :14000 + Temporal worker)..."
   (
     cd "$PROJECT_ROOT/api-service"
     if [ -f .env ]; then
@@ -130,7 +117,7 @@ cmd_start() {
 
   # ── Stage 6: Warm-up ─────────────────────────────────────────────────────
   if [ -f "$SMOKE_FIXTURE" ]; then
-    log_info "Stage 6: Warm-up (one fixture request through the pipeline)..."
+    log_info "Stage 5: Warm-up (one fixture request through the pipeline)..."
     curl -s -X POST http://localhost:14000/v1/detect -F "file=@$SMOKE_FIXTURE" -o /dev/null --max-time 90 || log_warn "Warm-up request did not complete (may be cold-start)"
     log_ok "Warm-up complete"
   else
@@ -160,7 +147,6 @@ cmd_status() {
     "Alertmanager|http://localhost:9093/-/ready" \
     "Temporal UI|http://localhost:8233" \
     "Ollama|http://localhost:11434/api/tags" \
-    "Detection|http://localhost:14001/health" \
     "API|http://localhost:14000/v1/health"; do
     IFS='|' read -r NAME URL <<< "$SVC"
     if curl -sf "$URL" >/dev/null 2>&1; then
@@ -173,9 +159,9 @@ cmd_status() {
 
 cmd_logs() {
   mkdir -p "$RUN_DIR"
-  touch "$DETECTION_LOG" "$API_LOG"
+  touch "$API_LOG"
   log_info "Tailing combined logs (Ctrl-C to exit)..."
-  tail -f "$DETECTION_LOG" "$API_LOG"
+  tail -f "$API_LOG"
 }
 
 case "${1:-help}" in

@@ -10,9 +10,6 @@ services:
       PORT: 14000
       API_KEY: ${API_KEY:-}
 
-      # Detection Service
-      DETECTION_SERVICE_URL: http://detection:14001
-
       # Gemini (primary classifier)
       GEMINI_API_KEY: ${GEMINI_API_KEY:-}
       GEMINI_MODEL: ${GEMINI_MODEL:-gemini-1.5-flash}
@@ -27,8 +24,6 @@ services:
     ports:
       - "${API_PORT:-14000}:14000"
     depends_on:
-      detection:
-        condition: service_started
       db:
         condition: service_healthy
     networks:
@@ -40,28 +35,6 @@ services:
       timeout: 5s
       retries: 3
       start_period: 10s
-
-  # Detection Service (Python/FastAPI - Grounding DINO)
-  detection:
-    build:
-      context: ./detection-service
-      dockerfile: Dockerfile
-    container_name: inventory-detection
-    environment:
-      MODEL_ID: ${DETECTION_MODEL_ID:-IDEA-Research/grounding-dino-tiny}
-      DEVICE: ${DETECTION_DEVICE:-cpu}
-      PORT: 14001
-    ports:
-      - "${DETECTION_PORT:-14001}:14001"
-    networks:
-      - inventory-network
-    restart: unless-stopped
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:14001/health"]
-      interval: 15s
-      timeout: 5s
-      retries: 3
-      start_period: 30s
 
   # Ollama (optional - for local LLM classification)
   ollama:

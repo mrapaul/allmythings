@@ -1,8 +1,0 @@
-[
-  {"a": "sofa", "b": "couch", "expected": true, "notes": "synonym"},
-  {"a": "table", "b": "chair", "expected": false, "notes": "different category"},
-  {"a": "lamp", "b": "light", "expected": true, "notes": "synonym"},
-  {"a": "plant", "b": "vase", "expected": false, "notes": "co-located but different"},
-  {"a": "coffee mug", "b": "cup", "expected": true, "notes": "subtype"},
-  {"a": "dining chair", "b": "office chair", "expected": true, "notes": "same category"}
-]
