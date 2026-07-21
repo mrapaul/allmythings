@@ -1,0 +1,106 @@
+{
+  "gemini:gemini-2.5-flash": {
+    "perFixture": [
+      {
+        "fixture": "1776173015803",
+        "error": "GEMINI_API_KEY not set",
+        "elapsedMs": 0
+      },
+      {
+        "fixture": "1776174188547",
+        "error": "GEMINI_API_KEY not set",
+        "elapsedMs": 0
+      },
+      {
+        "fixture": "1776175427607",
+        "error": "GEMINI_API_KEY not set",
+        "elapsedMs": 0
+      },
+      {
+        "fixture": "1776176976030",
+        "error": "GEMINI_API_KEY not set",
+        "elapsedMs": 0
+      }
+    ],
+    "aggregate": {
+      "avgRecall": 0,
+      "avgItems": 0,
+      "avgLatencyMs": 0,
+      "failures": 4,
+      "n": 4
+    }
+  },
+  "gemma4:31b-cloud": {
+    "perFixture": [
+      {
+        "fixture": "1776173015803",
+        "recall": 83.3,
+        "itemCount": 11,
+        "expectedMin": 8,
+        "expectedMax": 15,
+        "countWithinRange": true,
+        "matchedCount": 10,
+        "missed": [
+          "decorative wall plate",
+          "white area rug"
+        ],
+        "elapsedMs": 507839,
+        "attempts": 3
+      },
+      {
+        "fixture": "1776174188547",
+        "recall": 90.9,
+        "itemCount": 12,
+        "expectedMin": 7,
+        "expectedMax": 13,
+        "countWithinRange": true,
+        "matchedCount": 10,
+        "missed": [
+          "dark navy couch / sofa"
+        ],
+        "elapsedMs": 79693,
+        "attempts": 1
+      },
+      {
+        "fixture": "1776175427607",
+        "recall": 71.4,
+        "itemCount": 12,
+        "expectedMin": 10,
+        "expectedMax": 16,
+        "countWithinRange": true,
+        "matchedCount": 10,
+        "missed": [
+          "gold wire plant stand",
+          "wooden stool",
+          "gold candle holder",
+          "wooden side table"
+        ],
+        "elapsedMs": 7867,
+        "attempts": 1
+      },
+      {
+        "fixture": "1776176976030",
+        "recall": 76.9,
+        "itemCount": 11,
+        "expectedMin": 8,
+        "expectedMax": 14,
+        "countWithinRange": true,
+        "matchedCount": 10,
+        "missed": [
+          "gold wire plant stand",
+          "gold candle holder",
+          "wooden sideboard / cabinet"
+        ],
+        "elapsedMs": 25491,
+        "attempts": 1
+      }
+    ],
+    "aggregate": {
+      "avgRecall": 80.6,
+      "avgItems": 11.5,
+      "avgLatencyMs": 155223,
+      "failures": 0,
+      "n": 4
+    }
+  }
+}
