@@ -111,12 +111,15 @@ export async function detectStreamRoute(app: FastifyInstance): Promise<void> {
         // VLM path: stream items as each of the two passes completes.
         if (useVlm) {
           const runId = crypto.randomBytes(16).toString('hex');
-          writeEvent('meta', { runId, traceId });
+          writeEvent('meta', { runId, traceId, photoSha256: f.sha256 });
           let total = 0;
           try {
             for await (const ev of vlmDetector!.detectStream(f.buffer)) {
               if (aborted) return;
-              if (ev.kind !== 'item') continue; // scene event goes on the wire in Task 6
+              if (ev.kind === 'scene') {
+                writeEvent('scene', ev.scene);
+                continue;
+              }
               writeEvent('item', ev.item);
               total += 1;
               if (itemDribbleMs > 0) await new Promise((r) => setTimeout(r, itemDribbleMs));

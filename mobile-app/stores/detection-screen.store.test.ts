@@ -23,6 +23,30 @@ describe('detectionStore', () => {
     expect(s.getState().phase).toBe('review');
   });
 
+  it('stores the scene assessment and photo sha', () => {
+    const s = createDetectionStore();
+    s.getState().handleEvent({ type: 'meta', runId: 'r', traceId: 't', photoSha256: 'deadbeef' });
+    s.getState().handleEvent({
+      type: 'scene',
+      scene: { type: 'room', estimatedTotalItems: 8, verdict: 'ok', verdictReason: null },
+    });
+    expect(s.getState().photoSha256).toBe('deadbeef');
+    expect(s.getState().scene?.type).toBe('room');
+    expect(s.getState().scene?.verdict).toBe('ok');
+  });
+
+  it('resets scene and photo sha', () => {
+    const s = createDetectionStore();
+    s.getState().handleEvent({ type: 'meta', runId: 'r', traceId: 't', photoSha256: 'deadbeef' });
+    s.getState().handleEvent({
+      type: 'scene',
+      scene: { type: 'shelf', estimatedTotalItems: null, verdict: 'too_dark', verdictReason: 'x' },
+    });
+    s.getState().reset();
+    expect(s.getState().scene).toBeNull();
+    expect(s.getState().photoSha256).toBeNull();
+  });
+
   it('toggles row include', () => {
     const s = createDetectionStore();
     s.getState().handleEvent({ type: 'item', item: sample });

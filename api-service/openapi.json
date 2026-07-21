@@ -88,6 +88,26 @@
                       "items": {
                         "$ref": "#/components/schemas/def-0"
                       }
+                    },
+                    "scene": {
+                      "type": "object",
+                      "nullable": true,
+                      "properties": {
+                        "type": {
+                          "type": "string"
+                        },
+                        "estimatedTotalItems": {
+                          "type": "number",
+                          "nullable": true
+                        },
+                        "verdict": {
+                          "type": "string"
+                        },
+                        "verdictReason": {
+                          "type": "string",
+                          "nullable": true
+                        }
+                      }
                     }
                   }
                 }

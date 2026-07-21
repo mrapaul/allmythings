@@ -16,6 +16,30 @@ describe('detect helpers', () => {
     if (ev.type === 'item') expect(ev.item.label).toBe('X');
   });
 
+  it('_testParseStreamLine maps "scene"', () => {
+    const ev = _testParseStreamLine({
+      event: 'scene',
+      data: '{"type":"room","estimatedTotalItems":12,"verdict":"too_blurry","verdictReason":"motion blur"}',
+    });
+    expect(ev).toEqual({
+      type: 'scene',
+      scene: {
+        type: 'room',
+        estimatedTotalItems: 12,
+        verdict: 'too_blurry',
+        verdictReason: 'motion blur',
+      },
+    });
+  });
+
+  it('_testParseStreamLine keeps photoSha256 from "meta"', () => {
+    const ev = _testParseStreamLine({
+      event: 'meta',
+      data: '{"runId":"r","traceId":"t","photoSha256":"abc123"}',
+    });
+    expect(ev).toEqual({ type: 'meta', runId: 'r', traceId: 't', photoSha256: 'abc123' });
+  });
+
   it('_testParseStreamLine maps "done"', () => {
     const ev = _testParseStreamLine({
       event: 'done',

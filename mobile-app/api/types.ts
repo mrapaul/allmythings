@@ -13,8 +13,19 @@ export type { Def0 as DetectedItem } from './generated/types.gen';
 
 export type DetectError = { error: string; runId?: string; message?: string };
 
+export type SceneType = 'shelf' | 'drawer' | 'room' | 'closeup' | 'unknown';
+export type PhotoVerdict = 'ok' | 'too_dark' | 'too_blurry' | 'too_far' | 'not_a_scene';
+
+export interface SceneInfo {
+  type: SceneType;
+  estimatedTotalItems: number | null;
+  verdict: PhotoVerdict;
+  verdictReason: string | null;
+}
+
 export type DetectStreamEvent =
-  | { type: 'meta'; runId: string; traceId: string }
+  | { type: 'meta'; runId: string; traceId: string; photoSha256?: string }
+  | { type: 'scene'; scene: SceneInfo }
   | { type: 'item'; item: import('./generated/types.gen').Def0 }
   | { type: 'done'; runId: string; totalItems: number }
   | {

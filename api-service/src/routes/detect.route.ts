@@ -37,6 +37,16 @@ export async function detectRoute(app: FastifyInstance): Promise<void> {
             required: ['items'],
             properties: {
               items: { type: 'array', items: { $ref: 'DetectedItem' } },
+              scene: {
+                type: 'object',
+                nullable: true,
+                properties: {
+                  type: { type: 'string' },
+                  estimatedTotalItems: { type: 'number', nullable: true },
+                  verdict: { type: 'string' },
+                  verdictReason: { type: 'string', nullable: true },
+                },
+              },
             },
           },
           202: {
@@ -149,8 +159,8 @@ async function runVlmPath(args: VlmPathArgs) {
   try {
     // Persist so /photos/<sha> resolves, matching the pipeline path.
     await persistFrame(frame);
-    const { items } = await vlmDetector.detect(frame.buffer);
-    return reply.code(200).send({ items });
+    const { scene, items } = await vlmDetector.detect(frame.buffer);
+    return reply.code(200).send({ scene, items });
   } catch (err) {
     if (err instanceof DetectorUnavailableError) {
       return reply.code(503).send({ error: 'detector_unavailable', message: err.message });

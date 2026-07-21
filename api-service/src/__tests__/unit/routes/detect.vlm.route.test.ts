@@ -22,11 +22,12 @@ const ITEMS: DetectedItem[] = [
 ];
 
 function fakeDetector(): VlmDetector {
+  const scene = { ...DEFAULT_SCENE, type: 'room' as const, estimatedTotalItems: 9 };
   return {
-    detect: async (): Promise<DetectionResult> => ({ scene: { ...DEFAULT_SCENE }, items: ITEMS }),
+    detect: async (): Promise<DetectionResult> => ({ scene, items: ITEMS }),
     // eslint-disable-next-line @typescript-eslint/require-await
     detectStream: async function* () {
-      yield { kind: 'scene' as const, scene: { ...DEFAULT_SCENE } };
+      yield { kind: 'scene' as const, scene };
       for (const i of ITEMS) yield { kind: 'item' as const, item: i };
     },
   } as unknown as VlmDetector;
@@ -67,6 +68,12 @@ describe('detect routes — VLM path', () => {
     expect(body.items).toHaveLength(2);
     expect(body.items[0].label).toBe('sofa');
     expect(body.items[0].tags).toContain('velvet');
+    expect(body.scene).toEqual({
+      type: 'room',
+      estimatedTotalItems: 9,
+      verdict: 'ok',
+      verdictReason: null,
+    });
   });
 
   it('POST /v1/detect/stream emits meta, item×N, done', async () => {
@@ -87,10 +94,11 @@ describe('detect routes — VLM path', () => {
     expect(res.statusCode).toBe(200);
     expect(res.headers['content-type']).toContain('text/event-stream');
     const events = res.body.split('\n\n').filter(Boolean);
-    expect(events[0]).toMatch(/^event: meta\ndata: \{/);
-    expect(events[1]).toMatch(/^event: item\ndata: \{.*sofa/);
-    expect(events[2]).toMatch(/^event: item\ndata: \{.*lamp/);
-    expect(events[3]).toMatch(/^event: done\ndata: \{.*"totalItems":2/);
+    expect(events[0]).toMatch(/^event: meta\ndata: \{.*"photoSha256":"[0-9a-f]{64}"/);
+    expect(events[1]).toMatch(/^event: scene\ndata: \{.*"type":"room"/);
+    expect(events[2]).toMatch(/^event: item\ndata: \{.*sofa/);
+    expect(events[3]).toMatch(/^event: item\ndata: \{.*lamp/);
+    expect(events[4]).toMatch(/^event: done\ndata: \{.*"totalItems":2/);
   });
 
   it('GET /v1/detect/status returns 404 in VLM mode (no async runs)', async () => {

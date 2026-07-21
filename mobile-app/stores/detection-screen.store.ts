@@ -1,4 +1,4 @@
-import type { DetectStreamEvent, DetectedItem } from '@/api/types';
+import type { DetectStreamEvent, DetectedItem, SceneInfo } from '@/api/types';
 import { useStore } from 'zustand';
 import { createStore } from 'zustand/vanilla';
 
@@ -16,6 +16,8 @@ interface DetectionState {
   phase: Phase;
   runId: string | null;
   traceId: string | null;
+  photoSha256: string | null;
+  scene: SceneInfo | null;
   rows: DetectionRow[];
   errorCode: string | null;
   errorMessage: string | null;
@@ -32,12 +34,16 @@ export function createDetectionStore() {
     phase: 'loading',
     runId: null,
     traceId: null,
+    photoSha256: null,
+    scene: null,
     rows: [],
     errorCode: null,
     errorMessage: null,
     handleEvent: (e) =>
       set((s) => {
-        if (e.type === 'meta') return { runId: e.runId, traceId: e.traceId };
+        if (e.type === 'meta')
+          return { runId: e.runId, traceId: e.traceId, photoSha256: e.photoSha256 ?? null };
+        if (e.type === 'scene') return { scene: e.scene };
         if (e.type === 'item') {
           const id = `${s.rows.length}-${e.item.label}`;
           return {
@@ -74,6 +80,8 @@ export function createDetectionStore() {
         phase: 'loading',
         runId: null,
         traceId: null,
+        photoSha256: null,
+        scene: null,
         rows: [],
         errorCode: null,
         errorMessage: null,

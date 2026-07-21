@@ -84,7 +84,14 @@ export function _testParseStreamLine(ev: RawSseEvent): DetectStreamEvent {
   const data = JSON.parse(ev.data) as Record<string, unknown>;
   switch (ev.event) {
     case 'meta':
-      return { type: 'meta', runId: String(data.runId), traceId: String(data.traceId) };
+      return {
+        type: 'meta',
+        runId: String(data.runId),
+        traceId: String(data.traceId),
+        ...(typeof data.photoSha256 === 'string' ? { photoSha256: data.photoSha256 } : {}),
+      };
+    case 'scene':
+      return { type: 'scene', scene: data as unknown as import('./types').SceneInfo };
     case 'item':
       return { type: 'item', item: data as unknown as DetectedItem };
     case 'done':
