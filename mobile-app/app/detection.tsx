@@ -1,7 +1,9 @@
 import { detectImageStream } from '@/api/detect';
 import { getDetectStatus } from '@/api/detect-status';
+import { labelCrop } from '@/api/label';
 import { BoundingBoxOverlay } from '@/components/BoundingBoxOverlay';
 import { DetectionRow } from '@/components/DetectionRow';
+import { DrawBoxOverlay, type NormBox } from '@/components/DrawBoxOverlay';
 import { GlowBackdrop } from '@/components/GlowBackdrop';
 import { useHomes } from '@/contexts/HomesContext';
 import { useInventory } from '@/contexts/InventoryContext';
@@ -288,6 +290,49 @@ export default function DetectionScreen() {
     router.replace('/');
   };
 
+  // ----- draw-to-teach ------------------------------------------------------
+  const [isLabelingCrop, setIsLabelingCrop] = useState(false);
+  const onBoxDrawn = async (box: NormBox) => {
+    if (!processedUri || isLabelingCrop) return;
+    setIsLabelingCrop(true);
+    const store = getDetectionStore();
+    try {
+      const crop = await ImageManipulator.manipulateAsync(
+        processedUri,
+        [
+          {
+            crop: {
+              originX: Math.round(box.x * imgWH.w),
+              originY: Math.round(box.y * imgWH.h),
+              width: Math.max(1, Math.round(box.width * imgWH.w)),
+              height: Math.max(1, Math.round(box.height * imgWH.h)),
+            },
+          },
+        ],
+        { compress: 0.8, format: ImageManipulator.SaveFormat.JPEG },
+      );
+      const suggestion = await labelCrop(crop.uri);
+      store.getState().addManualRow({
+        label: suggestion.label,
+        description: suggestion.description,
+        category: suggestion.category,
+        tags: suggestion.tags,
+        box,
+      });
+    } catch {
+      // The gesture never dead-ends: fall back to a blank row the user names.
+      store.getState().addManualRow({
+        label: 'new item',
+        description: '',
+        category: 'Other',
+        tags: [],
+        box,
+      });
+    } finally {
+      setIsLabelingCrop(false);
+    }
+  };
+
   // ----- render -----------------------------------------------------------
   if (!imageUri) {
     return (
@@ -429,7 +474,15 @@ export default function DetectionScreen() {
                   saved: r.saved,
                 }))}
               />
-              {isLoading && (
+              <DrawBoxOverlay
+                viewWidth={photoMax}
+                viewHeight={photoH}
+                enabled={!isLoading && !qaSuspect && !serverRejected}
+                onBoxDrawn={(box) => {
+                  void onBoxDrawn(box);
+                }}
+              />
+              {(isLoading || isLabelingCrop) && (
                 <View style={styles.loadingOverlay}>
                   <ActivityIndicator color={colors.primary} />
                 </View>
@@ -484,7 +537,7 @@ export default function DetectionScreen() {
                   <Text style={[styles.legend, { color: colors.mutedForeground }]}>
                     {isStreaming && rows.length === 0
                       ? 'AI is scanning your photo…'
-                      : 'Tap a tag to rename · ✓ saves to inventory · swipe to discard'}
+                      : 'Tap a tag to rename · ✓ saves · drag on the photo to add a missed item'}
                   </Text>
                 </View>
 

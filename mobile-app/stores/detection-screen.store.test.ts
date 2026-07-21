@@ -47,6 +47,17 @@ describe('detectionStore', () => {
     expect(s.getState().photoSha256).toBeNull();
   });
 
+  it('adds a manual (user-drawn) row that is included and flagged', () => {
+    const s = createDetectionStore();
+    const id = s.getState().addManualRow(sample);
+    expect(id).toMatch(/^manual-/);
+    const row = s.getState().rows.find((r) => r.id === id);
+    expect(row?.manual).toBe(true);
+    expect(row?.included).toBe(true);
+    // A second manual row gets a distinct id.
+    expect(s.getState().addManualRow(sample)).not.toBe(id);
+  });
+
   it('toggles row include', () => {
     const s = createDetectionStore();
     s.getState().handleEvent({ type: 'item', item: sample });

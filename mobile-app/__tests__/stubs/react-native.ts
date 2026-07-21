@@ -69,6 +69,11 @@ const Dimensions = {
   addEventListener: () => ({ remove: () => undefined }),
 };
 
+// Draw-to-teach uses PanResponder; tests only need the handlers object shape.
+const PanResponder = {
+  create: (config: Record<string, unknown>) => ({ panHandlers: config }),
+};
+
 const useColorScheme = () => 'light';
 const useWindowDimensions = () => ({ width: 375, height: 812, scale: 2, fontScale: 1 });
 
@@ -84,6 +89,7 @@ export {
   ActivityIndicator,
   Alert,
   Animated,
+  PanResponder,
   StyleSheet,
   Platform,
   Dimensions,

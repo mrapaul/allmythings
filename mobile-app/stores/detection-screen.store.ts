@@ -8,6 +8,8 @@ export interface DetectionRow {
   included: boolean;
   saving: boolean;
   saved: boolean;
+  /** True when the user drew this box (draw-to-teach) rather than the model. */
+  manual?: boolean;
 }
 
 type Phase = 'loading' | 'streaming' | 'review';
@@ -22,12 +24,15 @@ interface DetectionState {
   errorCode: string | null;
   errorMessage: string | null;
   handleEvent: (e: DetectStreamEvent) => void;
+  addManualRow: (item: DetectedItem) => string;
   toggleInclude: (id: string) => void;
   patchRow: (id: string, patch: Partial<Omit<DetectionRow, 'id'>>) => void;
   beginSave: (ids: string[]) => void;
   endSave: (ids: string[]) => void;
   reset: () => void;
 }
+
+let manualCounter = 0;
 
 export function createDetectionStore() {
   return createStore<DetectionState>((set) => ({
@@ -61,6 +66,14 @@ export function createDetectionStore() {
         }
         return s;
       }),
+    addManualRow: (item) => {
+      const id = `manual-${manualCounter++}`;
+      set((s) => ({
+        phase: s.phase === 'loading' ? 'review' : s.phase,
+        rows: [{ id, item, included: true, saving: false, saved: false, manual: true }, ...s.rows],
+      }));
+      return id;
+    },
     toggleInclude: (id) =>
       set((s) => ({
         rows: s.rows.map((r) => (r.id === id ? { ...r, included: !r.included } : r)),
