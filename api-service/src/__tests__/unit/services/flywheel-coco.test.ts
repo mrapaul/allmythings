@@ -17,11 +17,16 @@ const record = (over: Record<string, unknown> = {}) => ({
   receivedAt: '2026-07-21T00:00:01.000Z',
   scene: null,
   events: [
-    { type: 'accept', item: item('vase') },
-    { type: 'discard', item: item('ghost object') },
-    { type: 'relabel', item: item('lamp', 'Lighting'), newLabel: 'brass lamp', newTags: ['brass'] },
-    { type: 'add_box', item: item('coaster') },
-    { type: 'photo_verdict', verdict: 'ok', userOverride: false },
+    { type: 'accept' as const, item: item('vase') },
+    { type: 'discard' as const, item: item('ghost object') },
+    {
+      type: 'relabel' as const,
+      item: item('lamp', 'Lighting'),
+      newLabel: 'brass lamp',
+      newTags: ['brass'],
+    },
+    { type: 'add_box' as const, item: item('coaster') },
+    { type: 'photo_verdict' as const, verdict: 'ok', userOverride: false },
   ],
   ...over,
 });
