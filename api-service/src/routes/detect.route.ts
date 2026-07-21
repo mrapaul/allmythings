@@ -149,7 +149,7 @@ async function runVlmPath(args: VlmPathArgs) {
   try {
     // Persist so /photos/<sha> resolves, matching the pipeline path.
     await persistFrame(frame);
-    const items = await vlmDetector.detect(frame.buffer);
+    const { items } = await vlmDetector.detect(frame.buffer);
     return reply.code(200).send({ items });
   } catch (err) {
     if (err instanceof DetectorUnavailableError) {

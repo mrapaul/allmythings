@@ -46,6 +46,68 @@ export interface NormBox {
 export type CoordMode = 'norm' | 'thousand' | 'pixel';
 
 // ---------------------------------------------------------------------------
+// Scene assessment (pass 1)
+// ---------------------------------------------------------------------------
+
+export const SCENE_TYPES = ['shelf', 'drawer', 'room', 'closeup', 'unknown'] as const;
+export type SceneType = (typeof SCENE_TYPES)[number];
+
+export const PHOTO_VERDICTS = ['ok', 'too_dark', 'too_blurry', 'too_far', 'not_a_scene'] as const;
+export type PhotoVerdict = (typeof PHOTO_VERDICTS)[number];
+
+export interface SceneInfo {
+  type: SceneType;
+  estimatedTotalItems: number | null;
+  verdict: PhotoVerdict;
+  verdictReason: string | null;
+}
+
+export const DEFAULT_SCENE: SceneInfo = {
+  type: 'unknown',
+  estimatedTotalItems: null,
+  verdict: 'ok',
+  verdictReason: null,
+};
+
+/**
+ * Extract the pass-1 scene assessment from parsed model JSON. Tolerant of any
+ * missing/junk field: an unusable block degrades to DEFAULT_SCENE rather than
+ * failing detection, because scene info is advisory (tiling + photo QA).
+ */
+export function parseSceneInfo(parsed: unknown): SceneInfo {
+  if (parsed === null || typeof parsed !== 'object') return { ...DEFAULT_SCENE };
+  const scene = (parsed as Record<string, unknown>).scene;
+  if (scene === null || typeof scene !== 'object') return { ...DEFAULT_SCENE };
+  const o = scene as Record<string, unknown>;
+
+  const rawType = typeof o.type === 'string' ? o.type.toLowerCase() : '';
+  const type = (SCENE_TYPES as readonly string[]).includes(rawType)
+    ? (rawType as SceneType)
+    : 'unknown';
+
+  const est = o.estimated_total_items;
+  const estimatedTotalItems =
+    typeof est === 'number' && Number.isFinite(est) && est >= 0 ? Math.round(est) : null;
+
+  const quality =
+    o.photo_quality !== null && typeof o.photo_quality === 'object'
+      ? (o.photo_quality as Record<string, unknown>)
+      : {};
+  const rawVerdict = typeof quality.verdict === 'string' ? quality.verdict.toLowerCase() : '';
+  const verdict = (PHOTO_VERDICTS as readonly string[]).includes(rawVerdict)
+    ? (rawVerdict as PhotoVerdict)
+    : 'ok';
+  const verdictReason = str(quality.reason) ?? null;
+
+  // A junk type together with a junk verdict means the model ignored the
+  // contract — treat the whole block as absent.
+  if (type === 'unknown' && verdict === 'ok' && estimatedTotalItems === null) {
+    return { ...DEFAULT_SCENE };
+  }
+  return { type, estimatedTotalItems, verdict, verdictReason };
+}
+
+// ---------------------------------------------------------------------------
 // JSON extraction
 // ---------------------------------------------------------------------------
 
@@ -411,7 +473,10 @@ Rules:
 - CRITICAL: NEVER output architectural surfaces as items. Do NOT include wall, walls, floor, flooring, ceiling, window, door, doorway, archway, baseboard, molding, beam, column, or "room"/"background". These are structure, not inventory.
 - DO include window treatments (curtains, blinds), light fixtures, and wall-mounted objects (mirrors, art, sconces).
 - Count clustered decorative objects separately, not as one.
-- Return ONLY valid JSON: {"room_type": "...", "items": [...]}
+- Also assess the photo itself in a top-level "scene" object:
+  "scene": {"type": "shelf|drawer|room|closeup", "estimated_total_items": <integer, your best estimate of ALL distinct objects present including ones you could not list>, "photo_quality": {"verdict": "ok|too_dark|too_blurry|too_far|not_a_scene", "reason": "<short reason, or null when ok>"}}
+  Use "room" when the frame shows a wide view of a whole room. Use a non-ok verdict when the photo is unusable for inventory (severely dark/blurry, subject too far to identify objects, or not a home scene at all).
+- Return ONLY valid JSON: {"scene": {...}, "room_type": "...", "items": [...]}
 - No markdown, no explanation.`;
 }
 

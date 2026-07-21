@@ -9,6 +9,7 @@ import {
   dedupeItems,
   buildPass1Prompt,
   buildPass2Prompt,
+  parseSceneInfo,
 } from '../../../services/vlm-detector.parse';
 import type { DetectedItem } from '../../../types/detected-item';
 
@@ -255,12 +256,64 @@ describe('dedupeItems', () => {
   });
 });
 
+describe('parseSceneInfo', () => {
+  it('parses a full scene block', () => {
+    const scene = parseSceneInfo({
+      scene: {
+        type: 'room',
+        estimated_total_items: 24,
+        photo_quality: { verdict: 'ok', reason: null },
+      },
+      items: [],
+    });
+    expect(scene).toEqual({
+      type: 'room',
+      estimatedTotalItems: 24,
+      verdict: 'ok',
+      verdictReason: null,
+    });
+  });
+
+  it('parses a reject verdict with reason', () => {
+    const scene = parseSceneInfo({
+      scene: {
+        type: 'closeup',
+        estimated_total_items: 0,
+        photo_quality: { verdict: 'too_blurry', reason: 'severe motion blur' },
+      },
+    });
+    expect(scene.verdict).toBe('too_blurry');
+    expect(scene.verdictReason).toBe('severe motion blur');
+  });
+
+  it('defaults safely when the scene block is missing or junk', () => {
+    const fallback = {
+      type: 'unknown',
+      estimatedTotalItems: null,
+      verdict: 'ok',
+      verdictReason: null,
+    };
+    expect(parseSceneInfo({ items: [] })).toEqual(fallback);
+    expect(parseSceneInfo(null)).toEqual(fallback);
+    expect(parseSceneInfo({ scene: { type: 'castle', photo_quality: { verdict: 'meh' } } })).toEqual(
+      fallback,
+    );
+  });
+});
+
 describe('prompt builders', () => {
   it('pass-1 prompt names categories and dimensions', () => {
     const p = buildPass1Prompt(1024, 768);
     expect(p).toContain('1024x768');
     expect(p).toContain('Furniture');
     expect(p).toContain('NORMALIZED');
+  });
+
+  it('pass-1 prompt demands the scene assessment block', () => {
+    const p = buildPass1Prompt(1024, 768);
+    expect(p).toContain('"scene"');
+    expect(p).toContain('estimated_total_items');
+    expect(p).toContain('photo_quality');
   });
 
   it('pass-2 prompt lists prior items and continues IDs', () => {

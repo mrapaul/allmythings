@@ -82,7 +82,7 @@ describe('VlmDetector', () => {
       maxImageSize: 1024,
       coordMode: 'auto',
     });
-    const items = await detector.detect(image);
+    const { items } = await detector.detect(image);
     expect(items).toHaveLength(3);
     expect(items.map((i) => i.label)).toEqual(['sectional sofa', 'coffee table', 'throw pillow']);
     const sofa = items[0]!;
@@ -98,7 +98,7 @@ describe('VlmDetector', () => {
       maxImageSize: 1024,
       coordMode: 'auto',
     });
-    const items = await detector.detect(image);
+    const { items } = await detector.detect(image);
     expect(items).toHaveLength(2);
   });
 
@@ -118,7 +118,7 @@ describe('VlmDetector', () => {
       maxImageSize: 1024,
       coordMode: 'auto',
     });
-    const items = await detector.detect(image);
+    const { items } = await detector.detect(image);
     expect(items).toHaveLength(1);
     // 80/800=0.1, 60/600=0.1, width (720-80)/800=0.8, height (480-60)/600=0.7
     expect(items[0]!.box.x).toBeCloseTo(0.1, 2);
@@ -137,7 +137,7 @@ describe('VlmDetector', () => {
       },
     } as unknown as OllamaVlmClient;
     const detector = new VlmDetector(client, { twoPass: true, maxImageSize: 1024, coordMode: 'auto' });
-    const items = await detector.detect(image);
+    const { items } = await detector.detect(image);
     expect(items).toHaveLength(2);
   });
 
@@ -150,13 +150,53 @@ describe('VlmDetector', () => {
     await expect(detector.detect(image)).rejects.toBeInstanceOf(OllamaUnavailableError);
   });
 
+  it('yields the scene assessment before any item', async () => {
+    const pass1WithScene = JSON.stringify({
+      scene: {
+        type: 'room',
+        estimated_total_items: 10,
+        photo_quality: { verdict: 'ok', reason: null },
+      },
+      items: JSON.parse(PASS1).items,
+    });
+    const detector = new VlmDetector(makeClient([pass1WithScene]), {
+      twoPass: false,
+      maxImageSize: 1024,
+      coordMode: 'auto',
+    });
+    const events = [];
+    for await (const ev of detector.detectStream(image)) events.push(ev);
+    expect(events[0]).toEqual({
+      kind: 'scene',
+      scene: { type: 'room', estimatedTotalItems: 10, verdict: 'ok', verdictReason: null },
+    });
+    expect(events.slice(1).every((e) => e.kind === 'item')).toBe(true);
+    expect(events).toHaveLength(3);
+  });
+
+  it('returns scene in detect() and defaults it when absent', async () => {
+    const detector = new VlmDetector(makeClient([PASS1]), {
+      twoPass: false,
+      maxImageSize: 1024,
+      coordMode: 'auto',
+    });
+    const { scene, items } = await detector.detect(image);
+    expect(items).toHaveLength(2);
+    expect(scene).toEqual({
+      type: 'unknown',
+      estimatedTotalItems: null,
+      verdict: 'ok',
+      verdictReason: null,
+    });
+  });
+
   it('tolerates malformed JSON by yielding no items', async () => {
     const detector = new VlmDetector(makeClient(['not json at all']), {
       twoPass: false,
       maxImageSize: 1024,
       coordMode: 'auto',
     });
-    const items = await detector.detect(image);
+    const { items } = await detector.detect(image);
     expect(items).toEqual([]);
   });
 });

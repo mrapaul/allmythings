@@ -12,7 +12,10 @@ import {
   cornersToNormBox,
   rawItemToDetectedItem,
   dedupeItems,
+  parseSceneInfo,
+  DEFAULT_SCENE,
   type CoordMode,
+  type SceneInfo,
 } from './vlm-detector.parse';
 
 /**
@@ -34,6 +37,16 @@ export interface VlmDetectorOptions {
   coordMode: CoordMode | 'auto';
 }
 
+/** Streamed detection event: the pass-1 scene assessment, then items. */
+export type DetectorEvent =
+  | { kind: 'scene'; scene: SceneInfo }
+  | { kind: 'item'; item: DetectedItem };
+
+export interface DetectionResult {
+  scene: SceneInfo;
+  items: DetectedItem[];
+}
+
 interface PreparedImage {
   base64: string;
   width: number;
@@ -46,36 +59,49 @@ export class VlmDetector {
     private readonly opts: VlmDetectorOptions,
   ) {}
 
-  /** Run the full pipeline and return all detected items. */
-  async detect(imageBuffer: Buffer): Promise<DetectedItem[]> {
+  /** Run the full pipeline and return the scene assessment plus all items. */
+  async detect(imageBuffer: Buffer): Promise<DetectionResult> {
+    let scene: SceneInfo = { ...DEFAULT_SCENE };
     const items: DetectedItem[] = [];
-    for await (const item of this.detectStream(imageBuffer)) {
-      items.push(item);
+    for await (const ev of this.detectStream(imageBuffer)) {
+      if (ev.kind === 'scene') scene = ev.scene;
+      else items.push(ev.item);
     }
-    return items;
+    return { scene, items };
   }
 
   /**
-   * Stream items as each pass completes: all pass-1 items, then all pass-2
-   * items. Lets the SSE route emit 'item' events incrementally.
+   * Stream the pass-1 scene assessment first, then items as each pass
+   * completes: all pass-1 items, then all pass-2 items. Lets the SSE route
+   * emit events incrementally.
    */
-  async *detectStream(imageBuffer: Buffer): AsyncGenerator<DetectedItem> {
+  async *detectStream(imageBuffer: Buffer): AsyncGenerator<DetectorEvent> {
     const img = await this.prepareImage(imageBuffer);
 
-    // --- Pass 1: detect everything ---
+    // --- Pass 1: detect everything + assess the scene ---
     const pass1Raw = await this.client.generateJson(
       buildPass1Prompt(img.width, img.height),
       img.base64,
     );
     const pass1Items = this.parsePass(pass1Raw, img, 'items');
-    logger.info({ count: pass1Items.detected.length, model: this.client.modelName }, 'vlm_pass1_complete');
+    const scene = this.parseScene(pass1Raw);
+    logger.info(
+      {
+        count: pass1Items.detected.length,
+        model: this.client.modelName,
+        sceneType: scene.type,
+        verdict: scene.verdict,
+      },
+      'vlm_pass1_complete',
+    );
+    yield { kind: 'scene', scene };
 
     const seen: DetectedItem[] = [];
     for (const item of pass1Items.detected) {
       const deduped = dedupeItems([...seen, item]);
       if (deduped.length > seen.length) {
         seen.push(item);
-        yield item;
+        yield { kind: 'item', item };
       }
     }
 
@@ -93,7 +119,7 @@ export class VlmDetector {
         const deduped = dedupeItems([...seen, item]);
         if (deduped.length > seen.length) {
           seen.push(item);
-          yield item;
+          yield { kind: 'item', item };
         }
       }
     } catch (err: unknown) {
@@ -102,6 +128,14 @@ export class VlmDetector {
         { err: err instanceof Error ? err.message : String(err) },
         'vlm_pass2_failed_continuing',
       );
+    }
+  }
+
+  private parseScene(raw: string): SceneInfo {
+    try {
+      return parseSceneInfo(stripAndParseJson(raw));
+    } catch {
+      return { ...DEFAULT_SCENE };
     }
   }
 

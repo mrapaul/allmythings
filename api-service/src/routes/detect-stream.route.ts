@@ -114,9 +114,10 @@ export async function detectStreamRoute(app: FastifyInstance): Promise<void> {
           writeEvent('meta', { runId, traceId });
           let total = 0;
           try {
-            for await (const item of vlmDetector!.detectStream(f.buffer)) {
+            for await (const ev of vlmDetector!.detectStream(f.buffer)) {
               if (aborted) return;
-              writeEvent('item', item);
+              if (ev.kind !== 'item') continue; // scene event goes on the wire in Task 6
+              writeEvent('item', ev.item);
               total += 1;
               if (itemDribbleMs > 0) await new Promise((r) => setTimeout(r, itemDribbleMs));
             }

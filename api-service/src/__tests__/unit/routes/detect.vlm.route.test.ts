@@ -13,7 +13,8 @@ import { detectStatusRoute } from '../../../routes/detect-status.route';
 import { detectedItemSchema } from '../../../schemas/detected-item.schema';
 import { envConfig } from '../../../config/env.config';
 import type { DetectedItem } from '../../../types/detected-item';
-import type { VlmDetector } from '../../../services/vlm-detector';
+import type { DetectionResult, VlmDetector } from '../../../services/vlm-detector';
+import { DEFAULT_SCENE } from '../../../services/vlm-detector.parse';
 
 const ITEMS: DetectedItem[] = [
   { label: 'sofa', description: 'red velvet sofa', category: 'Furniture', tags: ['red', 'velvet'], box: { x: 0.1, y: 0.5, width: 0.5, height: 0.3 } },
@@ -22,10 +23,11 @@ const ITEMS: DetectedItem[] = [
 
 function fakeDetector(): VlmDetector {
   return {
-    detect: async (): Promise<DetectedItem[]> => ITEMS,
+    detect: async (): Promise<DetectionResult> => ({ scene: { ...DEFAULT_SCENE }, items: ITEMS }),
     // eslint-disable-next-line @typescript-eslint/require-await
     detectStream: async function* () {
-      for (const i of ITEMS) yield i;
+      yield { kind: 'scene' as const, scene: { ...DEFAULT_SCENE } };
+      for (const i of ITEMS) yield { kind: 'item' as const, item: i };
     },
   } as unknown as VlmDetector;
 }

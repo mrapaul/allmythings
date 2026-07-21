@@ -43,7 +43,7 @@ describe('VlmClient interface', () => {
       maxImageSize: 256,
       coordMode: 'auto',
     });
-    const items = await detector.detect(image);
+    const { items } = await detector.detect(image);
     expect(items.map((i) => i.label)).toEqual(['desk lamp']);
   });
 });
