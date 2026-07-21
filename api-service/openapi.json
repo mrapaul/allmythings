@@ -139,6 +139,49 @@
         }
       }
     },
+    "/v1/label": {
+      "post": {
+        "summary": "Suggest a label for a single-object crop",
+        "tags": [
+          "vision"
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "label",
+                    "category",
+                    "description",
+                    "tags"
+                  ],
+                  "properties": {
+                    "label": {
+                      "type": "string"
+                    },
+                    "category": {
+                      "type": "string"
+                    },
+                    "description": {
+                      "type": "string"
+                    },
+                    "tags": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/v1/detect/stream": {
       "post": {
         "summary": "Detect home objects, streaming items via SSE",

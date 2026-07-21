@@ -480,6 +480,14 @@ Rules:
 - No markdown, no explanation.`;
 }
 
+export function buildLabelPrompt(): string {
+  const categories = VALID_CATEGORIES.join('|');
+  return `You are labeling a cropped photo showing ONE home object for an inventory. Identify the single main object in this crop.
+
+Return ONLY valid JSON (no markdown, no explanation):
+{"object": "specific object name (e.g. 'tufted velvet armchair', not just 'chair')", "category": "one of [${categories}]", "description": "short human-friendly description", "tags": {"color": "...", "material": "...", "style": "...", "condition": "new|good|fair|worn|damaged|unknown", "size_estimate": "small|medium|large", "brand": null, "notable_features": ["..."]}}`;
+}
+
 export function buildPass2Prompt(
   imgW: number,
   imgH: number,

@@ -14,6 +14,7 @@ import { envConfig } from './config/env.config';
 import { logger } from './utils/logger';
 import { errorHandler, notFoundHandler } from './middleware/error.middleware';
 import { detectRoute } from './routes/detect.route';
+import { labelRoute } from './routes/label.route';
 import { detectStreamRoute } from './routes/detect-stream.route';
 import { detectStatusRoute } from './routes/detect-status.route';
 import { healthRoute } from './routes/health.route';
@@ -23,7 +24,7 @@ import { ProviderHealthService } from './services/provider-health.service';
 import { advertiseService } from './utils/bonjour-advertiser';
 import { CircuitBreaker } from './utils/circuit-breaker';
 import { createPipelineClient } from './clients/pipeline.client';
-import { createVlmDetector } from './services/vlm-detector.factory';
+import { createLabelClient, createVlmDetector } from './services/vlm-detector.factory';
 import { detectedItemSchema } from './schemas/detected-item.schema';
 
 process.on('uncaughtException', (err) => {
@@ -87,6 +88,8 @@ export async function buildApp(options?: { disableRateLimit?: boolean }): Promis
   if (envConfig.detector === 'vlm') {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     (app as any).vlmDetector = createVlmDetector();
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    (app as any).labelClient = createLabelClient();
     logger.info(
       { model: envConfig.ollamaModel, ollama: envConfig.ollamaBaseUrl },
       'vlm_detector_active',
@@ -119,6 +122,7 @@ export async function buildApp(options?: { disableRateLimit?: boolean }): Promis
   await app.register(swaggerUi, { routePrefix: '/docs' });
 
   await app.register(detectRoute);
+  await app.register(labelRoute);
   await app.register(detectStreamRoute);
   await app.register(detectStatusRoute);
   await app.register(healthRoute);
