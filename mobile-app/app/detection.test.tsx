@@ -108,6 +108,16 @@ describe('DetectionScreen', () => {
     expect(tree).toBeTruthy();
   });
 
+  it('renders overlay labels for detected boxes', async () => {
+    const view = render(<DetectionScreen />);
+    await act(async () => {
+      await new Promise((r) => setTimeout(r, 0));
+    });
+    const texts = collectStrings(view.toJSON());
+    expect(texts).toContain('Sofa');
+    expect(texts).toContain('Lamp');
+  });
+
   it('shows a reject card when the server verdict is not ok', async () => {
     sse.events = [
       { type: 'meta', runId: 'r-test', traceId: 't-test', photoSha256: 'ff'.repeat(32) },

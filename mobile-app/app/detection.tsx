@@ -1,5 +1,6 @@
 import { detectImageStream } from '@/api/detect';
 import { getDetectStatus } from '@/api/detect-status';
+import { BoundingBoxOverlay } from '@/components/BoundingBoxOverlay';
 import { DetectionRow } from '@/components/DetectionRow';
 import { GlowBackdrop } from '@/components/GlowBackdrop';
 import { useHomes } from '@/contexts/HomesContext';
@@ -323,8 +324,13 @@ export default function DetectionScreen() {
   const serverRejected = scene !== null && scene.verdict !== 'ok' && !verdictDismissed;
   const rejectionCopy = serverRejected ? VERDICT_COPY[scene.verdict] : null;
 
-  const photoMax = Math.min(screenW - gutter * 2, isCompact ? 240 : 320);
-  const photoH = Math.min((imgWH.h / imgWH.w) * photoMax, isCompact ? 180 : 240);
+  // Size the frame to the photo's real aspect ratio (contain, not cover) so
+  // normalized detection boxes map 1:1 onto the rendered pixels.
+  const frameMaxW = Math.min(screenW - gutter * 2, isCompact ? 300 : 380);
+  const frameMaxH = isCompact ? 320 : 420;
+  const frameScale = Math.min(frameMaxW / imgWH.w, frameMaxH / imgWH.h);
+  const photoMax = Math.max(1, Math.round(imgWH.w * frameScale));
+  const photoH = Math.max(1, Math.round(imgWH.h * frameScale));
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
@@ -406,8 +412,22 @@ export default function DetectionScreen() {
               <Image
                 source={processedUri ?? imageUri}
                 style={styles.photo}
-                contentFit="cover"
+                contentFit="contain"
                 transition={250}
+              />
+              <BoundingBoxOverlay
+                imageWidth={imgWH.w}
+                imageHeight={imgWH.h}
+                viewWidth={photoMax}
+                viewHeight={photoH}
+                isLoading={isLoading || (isStreaming && rows.length === 0)}
+                boxes={rows.map((r) => ({
+                  id: r.id,
+                  label: r.item.label,
+                  box: r.item.box,
+                  included: r.included,
+                  saved: r.saved,
+                }))}
               />
               {isLoading && (
                 <View style={styles.loadingOverlay}>
