@@ -241,6 +241,26 @@ describe('dedupeItems', () => {
     expect(out).toHaveLength(2);
   });
 
+  it('collapses same-object detections whose labels are token-subsets', () => {
+    // Overlapping tiles often re-detect one object under a more/less specific
+    // name: "area rug" vs "white area rug" on the same box must collapse.
+    const box = { x: 0.3, y: 0.8, width: 0.5, height: 0.2 };
+    const items: DetectedItem[] = [
+      { label: 'area rug', description: '', category: 'Textile', tags: [], box },
+      { label: 'white area rug', description: '', category: 'Textile', tags: [], box },
+    ];
+    expect(dedupeItems(items)).toHaveLength(1);
+  });
+
+  it('keeps different objects that merely overlap', () => {
+    const box = { x: 0.3, y: 0.3, width: 0.3, height: 0.3 };
+    const items: DetectedItem[] = [
+      { label: 'ceramic vase', description: '', category: 'Decor', tags: [], box },
+      { label: 'wooden side table', description: '', category: 'Furniture', tags: [], box },
+    ];
+    expect(dedupeItems(items)).toHaveLength(2);
+  });
+
   it('caps runaway repetition of one label', () => {
     // Non-overlapping tiny boxes so IoU dedup does not remove them first; the
     // per-label cap is what limits the count.

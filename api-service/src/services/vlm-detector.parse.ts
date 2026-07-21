@@ -412,10 +412,21 @@ export function rawItemToDetectedItem(raw: unknown, box: NormBox | null): Detect
   };
 }
 
+/** True when one label's word set is contained in the other's ("area rug" ⊆ "white area rug"). */
+function labelsSubsume(a: string, b: string): boolean {
+  const ta = new Set(a.toLowerCase().split(/\s+/).filter(Boolean));
+  const tb = new Set(b.toLowerCase().split(/\s+/).filter(Boolean));
+  const [small, large] = ta.size <= tb.size ? [ta, tb] : [tb, ta];
+  for (const t of small) if (!large.has(t)) return false;
+  return true;
+}
+
 /**
  * Deduplicate items that refer to the same physical object. Two items collide
- * when they share a label (case-insensitive) and their boxes overlap heavily
- * (IoU >= threshold). The first occurrence wins.
+ * when their boxes overlap heavily (IoU >= threshold) and their labels match —
+ * either exactly (case-insensitive) or as a token-subset, which catches the
+ * same object re-detected by an overlapping tile under a more specific name.
+ * The first occurrence wins.
  */
 export function dedupeItems(
   items: DetectedItem[],
@@ -427,7 +438,7 @@ export function dedupeItems(
   for (const item of items) {
     const key = item.label.toLowerCase();
     const dup = kept.find(
-      (k) => k.label.toLowerCase() === key && iou(k.box, item.box) >= iouThreshold,
+      (k) => iou(k.box, item.box) >= iouThreshold && labelsSubsume(k.label, item.label),
     );
     if (dup) continue;
     // Cap runaway repetition (a known small-VLM failure mode where one label is
