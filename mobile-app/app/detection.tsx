@@ -6,6 +6,7 @@ import { useHomes } from '@/contexts/HomesContext';
 import { useInventory } from '@/contexts/InventoryContext';
 import { useColors } from '@/hooks/useColors';
 import { useResponsive } from '@/hooks/useResponsive';
+import { assessJpeg } from '@/lib/photo-quality';
 import { withSpan } from '@/observability/otel';
 import {
   type DetectionRow as DetectionStoreRow,
@@ -14,6 +15,7 @@ import {
 } from '@/stores/detection-screen.store';
 import { Prefs } from '@/stores/prefs';
 import { Feather } from '@expo/vector-icons';
+import { File } from 'expo-file-system';
 import { Image } from 'expo-image';
 import * as ImageManipulator from 'expo-image-manipulator';
 import { useLocalSearchParams, useRouter } from 'expo-router';
@@ -41,6 +43,7 @@ export default function DetectionScreen() {
 
   const phase = useDetectionStore((s) => s.phase);
   const rows = useDetectionStore((s) => s.rows);
+  const scene = useDetectionStore((s) => s.scene);
   const errorCode = useDetectionStore((s) => s.errorCode);
   const errorMessage = useDetectionStore((s) => s.errorMessage);
 
@@ -58,6 +61,9 @@ export default function DetectionScreen() {
   const [savingIds, setSavingIds] = useState<Set<string>>(() => new Set());
   const [autoFocusByRow, setAutoFocusByRow] = useState<Record<string, boolean>>({});
   const [tagsByRow, setTagsByRow] = useState<Record<string, string[]>>({});
+  const [qaSuspect, setQaSuspect] = useState(false);
+  const [verdictDismissed, setVerdictDismissed] = useState(false);
+  const proceedRef = useRef<(() => void) | null>(null);
   const launchedRef = useRef(false);
 
   // ----- effects: reset + crash-resume + run detection ---------------------
@@ -115,28 +121,48 @@ export default function DetectionScreen() {
       setProcessedUri(uploadUri);
       setImgWH({ w, h });
 
-      try {
-        await withSpan('detect.stream', async () => {
-          for await (const ev of detectImageStream(
-            { fileUri: uploadUri, fileName: 'frame.jpg', mimeType: 'image/jpeg' },
-            controller.signal,
-          )) {
-            if (controller.signal.aborted) break;
-            if (ev.type === 'meta') prefs.setLastDetectionRunId(ev.runId);
-            if (ev.type === 'done' || ev.type === 'error') prefs.setLastDetectionRunId(null);
-            store.getState().handleEvent(ev);
-          }
-        });
-      } catch (err) {
-        if (!controller.signal.aborted) {
-          store.getState().handleEvent({
-            type: 'error',
-            code: 'detect_stream_failed',
-            message: err instanceof Error ? err.message : String(err),
+      const stream = async (): Promise<void> => {
+        try {
+          await withSpan('detect.stream', async () => {
+            for await (const ev of detectImageStream(
+              { fileUri: uploadUri, fileName: 'frame.jpg', mimeType: 'image/jpeg' },
+              controller.signal,
+            )) {
+              if (controller.signal.aborted) break;
+              if (ev.type === 'meta') prefs.setLastDetectionRunId(ev.runId);
+              if (ev.type === 'done' || ev.type === 'error') prefs.setLastDetectionRunId(null);
+              store.getState().handleEvent(ev);
+            }
           });
+        } catch (err) {
+          if (!controller.signal.aborted) {
+            store.getState().handleEvent({
+              type: 'error',
+              code: 'detect_stream_failed',
+              message: err instanceof Error ? err.message : String(err),
+            });
+          }
+          prefs.setLastDetectionRunId(null);
         }
-        prefs.setLastDetectionRunId(null);
+      };
+
+      // Pre-upload heuristic: an implausibly small JPEG means a blurry/dark
+      // frame. Advisory only — the server's model verdict is authoritative.
+      let assessment: ReturnType<typeof assessJpeg> = 'ok';
+      try {
+        assessment = assessJpeg(new File(uploadUri).size ?? 0, w, h);
+      } catch {
+        // Missing file info never blocks the flow.
       }
+      if (assessment === 'suspect') {
+        proceedRef.current = () => {
+          setQaSuspect(false);
+          void stream();
+        };
+        setQaSuspect(true);
+        return;
+      }
+      await stream();
     })();
 
     return () => {
@@ -292,8 +318,10 @@ export default function DetectionScreen() {
 
   const savedCount = rows.filter((r) => r.saved).length;
   const pendingValid = rows.filter((r) => !r.saved && r.included).length;
-  const isLoading = phase === 'loading';
+  const isLoading = phase === 'loading' && !qaSuspect;
   const isStreaming = phase === 'streaming';
+  const serverRejected = scene !== null && scene.verdict !== 'ok' && !verdictDismissed;
+  const rejectionCopy = serverRejected ? VERDICT_COPY[scene.verdict] : null;
 
   const photoMax = Math.min(screenW - gutter * 2, isCompact ? 240 : 320);
   const photoH = Math.min((imgWH.h / imgWH.w) * photoMax, isCompact ? 180 : 240);
@@ -389,8 +417,34 @@ export default function DetectionScreen() {
             </View>
           </View>
 
+          {qaSuspect && (
+            <QualityCard
+              icon="camera-off"
+              title="This photo looks too dark or blurry"
+              body="Detection works best on a sharp, well-lit frame. Retake it, or send this one anyway."
+              primaryLabel="Retake"
+              onPrimary={() => router.replace('/')}
+              secondaryLabel="Use anyway"
+              onSecondary={() => proceedRef.current?.()}
+              colors={colors}
+            />
+          )}
+
+          {serverRejected && rejectionCopy && (
+            <QualityCard
+              icon="alert-triangle"
+              title={rejectionCopy.title}
+              body={scene?.verdictReason ?? rejectionCopy.body}
+              primaryLabel="Retake"
+              onPrimary={() => router.replace('/')}
+              secondaryLabel={rows.length > 0 ? 'Keep results anyway' : 'Dismiss'}
+              onSecondary={() => setVerdictDismissed(true)}
+              colors={colors}
+            />
+          )}
+
           <View style={[styles.rowsSection, { paddingHorizontal: gutter }]}>
-            {isLoading ? (
+            {qaSuspect || serverRejected ? null : isLoading ? (
               <View style={styles.helperWrap}>
                 <Text style={[styles.helper, { color: colors.mutedForeground }]}>
                   Identifying every piece in this frame…
@@ -449,7 +503,7 @@ export default function DetectionScreen() {
           </View>
         </ScrollView>
 
-        {!isLoading && rows.length > 0 && (
+        {!isLoading && rows.length > 0 && !qaSuspect && !serverRejected && (
           <View
             style={[
               styles.bottomBar,
@@ -519,7 +573,124 @@ export default function DetectionScreen() {
   );
 }
 
+const VERDICT_COPY: Record<string, { title: string; body: string }> = {
+  too_dark: {
+    title: 'Photo rejected: too dark',
+    body: 'The scene is too dark to identify objects reliably. Turn on a light and retake.',
+  },
+  too_blurry: {
+    title: 'Photo rejected: too blurry',
+    body: 'The frame is blurred. Hold the phone steady and retake.',
+  },
+  too_far: {
+    title: 'Photo rejected: too far away',
+    body: 'Objects are too small to identify. Step closer and retake.',
+  },
+  not_a_scene: {
+    title: 'Photo rejected',
+    body: 'This does not look like a shelf, drawer, or room to inventory.',
+  },
+};
+
+interface QualityCardProps {
+  icon: keyof typeof Feather.glyphMap;
+  title: string;
+  body: string;
+  primaryLabel: string;
+  onPrimary: () => void;
+  secondaryLabel: string;
+  onSecondary: () => void;
+  colors: ReturnType<typeof useColors>;
+}
+
+function QualityCard({
+  icon,
+  title,
+  body,
+  primaryLabel,
+  onPrimary,
+  secondaryLabel,
+  onSecondary,
+  colors,
+}: QualityCardProps) {
+  return (
+    <View
+      style={[styles.qualityCard, { backgroundColor: colors.card, borderColor: colors.border }]}
+    >
+      <Feather name={icon} size={28} color={colors.destructive} />
+      <Text style={[styles.qualityTitle, { color: colors.foreground }]}>{title}</Text>
+      <Text style={[styles.qualityBody, { color: colors.mutedForeground }]}>{body}</Text>
+      <View style={styles.qualityActions}>
+        <Pressable
+          accessibilityLabel={primaryLabel}
+          onPress={onPrimary}
+          style={({ pressed }) => [
+            styles.qualityPrimaryBtn,
+            { backgroundColor: colors.primary, opacity: pressed ? 0.85 : 1 },
+          ]}
+        >
+          <Text style={[styles.qualityPrimaryLabel, { color: colors.primaryForeground }]}>
+            {primaryLabel}
+          </Text>
+        </Pressable>
+        <Pressable
+          accessibilityLabel={secondaryLabel}
+          onPress={onSecondary}
+          style={({ pressed }) => [styles.qualitySecondaryBtn, { opacity: pressed ? 0.7 : 1 }]}
+        >
+          <Text style={[styles.qualitySecondaryLabel, { color: colors.mutedForeground }]}>
+            {secondaryLabel}
+          </Text>
+        </Pressable>
+      </View>
+    </View>
+  );
+}
+
 const styles = StyleSheet.create({
+  qualityCard: {
+    marginHorizontal: 24,
+    marginTop: 8,
+    padding: 20,
+    borderRadius: 18,
+    borderWidth: 1,
+    alignItems: 'center',
+    gap: 8,
+  },
+  qualityTitle: {
+    fontFamily: 'Fraunces_600SemiBold',
+    fontSize: 16,
+    textAlign: 'center',
+  },
+  qualityBody: {
+    fontFamily: 'Inter_400Regular',
+    fontSize: 13,
+    lineHeight: 19,
+    textAlign: 'center',
+  },
+  qualityActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 16,
+    marginTop: 8,
+  },
+  qualityPrimaryBtn: {
+    paddingVertical: 10,
+    paddingHorizontal: 22,
+    borderRadius: 22,
+  },
+  qualityPrimaryLabel: {
+    fontFamily: 'Inter_600SemiBold',
+    fontSize: 14,
+  },
+  qualitySecondaryBtn: {
+    paddingVertical: 10,
+    paddingHorizontal: 8,
+  },
+  qualitySecondaryLabel: {
+    fontFamily: 'Inter_500Medium',
+    fontSize: 13,
+  },
   container: { flex: 1, alignItems: 'center' },
   contentClamp: { flex: 1, width: '100%', alignSelf: 'center' },
   centeredMsg: {

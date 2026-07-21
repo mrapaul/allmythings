@@ -1,34 +1,58 @@
-import { render } from '@testing-library/react-native';
-import { describe, expect, it, vi } from 'vitest';
+import { act, render } from '@testing-library/react-native';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-// Stub the SSE generator to yield meta + 2 items + done synchronously.
+function collectStrings(node: unknown, out: string[] = []): string[] {
+  if (typeof node === 'string') {
+    out.push(node);
+    return out;
+  }
+  if (Array.isArray(node)) {
+    for (const child of node) collectStrings(child, out);
+    return out;
+  }
+  if (node && typeof node === 'object' && 'children' in node) {
+    collectStrings((node as { children: unknown }).children, out);
+  }
+  return out;
+}
+
+// Stub the SSE generator; each test can swap the event script.
+const sse = vi.hoisted(() => ({
+  events: [] as unknown[],
+}));
+
+const DEFAULT_EVENTS = [
+  { type: 'meta', runId: 'r-test', traceId: 't-test' },
+  {
+    type: 'item',
+    item: {
+      label: 'Sofa',
+      description: 'leather couch',
+      category: 'Furniture',
+      tags: ['leather', 'brown'],
+      box: { x: 0.1, y: 0.1, width: 0.4, height: 0.4 },
+    },
+  },
+  {
+    type: 'item',
+    item: {
+      label: 'Lamp',
+      description: '',
+      category: 'Lighting',
+      tags: ['floor'],
+      box: { x: 0.6, y: 0.2, width: 0.2, height: 0.5 },
+    },
+  },
+  { type: 'done', runId: 'r-test', totalItems: 2 },
+];
+
 vi.mock('@/api/detect', async () => {
   const actual = await vi.importActual<typeof import('@/api/detect')>('@/api/detect');
   return {
     ...actual,
+    // eslint-disable-next-line @typescript-eslint/require-await
     detectImageStream: async function* () {
-      yield { type: 'meta', runId: 'r-test', traceId: 't-test' } as const;
-      yield {
-        type: 'item',
-        item: {
-          label: 'Sofa',
-          description: 'leather couch',
-          category: 'Furniture',
-          tags: ['leather', 'brown'],
-          box: { x: 0.1, y: 0.1, width: 0.4, height: 0.4 },
-        },
-      } as const;
-      yield {
-        type: 'item',
-        item: {
-          label: 'Lamp',
-          description: '',
-          category: 'Lighting',
-          tags: ['floor'],
-          box: { x: 0.6, y: 0.2, width: 0.2, height: 0.5 },
-        },
-      } as const;
-      yield { type: 'done', runId: 'r-test', totalItems: 2 } as const;
+      for (const ev of sse.events) yield ev;
     },
   };
 });
@@ -75,8 +99,37 @@ vi.mock('@/stores/prefs', () => ({
 const DetectionScreen = (await import('./detection')).default;
 
 describe('DetectionScreen', () => {
+  beforeEach(() => {
+    sse.events = [...DEFAULT_EVENTS];
+  });
+
   it('renders without throwing', () => {
     const tree = render(<DetectionScreen />).toJSON();
     expect(tree).toBeTruthy();
+  });
+
+  it('shows a reject card when the server verdict is not ok', async () => {
+    sse.events = [
+      { type: 'meta', runId: 'r-test', traceId: 't-test', photoSha256: 'ff'.repeat(32) },
+      {
+        type: 'scene',
+        scene: {
+          type: 'room',
+          estimatedTotalItems: 0,
+          verdict: 'too_blurry',
+          verdictReason: 'severe motion blur',
+        },
+      },
+      { type: 'done', runId: 'r-test', totalItems: 0 },
+    ];
+    const view = render(<DetectionScreen />);
+    // Flush the async detect stream + state updates.
+    await act(async () => {
+      await new Promise((r) => setTimeout(r, 0));
+    });
+    const texts = collectStrings(view.toJSON());
+    expect(texts).toContain('Photo rejected: too blurry');
+    expect(texts).toContain('severe motion blur');
+    expect(texts).toContain('Retake');
   });
 });

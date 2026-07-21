@@ -202,11 +202,11 @@ db-new:
 .PHONY: eval eval-ci eval-baseline
 
 eval: ## Run eval harness on all configured candidate models
-	node eval/harness.mjs qwen2.5vl:7b florence:qwen7b hybrid:owlv2-qwen7b
+	node eval/harness.mjs gemini:gemini-2.5-flash gemma4:31b-cloud
 
 eval-ci: ## Run eval gated by eval/baseline.json
-	node eval/harness.mjs qwen2.5vl:7b florence:qwen7b hybrid:owlv2-qwen7b --ci
+	node eval/harness.mjs gemini:gemini-2.5-flash gemma4:31b-cloud --ci
 
 eval-baseline: ## Re-snapshot current results as new baseline (commit after)
-	node eval/harness.mjs qwen2.5vl:7b florence:qwen7b hybrid:owlv2-qwen7b
+	node eval/harness.mjs gemini:gemini-2.5-flash gemma4:31b-cloud
 	@latest=$$(ls -t eval/report-*.json | head -1); cp "$$latest" eval/baseline.json; echo "Baseline = $$latest"

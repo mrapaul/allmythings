@@ -125,6 +125,15 @@ vi.mock('expo-image-manipulator', () => ({
   SaveFormat: { JPEG: 'jpeg', PNG: 'png' },
 }));
 
+// `expo-file-system` needs native bindings; the detection screen only reads
+// File(uri).size for the pre-upload quality heuristic. A healthy size keeps
+// the QA gate open in tests.
+vi.mock('expo-file-system', () => ({
+  File: class {
+    size = 500_000;
+  },
+}));
+
 // `expo-constants` pulls in `expo-modules-core`'s native bindings. The
 // detection screen + api client read `expoConfig.extra` for base URL/api
 // key — empty config returns the localhost defaults.

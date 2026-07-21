@@ -12,6 +12,20 @@ const ORACLES  = path.join(EVAL_ROOT, 'oracle');
 const RUNS     = path.join(EVAL_ROOT, 'runs');
 const OLLAMA      = process.env.OLLAMA_BASE_URL ?? 'http://localhost:11434';
 const HYBRID_URL  = process.env.HYBRID_URL ?? 'http://localhost:14000/v1/detect?mode=full';
+const GEMINI_BASE = 'https://generativelanguage.googleapis.com/v1beta';
+
+// GEMINI_API_KEY from env, falling back to api-service/.env so `make eval`
+// works without exporting anything.
+async function resolveGeminiKey() {
+  if (process.env.GEMINI_API_KEY) return process.env.GEMINI_API_KEY;
+  try {
+    const envFile = await fs.readFile(path.join(EVAL_ROOT, '..', 'api-service', '.env'), 'utf-8');
+    const line = envFile.split('\n').find((l) => l.startsWith('GEMINI_API_KEY='));
+    return line ? line.slice('GEMINI_API_KEY='.length).trim() : '';
+  } catch {
+    return '';
+  }
+}
 
 const PROMPT = `You are cataloging a photo for a home inventory. Identify EVERY distinct physical item visible - furniture, appliances, electronics, decor, plants, lighting, wall art, rugs, curtains, and any other discrete objects. Aim for 6-15 items. Do not include the room itself, walls, ceiling, or floor as items (but DO include rugs, carpets, window treatments).
 
@@ -60,6 +74,43 @@ async function runModel(model, imagePath) {
       }
       const data = await res.json();
       const text = data.response ?? '';
+      return { text, elapsedMs: Date.now() - t0, attempt };
+    } catch (e) {
+      lastErr = e;
+    }
+  }
+  return { text: '', elapsedMs: Date.now() - t0, error: String(lastErr), attempt: MAX_ATTEMPTS };
+}
+
+async function runGemini(model, imagePath, apiKey) {
+  const t0 = Date.now();
+  if (!apiKey) return { text: '', elapsedMs: 0, error: 'GEMINI_API_KEY not set', attempt: 1 };
+  const imageB64 = (await fs.readFile(imagePath)).toString('base64');
+  const MAX_ATTEMPTS = 3;
+  let lastErr = null;
+  for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
+    try {
+      const res = await fetch(`${GEMINI_BASE}/models/${model}:generateContent`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'x-goog-api-key': apiKey },
+        body: JSON.stringify({
+          contents: [{ parts: [
+            { inline_data: { mime_type: 'image/jpeg', data: imageB64 } },
+            { text: PROMPT },
+          ] }],
+          generationConfig: { temperature: 0.2, responseMimeType: 'application/json' },
+        }),
+        signal: AbortSignal.timeout(120_000),
+      });
+      if (!res.ok) {
+        const body = await res.text().catch(() => '');
+        lastErr = new Error(`${res.status}: ${body.slice(0, 300)}`);
+        // Back off on free-tier rate limits before retrying.
+        if (res.status === 429) await new Promise((r) => setTimeout(r, 15_000));
+        continue;
+      }
+      const data = await res.json();
+      const text = (data.candidates?.[0]?.content?.parts ?? []).map((p) => p.text ?? '').join('');
       return { text, elapsedMs: Date.now() - t0, attempt };
     } catch (e) {
       lastErr = e;
@@ -151,6 +202,7 @@ async function main() {
   }
 
   await fs.mkdir(RUNS, { recursive: true });
+  const geminiKey = await resolveGeminiKey();
   const baseline = ci
     ? JSON.parse(await fs.readFile(path.join(EVAL_ROOT, 'baseline.json'), 'utf-8').catch(() => '{}'))
     : null;
@@ -172,7 +224,11 @@ async function main() {
       const imagePath = path.join(FIXTURES, f);
       process.stdout.write(`  ${name}: `);
       const useEndpoint = model.startsWith('hybrid:') || model.startsWith('florence:');
-      const runResult = useEndpoint ? await runPipelineEndpoint(imagePath) : await runModel(model, imagePath);
+      const runResult = model.startsWith('gemini:')
+        ? await runGemini(model.slice('gemini:'.length), imagePath, geminiKey)
+        : useEndpoint
+          ? await runPipelineEndpoint(imagePath)
+          : await runModel(model, imagePath);
       if (runResult.error) {
         failures++;
         console.log(`ERROR (${runResult.elapsedMs}ms): ${runResult.error.slice(0, 80)}`);
