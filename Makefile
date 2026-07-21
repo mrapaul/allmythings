@@ -199,13 +199,19 @@ db-new:
 
 .PHONY: help setup install install-api install-mobile dev dev-api dev-mobile start start-deps stop status logs smoke backup restore install-supervisor uninstall-supervisor build build-api build-mobile test test-api test-mobile lint lint-api lint-mobile format format-api format-mobile generate clean clean-api clean-mobile build-api-raw build-mobile-raw verify db-up db-down db-new
 
-.PHONY: eval eval-ci eval-baseline
+.PHONY: eval eval-ci eval-baseline dataset-export eval-promote
 
 eval: ## Run eval harness on all configured candidate models
 	node eval/harness.mjs gemini:gemini-2.5-flash gemma4:31b-cloud
 
 eval-ci: ## Run eval gated by eval/baseline.json
 	node eval/harness.mjs gemini:gemini-2.5-flash gemma4:31b-cloud --ci
+
+dataset-export: ## Export the corrections flywheel as a COCO dataset under datasets/
+	cd api-service && npx tsx scripts/dataset-export.ts
+
+eval-promote: ## Promote a corrected photo into the eval oracle: make eval-promote SHA=<sha256>
+	cd api-service && npx tsx scripts/promote-fixture.ts $(SHA)
 
 eval-baseline: ## Re-snapshot current results as new baseline (commit after)
 	node eval/harness.mjs gemini:gemini-2.5-flash gemma4:31b-cloud

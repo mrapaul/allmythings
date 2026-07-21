@@ -46,3 +46,4 @@ eval/runs/
 
 # Reference material (design folder is local-only — contains 200+ MB binaries)
 /design/
+datasets/

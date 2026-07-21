@@ -45,3 +45,4 @@ temp/
 !src/__tests__/**/*.json
 # OpenAPI spec is the contract source-of-truth for mobile codegen — must be tracked.
 !openapi.json
+datasets/
