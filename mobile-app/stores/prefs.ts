@@ -10,6 +10,7 @@ const KEY_ACTIVE_HOME = 'active_home_id';
 const KEY_PROFILE = 'profile';
 const KEY_LAST_DETECTION_RUN = 'last_detection_run_id';
 const KEY_CORRECTIONS_QUEUE = 'corrections_queue';
+const KEY_API_BASE_URL = 'api_base_url_override';
 
 export class Prefs {
   constructor(private kv: KVBackend) {}
@@ -49,6 +50,15 @@ export class Prefs {
   }
   setProfile(p: Profile): void {
     this.kv.set(KEY_PROFILE, JSON.stringify(p));
+  }
+
+  getApiBaseUrlOverride(): string | null {
+    return this.kv.getString(KEY_API_BASE_URL) ?? null;
+  }
+  setApiBaseUrlOverride(url: string | null): void {
+    const trimmed = url?.trim().replace(/\/+$/, '');
+    if (trimmed) this.kv.set(KEY_API_BASE_URL, trimmed);
+    else this.kv.delete(KEY_API_BASE_URL);
   }
 
   getCorrectionsQueue(): string[] {

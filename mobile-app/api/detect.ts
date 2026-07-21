@@ -1,4 +1,4 @@
-import Constants from 'expo-constants';
+import { resolveApiBaseUrl, resolveApiKey } from './base-url';
 import { apiFetch, makeTraceparent } from './client';
 import { type RawSseEvent, parseSseChunks } from './sse';
 import type { DetectStreamEvent, DetectedItem } from './types';
@@ -39,10 +39,8 @@ export async function* detectImageStream(
     type: input.mimeType,
   } as unknown as Blob);
 
-  const baseUrl =
-    (Constants.expoConfig?.extra as { apiBaseUrl?: string } | undefined)?.apiBaseUrl ??
-    'http://localhost:14000';
-  const apiKey = (Constants.expoConfig?.extra as { apiKey?: string } | undefined)?.apiKey;
+  const baseUrl = resolveApiBaseUrl();
+  const apiKey = resolveApiKey();
   const headers: Record<string, string> = { traceparent };
   if (apiKey) headers.authorization = `Bearer ${apiKey}`;
 

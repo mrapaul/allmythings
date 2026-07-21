@@ -1,28 +1,17 @@
 import { context, trace } from '@opentelemetry/api';
-import Constants from 'expo-constants';
 import { ofetch } from 'ofetch';
-
-interface ClientConfig {
-  baseUrl: string;
-  apiKey?: string | undefined;
-}
-
-function readConfig(): ClientConfig {
-  const extra = (Constants.expoConfig?.extra ?? {}) as { apiBaseUrl?: string; apiKey?: string };
-  return {
-    baseUrl: extra.apiBaseUrl ?? 'http://localhost:14000',
-    apiKey: extra.apiKey,
-  };
-}
+import { resolveApiBaseUrl, resolveApiKey } from './base-url';
 
 export const apiFetch = ofetch.create({
-  baseURL: readConfig().baseUrl,
+  baseURL: resolveApiBaseUrl(),
   retry: 1,
   retryDelay: 250,
   onRequest({ options }) {
-    const cfg = readConfig();
+    // Re-resolve per request so a Settings change applies without a restart.
+    options.baseURL = resolveApiBaseUrl();
+    const apiKey = resolveApiKey();
     const headers = new Headers(options.headers ?? {});
-    if (cfg.apiKey) headers.set('authorization', `Bearer ${cfg.apiKey}`);
+    if (apiKey) headers.set('authorization', `Bearer ${apiKey}`);
     options.headers = headers;
   },
 });

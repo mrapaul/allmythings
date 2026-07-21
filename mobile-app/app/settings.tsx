@@ -2,10 +2,12 @@ import GlowBackdrop from '@/components/GlowBackdrop';
 import { useHomes } from '@/contexts/HomesContext';
 import { useInventory } from '@/contexts/InventoryContext';
 import { useColors } from '@/hooks/useColors';
+import { Prefs } from '@/stores/prefs';
 import { Feather } from '@expo/vector-icons';
+import Constants from 'expo-constants';
 import * as Haptics from 'expo-haptics';
 import { useRouter } from 'expo-router';
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import {
   Alert,
   Platform,
@@ -30,6 +32,22 @@ export default function SettingsScreen() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editName, setEditName] = useState('');
   const [editIcon, setEditIcon] = useState('🏡');
+
+  const prefs = useMemo(() => {
+    try {
+      return Prefs.makeMmkv();
+    } catch {
+      return Prefs.makeInMemory();
+    }
+  }, []);
+  const defaultServerUrl =
+    ((Constants.expoConfig?.extra ?? {}) as { apiBaseUrl?: string }).apiBaseUrl ??
+    'http://localhost:14000';
+  const [serverUrl, setServerUrl] = useState(prefs.getApiBaseUrlOverride() ?? '');
+  const saveServerUrl = () => {
+    prefs.setApiBaseUrlOverride(serverUrl || null);
+    setServerUrl(prefs.getApiBaseUrlOverride() ?? '');
+  };
 
   const startEdit = (id: string, name: string, icon: string) => {
     setEditingId(id);
@@ -219,6 +237,35 @@ export default function SettingsScreen() {
           </Pressable>
         </View>
 
+        <Text style={[styles.section, { color: colors.mutedForeground }]}>SERVER</Text>
+        <View style={[styles.group, { backgroundColor: colors.card, borderColor: colors.border }]}>
+          <View style={styles.row}>
+            <View style={[styles.addIcon, { backgroundColor: colors.glowMint }]}>
+              <Feather name="server" size={16} color={colors.foreground} />
+            </View>
+            <View style={styles.rowBody}>
+              <Text style={[styles.rowTitle, { color: colors.foreground }]}>Server URL</Text>
+              <TextInput
+                accessibilityLabel="Server URL"
+                value={serverUrl}
+                onChangeText={setServerUrl}
+                onEndEditing={saveServerUrl}
+                onBlur={saveServerUrl}
+                placeholder={defaultServerUrl}
+                placeholderTextColor={colors.mutedForeground}
+                autoCapitalize="none"
+                autoCorrect={false}
+                keyboardType="url"
+                style={[styles.serverInput, { color: colors.foreground }]}
+              />
+              <Text style={[styles.rowMeta, { color: colors.mutedForeground }]}>
+                Leave empty for the built-in default. Use your Tailscale hostname to reach the
+                server away from home.
+              </Text>
+            </View>
+          </View>
+        </View>
+
         <Text style={[styles.section, { color: colors.mutedForeground }]}>DANGER ZONE</Text>
         <View style={[styles.group, { backgroundColor: colors.card, borderColor: colors.border }]}>
           <Pressable onPress={handleDeleteAll} style={styles.row}>
@@ -309,6 +356,11 @@ const styles = StyleSheet.create({
     fontFamily: 'Inter_400Regular',
     fontSize: 12,
     marginTop: 2,
+  },
+  serverInput: {
+    fontFamily: 'Inter_400Regular',
+    fontSize: 14,
+    paddingVertical: 4,
   },
   rowAction: {
     width: 36,

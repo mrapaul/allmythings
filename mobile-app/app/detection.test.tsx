@@ -92,6 +92,10 @@ vi.mock('@/stores/prefs', () => ({
     makeMmkv: () => ({
       getLastDetectionRunId: () => null,
       setLastDetectionRunId: () => undefined,
+      getApiBaseUrlOverride: () => null,
+      setApiBaseUrlOverride: () => undefined,
+      getCorrectionsQueue: () => [],
+      setCorrectionsQueue: () => undefined,
     }),
   },
 }));
