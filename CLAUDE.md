@@ -11,7 +11,7 @@ Two active components:
 1. **Mobile App** (`/mobile-app`): Expo SDK 54 / React Native 0.81, expo-router, Zustand, Drizzle (SQLite), pnpm. Lint/format via Biome, tests via Vitest.
 2. **API Service** (`/api-service`): Node.js 20+, Fastify, TypeScript, Zod. Tests via Vitest. Serves `/v1/detect` and `/v1/detect/stream` (SSE).
 
-Detection today runs through `DETECTOR=vlm`: a two-pass call to Ollama (`qwen2.5vl:7b`, `OLLAMA_BASE_URL`, default `http://localhost:11434`). Measured accuracy of this path is ~57–64% recall (`eval/baseline.json`); it is being replaced by a frontier-VLM structured-output detector. Do not extend the local-model path.
+Detection runs through `DETECTOR=vlm`: a two-pass VLM detector with a pluggable client (`VlmClient`). The chain is Gemini (structured output, when `GEMINI_API_KEY` is set) → Ollama fallback; with no Gemini key it runs Ollama-only on `gemma4:31b-cloud` (Ollama cloud free tier), the current eval-gated baseline at **80.6% avg recall** (`eval/baseline.json`, 2026-07-21). Pass 1 also returns a scene assessment (type/density/photo verdict) that drives server-side adaptive 2×2 tiling for wide room scenes and photo accept/reject in the app. `/v1/label` auto-labels user-drawn crops (draw-to-teach); `/v1/corrections` appends every user verdict to the training flywheel (`make dataset-export` → COCO, `make eval-promote SHA=…` → new oracle fixture).
 
 Supporting directories:
 
