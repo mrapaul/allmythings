@@ -15,12 +15,14 @@ import { logger } from './utils/logger';
 import { errorHandler, notFoundHandler } from './middleware/error.middleware';
 import { detectRoute } from './routes/detect.route';
 import { labelRoute } from './routes/label.route';
+import { correctionsRoute } from './routes/corrections.route';
 import { detectStreamRoute } from './routes/detect-stream.route';
 import { detectStatusRoute } from './routes/detect-status.route';
 import { healthRoute } from './routes/health.route';
 import { readyRoute } from './routes/ready.route';
 import { metricsRoute } from './routes/metrics.route';
 import { ProviderHealthService } from './services/provider-health.service';
+import { FlywheelService } from './services/flywheel.service';
 import { advertiseService } from './utils/bonjour-advertiser';
 import { CircuitBreaker } from './utils/circuit-breaker';
 import { createPipelineClient } from './clients/pipeline.client';
@@ -90,6 +92,8 @@ export async function buildApp(options?: { disableRateLimit?: boolean }): Promis
     (app as any).vlmDetector = createVlmDetector();
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     (app as any).labelClient = createLabelClient();
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    (app as any).flywheel = new FlywheelService(envConfig.photoDir);
     logger.info(
       { model: envConfig.ollamaModel, ollama: envConfig.ollamaBaseUrl },
       'vlm_detector_active',
@@ -123,6 +127,7 @@ export async function buildApp(options?: { disableRateLimit?: boolean }): Promis
 
   await app.register(detectRoute);
   await app.register(labelRoute);
+  await app.register(correctionsRoute);
   await app.register(detectStreamRoute);
   await app.register(detectStatusRoute);
   await app.register(healthRoute);

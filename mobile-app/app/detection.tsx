@@ -9,6 +9,7 @@ import { useHomes } from '@/contexts/HomesContext';
 import { useInventory } from '@/contexts/InventoryContext';
 import { useColors } from '@/hooks/useColors';
 import { useResponsive } from '@/hooks/useResponsive';
+import { CorrectionsQueue, buildCorrectionEvents } from '@/lib/corrections';
 import { assessJpeg } from '@/lib/photo-quality';
 import { withSpan } from '@/observability/otel';
 import {
@@ -68,6 +69,31 @@ export default function DetectionScreen() {
   const [verdictDismissed, setVerdictDismissed] = useState(false);
   const proceedRef = useRef<(() => void) | null>(null);
   const launchedRef = useRef(false);
+  const correctionsSentRef = useRef(false);
+  const correctionsQueue = useMemo(() => new CorrectionsQueue(prefs), [prefs]);
+
+  // Deliver any corrections a previous session failed to send.
+  useEffect(() => {
+    void correctionsQueue.flush();
+  }, [correctionsQueue]);
+
+  // Post the user's verdicts (accept/discard/relabel/drawn boxes) to the
+  // training-data flywheel exactly once, when they leave the review screen.
+  const submitCorrections = () => {
+    if (correctionsSentRef.current) return;
+    const st = getDetectionStore().getState();
+    if (!st.photoSha256) return;
+    const events = buildCorrectionEvents(st.rows, tagsByRow, st.scene, verdictDismissed);
+    if (events.length === 0) return;
+    correctionsSentRef.current = true;
+    void correctionsQueue.submit({
+      photoSha256: st.photoSha256,
+      model: 'unknown',
+      capturedAt: new Date().toISOString(),
+      scene: st.scene,
+      events,
+    });
+  };
 
   // ----- effects: reset + crash-resume + run detection ---------------------
   useEffect(() => {
@@ -280,6 +306,7 @@ export default function DetectionScreen() {
       });
       await addItems(payloads);
       getDetectionStore().getState().endSave(ids);
+      submitCorrections();
       router.replace('/');
     } finally {
       setIsBulkSaving(false);
@@ -287,6 +314,7 @@ export default function DetectionScreen() {
   };
 
   const closeOut = () => {
+    submitCorrections();
     router.replace('/');
   };
 
@@ -496,7 +524,7 @@ export default function DetectionScreen() {
               title="This photo looks too dark or blurry"
               body="Detection works best on a sharp, well-lit frame. Retake it, or send this one anyway."
               primaryLabel="Retake"
-              onPrimary={() => router.replace('/')}
+              onPrimary={closeOut}
               secondaryLabel="Use anyway"
               onSecondary={() => proceedRef.current?.()}
               colors={colors}
@@ -509,7 +537,7 @@ export default function DetectionScreen() {
               title={rejectionCopy.title}
               body={scene?.verdictReason ?? rejectionCopy.body}
               primaryLabel="Retake"
-              onPrimary={() => router.replace('/')}
+              onPrimary={closeOut}
               secondaryLabel={rows.length > 0 ? 'Keep results anyway' : 'Dismiss'}
               onSecondary={() => setVerdictDismissed(true)}
               colors={colors}

@@ -182,6 +182,19 @@
         }
       }
     },
+    "/v1/corrections": {
+      "post": {
+        "summary": "Record user corrections as training-data flywheel samples",
+        "tags": [
+          "flywheel"
+        ],
+        "responses": {
+          "204": {
+            "description": "Recorded"
+          }
+        }
+      }
+    },
     "/v1/detect/stream": {
       "post": {
         "summary": "Detect home objects, streaming items via SSE",

@@ -9,6 +9,7 @@ export interface KVBackend {
 const KEY_ACTIVE_HOME = 'active_home_id';
 const KEY_PROFILE = 'profile';
 const KEY_LAST_DETECTION_RUN = 'last_detection_run_id';
+const KEY_CORRECTIONS_QUEUE = 'corrections_queue';
 
 export class Prefs {
   constructor(private kv: KVBackend) {}
@@ -48,6 +49,21 @@ export class Prefs {
   }
   setProfile(p: Profile): void {
     this.kv.set(KEY_PROFILE, JSON.stringify(p));
+  }
+
+  getCorrectionsQueue(): string[] {
+    const raw = this.kv.getString(KEY_CORRECTIONS_QUEUE);
+    if (!raw) return [];
+    try {
+      const parsed = JSON.parse(raw) as unknown;
+      return Array.isArray(parsed) ? parsed.filter((x): x is string => typeof x === 'string') : [];
+    } catch {
+      return [];
+    }
+  }
+  setCorrectionsQueue(items: string[]): void {
+    if (items.length === 0) this.kv.delete(KEY_CORRECTIONS_QUEUE);
+    else this.kv.set(KEY_CORRECTIONS_QUEUE, JSON.stringify(items));
   }
 
   getLastDetectionRunId(): string | null {
