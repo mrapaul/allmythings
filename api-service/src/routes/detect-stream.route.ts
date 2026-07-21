@@ -12,7 +12,7 @@ import {
 import { mapPipelineDetectionToItem } from './detect.mapper';
 import { encodeSseEvent, SSE_KEEPALIVE } from '../utils/sse';
 import type { VlmDetector } from '../services/vlm-detector';
-import { OllamaUnavailableError } from '../clients/ollama-vlm.client';
+import { DetectorUnavailableError } from '../clients/vlm-client';
 
 const MAX_IMAGE_SIZE = 10 * 1024 * 1024;
 const SUPPORTED = new Set(['image/jpeg', 'image/png', 'image/webp']);
@@ -121,7 +121,7 @@ export async function detectStreamRoute(app: FastifyInstance): Promise<void> {
               if (itemDribbleMs > 0) await new Promise((r) => setTimeout(r, itemDribbleMs));
             }
           } catch (err) {
-            if (err instanceof OllamaUnavailableError) {
+            if (err instanceof DetectorUnavailableError) {
               writeEvent('error', { code: 'detector_unavailable', message: err.message });
               return;
             }

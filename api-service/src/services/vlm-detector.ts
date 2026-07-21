@@ -1,6 +1,6 @@
 import sharp from 'sharp';
 import type { DetectedItem } from '../types/detected-item';
-import { OllamaVlmClient } from '../clients/ollama-vlm.client';
+import type { VlmClient } from '../clients/vlm-client';
 import { logger } from '../utils/logger';
 import {
   buildPass1Prompt,
@@ -42,7 +42,7 @@ interface PreparedImage {
 
 export class VlmDetector {
   constructor(
-    private readonly client: OllamaVlmClient,
+    private readonly client: VlmClient,
     private readonly opts: VlmDetectorOptions,
   ) {}
 

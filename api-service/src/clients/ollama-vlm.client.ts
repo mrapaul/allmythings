@@ -1,4 +1,5 @@
 import { logger } from '../utils/logger';
+import { DetectorUnavailableError, type VlmClient } from './vlm-client';
 
 /**
  * Thin client for a self-hosted Ollama vision model.
@@ -8,7 +9,7 @@ import { logger } from '../utils/logger';
  * Detection/parsing logic lives in the VlmDetector, not here.
  */
 
-export class OllamaUnavailableError extends Error {
+export class OllamaUnavailableError extends DetectorUnavailableError {
   constructor(message: string) {
     super(message);
     this.name = 'OllamaUnavailableError';
@@ -31,7 +32,7 @@ interface OllamaGenerateResponse {
   error?: string;
 }
 
-export class OllamaVlmClient {
+export class OllamaVlmClient implements VlmClient {
   private readonly baseUrl: string;
   private readonly model: string;
   private readonly timeoutMs: number;

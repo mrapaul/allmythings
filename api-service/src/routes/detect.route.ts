@@ -12,7 +12,7 @@ import {
 } from '../clients/pipeline.client';
 import { mapSceneToItems } from './detect.mapper';
 import type { VlmDetector } from '../services/vlm-detector';
-import { OllamaUnavailableError } from '../clients/ollama-vlm.client';
+import { DetectorUnavailableError } from '../clients/vlm-client';
 
 const MAX_IMAGE_SIZE = 10 * 1024 * 1024;
 const SUPPORTED = new Set(['image/jpeg', 'image/png', 'image/webp']);
@@ -152,7 +152,7 @@ async function runVlmPath(args: VlmPathArgs) {
     const items = await vlmDetector.detect(frame.buffer);
     return reply.code(200).send({ items });
   } catch (err) {
-    if (err instanceof OllamaUnavailableError) {
+    if (err instanceof DetectorUnavailableError) {
       return reply.code(503).send({ error: 'detector_unavailable', message: err.message });
     }
     throw err;
