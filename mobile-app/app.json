@@ -30,17 +30,9 @@
       },
       "package": "com.codesparktech.homeinventory",
       "versionCode": 1,
-      "permissions": [
-        "android.permission.CAMERA",
-        "android.permission.READ_MEDIA_IMAGES"
-      ]
+      "permissions": ["android.permission.CAMERA", "android.permission.READ_MEDIA_IMAGES"]
     },
-    "plugins": [
-      "expo-router",
-      "expo-font",
-      "expo-sqlite",
-      "@sentry/react-native"
-    ],
+    "plugins": ["expo-router", "expo-font", "expo-sqlite", "@sentry/react-native"],
     "experiments": {
       "typedRoutes": true
     },
