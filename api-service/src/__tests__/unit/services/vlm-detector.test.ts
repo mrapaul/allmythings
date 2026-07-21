@@ -190,6 +190,87 @@ describe('VlmDetector', () => {
     });
   });
 
+  it('runs tile passes for a dense room scene and merges mapped items', async () => {
+    // Room with 2 listed items but an estimate of 10 → tiling triggers.
+    const pass1 = JSON.stringify({
+      scene: {
+        type: 'room',
+        estimated_total_items: 10,
+        photo_quality: { verdict: 'ok', reason: null },
+      },
+      items: JSON.parse(PASS1).items,
+    });
+    // One physical rug sitting in the overlap band between the two top tiles.
+    // Prepared image is 800x600 → tiles are 460x345 at (0,0), (340,0), (0,255),
+    // (340,255). Global rug box x:[350,450] y:[100,200] expressed tile-locally:
+    const rugSeenFromTile0 = {
+      object: 'white area rug',
+      category: 'Textile',
+      bounding_box: { x_min: 350 / 460, y_min: 100 / 345, x_max: 450 / 460, y_max: 200 / 345 },
+      tags: { color: 'white' },
+    };
+    const rugSeenFromTile1 = {
+      object: 'white area rug',
+      category: 'Textile',
+      bounding_box: { x_min: 10 / 460, y_min: 100 / 345, x_max: 110 / 460, y_max: 200 / 345 },
+      tags: { color: 'white' },
+    };
+    const emptyTile = JSON.stringify({ items: [] });
+    const prompts: string[] = [];
+    let call = 0;
+    const responses = [
+      pass1,
+      JSON.stringify({ items: [rugSeenFromTile0] }), // tile (0,0)
+      JSON.stringify({ items: [rugSeenFromTile1] }), // tile (340,0) — overlap duplicate
+      emptyTile, // tile (0,255)
+      emptyTile, // tile (340,255)
+      JSON.stringify({ new_items: [] }), // pass 2 audit
+    ];
+    const client = {
+      modelName: 'stub',
+      generateJson: async (prompt: string): Promise<string> => {
+        prompts.push(prompt);
+        const r = responses[call] ?? '{"items":[]}';
+        call += 1;
+        return r;
+      },
+    };
+    const detector = new VlmDetector(client, { twoPass: true, maxImageSize: 1024, coordMode: 'auto' });
+    const { items } = await detector.detect(image);
+    // 1 full-frame pass + 4 tiles + 1 audit
+    expect(prompts).toHaveLength(6);
+    const rugs = items.filter((i) => i.label === 'white area rug');
+    expect(rugs).toHaveLength(1);
+    // Tile-local coords must have been mapped into full-image space (both
+    // duplicates land on the same global box, which is why dedupe collapses
+    // them). The rug came from an interior tile so its x cannot still be 0.5.
+    expect(rugs[0]!.box.x).toBeGreaterThan(0);
+    expect(rugs[0]!.box.x + rugs[0]!.box.width).toBeLessThanOrEqual(1);
+    expect(items.map((i) => i.label)).toContain('sectional sofa');
+  });
+
+  it('does not tile compact scenes', async () => {
+    const pass1 = JSON.stringify({
+      scene: {
+        type: 'shelf',
+        estimated_total_items: 30,
+        photo_quality: { verdict: 'ok', reason: null },
+      },
+      items: JSON.parse(PASS1).items,
+    });
+    let calls = 0;
+    const client = {
+      modelName: 'stub',
+      generateJson: async (): Promise<string> => {
+        calls += 1;
+        return calls === 1 ? pass1 : '{"new_items":[]}';
+      },
+    };
+    const detector = new VlmDetector(client, { twoPass: true, maxImageSize: 1024, coordMode: 'auto' });
+    await detector.detect(image);
+    expect(calls).toBe(2); // pass 1 + audit only, no tiles
+  });
+
   it('tolerates malformed JSON by yielding no items', async () => {
     const detector = new VlmDetector(makeClient(['not json at all']), {
       twoPass: false,

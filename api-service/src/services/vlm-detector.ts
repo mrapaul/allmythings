@@ -17,6 +17,7 @@ import {
   type CoordMode,
   type SceneInfo,
 } from './vlm-detector.parse';
+import { shouldTile, computeTileRects, mapTileBoxToFull } from './vlm-detector.tiling';
 
 /**
  * Two-pass VLM home-inventory detector.
@@ -51,6 +52,8 @@ interface PreparedImage {
   base64: string;
   width: number;
   height: number;
+  /** Resized JPEG bytes, kept so tile passes can crop without re-decoding the original. */
+  buffer: Buffer;
 }
 
 export class VlmDetector {
@@ -105,6 +108,11 @@ export class VlmDetector {
       }
     }
 
+    // --- Tile passes: only for dense wide-room scenes (model-output-driven) ---
+    if (shouldTile(scene, seen.length)) {
+      yield* this.tilePasses(img, seen);
+    }
+
     if (!this.opts.twoPass) return;
 
     // --- Pass 2: audit for missed items ---
@@ -128,6 +136,57 @@ export class VlmDetector {
         { err: err instanceof Error ? err.message : String(err) },
         'vlm_pass2_failed_continuing',
       );
+    }
+  }
+
+  /**
+   * Run one detection pass per overlapping tile, map boxes back into
+   * full-image coordinates, and yield only items that survive dedupe against
+   * everything already seen. A failed tile is skipped, never fatal.
+   */
+  private async *tilePasses(
+    img: PreparedImage,
+    seen: DetectedItem[],
+  ): AsyncGenerator<DetectorEvent> {
+    const rects = computeTileRects(img.width, img.height);
+    logger.info({ tiles: rects.length }, 'vlm_tiling_started');
+    for (const rect of rects) {
+      try {
+        const tileJpeg = await sharp(img.buffer)
+          .extract(rect)
+          .jpeg({ quality: 85 })
+          .toBuffer();
+        const tileImg: PreparedImage = {
+          base64: tileJpeg.toString('base64'),
+          width: rect.width,
+          height: rect.height,
+          buffer: tileJpeg,
+        };
+        const raw = await this.client.generateJson(
+          buildPass1Prompt(rect.width, rect.height),
+          tileImg.base64,
+        );
+        const parsed = this.parsePass(raw, tileImg, 'items');
+        let yielded = 0;
+        for (const item of parsed.detected) {
+          const mapped: DetectedItem = {
+            ...item,
+            box: mapTileBoxToFull(item.box, rect, img.width, img.height),
+          };
+          const deduped = dedupeItems([...seen, mapped]);
+          if (deduped.length > seen.length) {
+            seen.push(mapped);
+            yielded += 1;
+            yield { kind: 'item', item: mapped };
+          }
+        }
+        logger.info({ rect, found: parsed.detected.length, yielded }, 'vlm_tile_complete');
+      } catch (err: unknown) {
+        logger.warn(
+          { rect, err: err instanceof Error ? err.message : String(err) },
+          'vlm_tile_failed_continuing',
+        );
+      }
     }
   }
 
@@ -212,6 +271,7 @@ export class VlmDetector {
       base64: data.toString('base64'),
       width: info.width,
       height: info.height,
+      buffer: data,
     };
   }
 }
