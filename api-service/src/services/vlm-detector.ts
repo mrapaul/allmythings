@@ -48,6 +48,12 @@ export interface DetectionResult {
   items: DetectedItem[];
 }
 
+/** Public surface every detector (single-backend or composed) exposes. */
+export interface Detector {
+  detect(imageBuffer: Buffer): Promise<DetectionResult>;
+  detectStream(imageBuffer: Buffer): AsyncGenerator<DetectorEvent>;
+}
+
 interface PreparedImage {
   base64: string;
   width: number;

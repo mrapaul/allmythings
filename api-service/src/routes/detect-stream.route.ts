@@ -11,7 +11,7 @@ import {
 } from '../clients/pipeline.client';
 import { mapPipelineDetectionToItem } from './detect.mapper';
 import { encodeSseEvent, SSE_KEEPALIVE } from '../utils/sse';
-import type { VlmDetector } from '../services/vlm-detector';
+import type { Detector } from '../services/vlm-detector';
 import { DetectorUnavailableError } from '../clients/vlm-client';
 
 const MAX_IMAGE_SIZE = 10 * 1024 * 1024;
@@ -22,7 +22,7 @@ export async function detectStreamRoute(app: FastifyInstance): Promise<void> {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const pipeline = (app as any).pipeline as PipelineClient | undefined;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const vlmDetector = (app as any).vlmDetector as VlmDetector | undefined;
+  const vlmDetector = (app as any).vlmDetector as Detector | undefined;
 
   app.post(
     '/v1/detect/stream',

@@ -4,6 +4,8 @@ export interface EnvConfig {
   // Active detector path. 'vlm' = self-hosted two-pass VLM (Ollama) directly
   // behind /v1/detect; 'pipeline' = legacy Dagster pipeline-service sidecar.
   detector: 'vlm' | 'pipeline';
+  // Which VLM backend leads the fallback chain (DETECTOR=vlm path).
+  detectorPrimary: 'gemini' | 'ollama';
   detectionServiceUrl: string;
   detectionTimeoutMs: number;
   detectionBoxThreshold: number;
@@ -57,13 +59,14 @@ export const envConfig: EnvConfig = {
   port: parseInt(process.env.PORT || '14000', 10),
   nodeEnv: process.env.NODE_ENV || 'development',
   detector: process.env.DETECTOR === 'pipeline' ? 'pipeline' : 'vlm',
+  detectorPrimary: process.env.DETECTOR_PRIMARY === 'ollama' ? 'ollama' : 'gemini',
   detectionServiceUrl: process.env.DETECTION_SERVICE_URL || 'http://localhost:14001',
   detectionTimeoutMs: parseInt(process.env.DETECTION_TIMEOUT_MS || '30000', 10),
   detectionBoxThreshold: parseFloat(process.env.DETECTION_BOX_THRESHOLD || '0.2'),
   detectionTextThreshold: parseFloat(process.env.DETECTION_TEXT_THRESHOLD || '0.2'),
   detectionPrompt: process.env.DETECTION_PROMPT || 'object . item . furniture . household item . appliance . electronic . decor',
   geminiApiKey: process.env.GEMINI_API_KEY || '',
-  geminiModel: process.env.GEMINI_MODEL || 'gemini-1.5-flash',
+  geminiModel: process.env.GEMINI_MODEL || 'gemini-2.5-flash',
   classificationTimeoutMs: parseInt(process.env.CLASSIFICATION_TIMEOUT_MS || '300000', 10),
   classificationMinConfidence: parseFloat(process.env.CLASSIFICATION_MIN_CONFIDENCE || '0.5'),
   ollamaBaseUrl: process.env.OLLAMA_BASE_URL || 'http://localhost:11434',

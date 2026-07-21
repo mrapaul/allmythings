@@ -11,7 +11,7 @@ import {
   QueueFullError,
 } from '../clients/pipeline.client';
 import { mapSceneToItems } from './detect.mapper';
-import type { VlmDetector } from '../services/vlm-detector';
+import type { Detector } from '../services/vlm-detector';
 import { DetectorUnavailableError } from '../clients/vlm-client';
 
 const MAX_IMAGE_SIZE = 10 * 1024 * 1024;
@@ -22,7 +22,7 @@ export async function detectRoute(app: FastifyInstance): Promise<void> {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const pipeline = (app as any).pipeline as PipelineClient | undefined;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const vlmDetector = (app as any).vlmDetector as VlmDetector | undefined;
+  const vlmDetector = (app as any).vlmDetector as Detector | undefined;
 
   app.post(
     '/v1/detect',
@@ -128,7 +128,7 @@ export async function detectRoute(app: FastifyInstance): Promise<void> {
 
 interface VlmPathArgs {
   reply: FastifyReply;
-  vlmDetector: VlmDetector;
+  vlmDetector: Detector;
   frame: { buffer: Buffer; mime: string; sha256: string };
 }
 
