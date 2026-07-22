@@ -33,7 +33,7 @@ describe('OllamaVlmClient retry', () => {
     expect(fetchMock).toHaveBeenCalledTimes(2);
   });
 
-  it('fails after the retry also times out', async () => {
+  it('fails after all retries also time out', async () => {
     const fetchMock = fetch as unknown as ReturnType<typeof vi.fn>;
     const abortErr = Object.assign(new Error('aborted'), { name: 'AbortError' });
     fetchMock.mockRejectedValue(abortErr);
@@ -41,7 +41,7 @@ describe('OllamaVlmClient retry', () => {
     await expect(makeClient().generateJson('p', 'img')).rejects.toBeInstanceOf(
       OllamaUnavailableError,
     );
-    expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(fetchMock).toHaveBeenCalledTimes(3);
   });
 
   it('does not retry non-transient errors (4xx)', async () => {

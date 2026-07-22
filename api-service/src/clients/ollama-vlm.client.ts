@@ -64,17 +64,24 @@ export class OllamaVlmClient implements VlmClient {
    * anything else throws OllamaUnavailableError immediately.
    */
   async generateJson(prompt: string, imageBase64: string): Promise<string> {
-    try {
-      return await this.generateJsonOnce(prompt, imageBase64);
-    } catch (err: unknown) {
-      const transient =
-        err instanceof OllamaUnavailableError &&
-        /timed out|returned 5\d\d/.test(err.message);
-      if (!transient) throw err;
-      logger.warn({ model: this.model }, 'ollama_transient_failure_retrying_once');
-      await new Promise((r) => setTimeout(r, this.retryDelayMs));
-      return this.generateJsonOnce(prompt, imageBase64);
+    const MAX_ATTEMPTS = 3; // free-tier congestion regularly eats one retry
+    let lastErr: unknown;
+    for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
+      try {
+        return await this.generateJsonOnce(prompt, imageBase64);
+      } catch (err: unknown) {
+        const transient =
+          err instanceof OllamaUnavailableError &&
+          /timed out|returned 5\d\d/.test(err.message);
+        if (!transient) throw err;
+        lastErr = err;
+        if (attempt < MAX_ATTEMPTS) {
+          logger.warn({ model: this.model, attempt }, 'ollama_transient_failure_retrying');
+          await new Promise((r) => setTimeout(r, this.retryDelayMs * attempt));
+        }
+      }
     }
+    throw lastErr;
   }
 
   private async generateJsonOnce(prompt: string, imageBase64: string): Promise<string> {
