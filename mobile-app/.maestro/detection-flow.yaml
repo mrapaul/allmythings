@@ -42,8 +42,10 @@ tags:
 # Items were detected and rendered as rows with editable tags.
 - assertVisible: "Save remaining .*"
 
-# Save everything to the inventory and land back home.
+# Save everything to the inventory and land back home with items showing.
 - tapOn: "Save remaining .*"
 - extendedWaitUntil:
-    visible: "A blank canvas|items|item"
+    visible: "Collection"
     timeout: 60000
+# The saved items render as inventory cards with category chips.
+- assertVisible: "Collection"
