@@ -21,8 +21,11 @@ describe('shouldTile', () => {
   });
 
   it('tiles a room when the model estimates many more items than it listed', () => {
-    expect(shouldTile(scene({ estimatedTotalItems: 10 }), 10 - TILE_TRIGGER_MISSING)).toBe(true);
-    expect(shouldTile(scene({ estimatedTotalItems: 10 }), 10 - TILE_TRIGGER_MISSING + 1)).toBe(
+    // Keep counts below TILE_TRIGGER_MIN_ITEMS so only the estimate-gap
+    // branch is exercised.
+    const est = TILE_TRIGGER_MIN_ITEMS - 2;
+    expect(shouldTile(scene({ estimatedTotalItems: est }), est - TILE_TRIGGER_MISSING)).toBe(true);
+    expect(shouldTile(scene({ estimatedTotalItems: est }), est - TILE_TRIGGER_MISSING + 1)).toBe(
       false,
     );
   });

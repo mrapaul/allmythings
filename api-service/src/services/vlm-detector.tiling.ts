@@ -22,9 +22,9 @@ export const TILE_GRID = 2;
 /** Overlap between adjacent tiles, as a fraction of the full dimension. */
 export const TILE_OVERLAP = 0.15;
 /** Tile when pass 1 already found at least this many items in a room scene. */
-export const TILE_TRIGGER_MIN_ITEMS = 12;
+export const TILE_TRIGGER_MIN_ITEMS = 8;
 /** Tile when the model estimates at least this many items beyond what it listed. */
-export const TILE_TRIGGER_MISSING = 4;
+export const TILE_TRIGGER_MISSING = 3;
 
 /**
  * Model-output-driven tiling decision: only wide room scenes, and only when

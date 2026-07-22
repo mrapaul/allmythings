@@ -1,0 +1,109 @@
+{
+  "api:production": {
+    "perFixture": [
+      {
+        "fixture": "1776173015803",
+        "recall": 91.7,
+        "itemCount": 33,
+        "expectedMin": 8,
+        "expectedMax": 15,
+        "countWithinRange": false,
+        "matchedCount": 11,
+        "missed": [
+          "dark navy couch / sofa"
+        ],
+        "elapsedMs": 537279,
+        "attempts": 1
+      },
+      {
+        "fixture": "1776174188547",
+        "recall": 100,
+        "itemCount": 38,
+        "expectedMin": 7,
+        "expectedMax": 13,
+        "countWithinRange": false,
+        "matchedCount": 11,
+        "missed": [],
+        "elapsedMs": 673984,
+        "attempts": 1
+      },
+      {
+        "fixture": "1776175427607",
+        "recall": 92.9,
+        "itemCount": 32,
+        "expectedMin": 10,
+        "expectedMax": 16,
+        "countWithinRange": false,
+        "matchedCount": 13,
+        "missed": [
+          "gold candle holder"
+        ],
+        "elapsedMs": 684932,
+        "attempts": 1
+      },
+      {
+        "fixture": "1776176976030",
+        "recall": 76.9,
+        "itemCount": 15,
+        "expectedMin": 8,
+        "expectedMax": 14,
+        "countWithinRange": false,
+        "matchedCount": 10,
+        "missed": [
+          "snake plant small",
+          "gold candle holder",
+          "wooden sideboard / cabinet"
+        ],
+        "elapsedMs": 50630,
+        "attempts": 1
+      },
+      {
+        "fixture": "bedroom_01",
+        "recall": 100,
+        "itemCount": 58,
+        "expectedMin": 9,
+        "expectedMax": 18,
+        "countWithinRange": false,
+        "matchedCount": 14,
+        "missed": [],
+        "elapsedMs": 1523441,
+        "attempts": 1
+      },
+      {
+        "fixture": "dining_room_01",
+        "recall": 87.5,
+        "itemCount": 9,
+        "expectedMin": 5,
+        "expectedMax": 10,
+        "countWithinRange": true,
+        "matchedCount": 7,
+        "missed": [
+          "slippers"
+        ],
+        "elapsedMs": 209096,
+        "attempts": 1
+      },
+      {
+        "fixture": "living_room_02",
+        "recall": 94.4,
+        "itemCount": 69,
+        "expectedMin": 12,
+        "expectedMax": 24,
+        "countWithinRange": false,
+        "matchedCount": 17,
+        "missed": [
+          "computer mouse"
+        ],
+        "elapsedMs": 1138570,
+        "attempts": 1
+      }
+    ],
+    "aggregate": {
+      "avgRecall": 91.9,
+      "avgItems": 36.3,
+      "avgLatencyMs": 688276,
+      "failures": 0,
+      "n": 7
+    }
+  }
+}
