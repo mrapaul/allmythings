@@ -71,7 +71,7 @@ start-deps: ## Just the deps (obs + Temporal + Ollama) — you run the api yours
 	@if ! pgrep -x ollama >/dev/null; then \
 		mkdir -p /tmp/allmythings && \
 		echo "${GREEN}Starting Ollama in background (logs: /tmp/allmythings/ollama.log)...${NC}" && \
-		ollama serve >/tmp/allmythings/ollama.log 2>&1 & \
+		OLLAMA_HOST=127.0.0.1:11434 ollama serve >/tmp/allmythings/ollama.log 2>&1 & \
 	else \
 		echo "${YELLOW}Ollama already running.${NC}"; \
 	fi

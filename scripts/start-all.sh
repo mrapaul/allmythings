@@ -77,7 +77,8 @@ cmd_start() {
   # ── Stage 3: Ollama + required models ────────────────────────────────────
   log_info "Stage 3: Ollama + required models..."
   if ! pgrep -x ollama >/dev/null; then
-    ollama serve >>"$RUN_DIR/ollama.log" 2>&1 &
+    # Force localhost bind: the login shell may export a stale remote OLLAMA_HOST.
+    OLLAMA_HOST=127.0.0.1:11434 ollama serve >>"$RUN_DIR/ollama.log" 2>&1 &
     local ollama_elapsed=0
     while [ "$ollama_elapsed" -lt 30 ]; do
       if curl -sf http://localhost:11434/api/tags >/dev/null 2>&1; then break; fi
@@ -86,17 +87,20 @@ cmd_start() {
   fi
   wait_http http://localhost:11434/api/tags 10 "Ollama" || exit 1
 
-  for MODEL in qwen2.5vl:7b qwen2.5vl:3b moondream:latest; do
+  # Active detector model from api-service/.env (fallback: shipped default).
+  ACTIVE_MODEL="$(grep -E '^OLLAMA_MODEL=' "$PROJECT_ROOT/api-service/.env" 2>/dev/null | cut -d= -f2 || true)"
+  ACTIVE_MODEL="${ACTIVE_MODEL:-gemma4:31b-cloud}"
+  for MODEL in "$ACTIVE_MODEL"; do
     MODEL_SHORT="${MODEL%:latest}"
-    if ! ollama list | awk 'NR>1 {print $1}' | grep -qx "$MODEL_SHORT" \
-         && ! ollama list | awk 'NR>1 {print $1}' | grep -qx "$MODEL"; then
+    if ! OLLAMA_HOST=127.0.0.1:11434 ollama list | awk 'NR>1 {print $1}' | grep -qx "$MODEL_SHORT" \
+         && ! OLLAMA_HOST=127.0.0.1:11434 ollama list | awk 'NR>1 {print $1}' | grep -qx "$MODEL"; then
       log_info "Pulling $MODEL..."
-      ollama pull "$MODEL"
+      OLLAMA_HOST=127.0.0.1:11434 ollama pull "$MODEL"
     fi
     log_ok "model: $MODEL"
   done
 
-  BIG_MODEL=$(ollama ps 2>/dev/null | awk 'NR>1 && $3 ~ /GB/ && $3+0 > 10 {print $1}' | head -1 || true)
+  BIG_MODEL=$(OLLAMA_HOST=127.0.0.1:11434 ollama ps 2>/dev/null | awk 'NR>1 && $3 ~ /GB/ && $3+0 > 10 {print $1}' | head -1 || true)
   if [ -n "$BIG_MODEL" ]; then
     log_warn "Large model $BIG_MODEL is loaded (>10GB). Consider: ollama stop $BIG_MODEL"
   fi
