@@ -25,6 +25,8 @@ export interface OllamaVlmClientOptions {
   /** Max tokens to generate per pass. */
   numPredict?: number;
   temperature?: number;
+  /** Pause before the single retry of a transient failure (timeout/5xx). */
+  retryDelayMs?: number;
 }
 
 interface OllamaGenerateResponse {
@@ -39,6 +41,7 @@ export class OllamaVlmClient implements VlmClient {
   private readonly keepAlive: string;
   private readonly numPredict: number;
   private readonly temperature: number;
+  private readonly retryDelayMs: number;
 
   constructor(opts: OllamaVlmClientOptions) {
     this.baseUrl = opts.baseUrl.replace(/\/$/, '');
@@ -47,6 +50,7 @@ export class OllamaVlmClient implements VlmClient {
     this.keepAlive = opts.keepAlive ?? '5m';
     this.numPredict = opts.numPredict ?? 8192;
     this.temperature = opts.temperature ?? 0.1;
+    this.retryDelayMs = opts.retryDelayMs ?? 5_000;
   }
 
   get modelName(): string {
@@ -55,10 +59,25 @@ export class OllamaVlmClient implements VlmClient {
 
   /**
    * Send a single prompt + base64 JPEG to the model and return the raw
-   * JSON-constrained text response. Throws OllamaUnavailableError on
-   * transport failure, timeout, or non-2xx status.
+   * JSON-constrained text response. Transient failures (timeout, 5xx —
+   * routine on the free cloud tier under load) are retried exactly once;
+   * anything else throws OllamaUnavailableError immediately.
    */
   async generateJson(prompt: string, imageBase64: string): Promise<string> {
+    try {
+      return await this.generateJsonOnce(prompt, imageBase64);
+    } catch (err: unknown) {
+      const transient =
+        err instanceof OllamaUnavailableError &&
+        /timed out|returned 5\d\d/.test(err.message);
+      if (!transient) throw err;
+      logger.warn({ model: this.model }, 'ollama_transient_failure_retrying_once');
+      await new Promise((r) => setTimeout(r, this.retryDelayMs));
+      return this.generateJsonOnce(prompt, imageBase64);
+    }
+  }
+
+  private async generateJsonOnce(prompt: string, imageBase64: string): Promise<string> {
     const url = `${this.baseUrl}/api/generate`;
     const body = {
       model: this.model,
