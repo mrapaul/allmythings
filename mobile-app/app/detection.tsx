@@ -567,7 +567,7 @@ export default function DetectionScreen() {
                   <Text style={[styles.legend, { color: colors.mutedForeground }]}>
                     {isStreaming && rows.length === 0
                       ? 'AI is scanning your photo…'
-                      : 'Tap a tag to rename · ✓ saves · drag on the photo to add a missed item'}
+                      : 'Tap a label to edit · + adds a label · drag on the photo to box a missed item'}
                   </Text>
                 </View>
 
@@ -636,6 +636,7 @@ export default function DetectionScreen() {
                 accessibilityLabel={
                   pendingValid > 0 ? `Save remaining ${pendingValid} items and close` : 'Done'
                 }
+                testID="save-all"
                 onPress={() => {
                   void saveAllPending();
                 }}
@@ -654,19 +655,17 @@ export default function DetectionScreen() {
                 ) : (
                   <Feather
                     name={pendingValid > 0 ? 'check-circle' : 'check'}
-                    size={20}
+                    size={22}
                     color={colors.primaryForeground}
                   />
                 )}
-                <Text style={[styles.saveBtnLabel, { color: colors.primaryForeground }]}>
-                  {isBulkSaving
-                    ? 'Saving…'
-                    : pendingValid > 0
-                      ? `Save remaining ${pendingValid}`
-                      : savedCount > 0
-                        ? 'Done'
-                        : 'Close'}
-                </Text>
+                {pendingValid > 0 && !isBulkSaving && (
+                  <View style={[styles.saveCountBadge, { backgroundColor: colors.card }]}>
+                    <Text style={[styles.saveCountText, { color: colors.primary }]}>
+                      {pendingValid}
+                    </Text>
+                  </View>
+                )}
               </Pressable>
             </View>
           </View>
@@ -951,10 +950,17 @@ const styles = StyleSheet.create({
     fontSize: 12,
     letterSpacing: 0.2,
   },
-  saveBtnLabel: {
-    fontFamily: 'Inter_600SemiBold',
-    fontSize: 14,
-    letterSpacing: 0.2,
+  saveCountBadge: {
+    minWidth: 22,
+    height: 22,
+    borderRadius: 11,
+    paddingHorizontal: 5,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  saveCountText: {
+    fontFamily: 'Inter_700Bold',
+    fontSize: 12,
   },
   primaryBtn: {
     marginTop: 24,

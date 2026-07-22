@@ -33,17 +33,22 @@ tags:
 # Detection screen must receive the image (regression: "No image selected").
 - assertNotVisible: "No image selected"
 
-# The stream takes minutes on the free cloud model. Wait for review state:
-# either the item-count title ("N items") or the streaming counter.
+# Detection takes minutes on the free cloud model. The icon-only save-all
+# button appears once at least one item row has rendered.
 - extendedWaitUntil:
-    visible: "Save remaining .*"
+    visible:
+      id: "save-all"
     timeout: 900000
 
-# Items were detected and rendered as rows with editable tags.
-- assertVisible: "Save remaining .*"
+# Rows carry icon-only actions and the add-label chip.
+- assertVisible:
+    id: "row-save-0"
+- assertVisible:
+    id: "add-label-chip"
 
 # Save everything to the inventory and land back home with items showing.
-- tapOn: "Save remaining .*"
+- tapOn:
+    id: "save-all"
 - extendedWaitUntil:
     visible: "Collection"
     timeout: 60000

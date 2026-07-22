@@ -115,6 +115,8 @@ export function AddChipButton({ onAdd }: AddProps) {
   const colors = useColors();
   return (
     <Pressable
+      accessibilityLabel="Add label"
+      testID="add-label-chip"
       onPress={() => {
         if (Platform.OS !== 'web') Haptics.selectionAsync();
         onAdd();
@@ -122,13 +124,12 @@ export function AddChipButton({ onAdd }: AddProps) {
       style={({ pressed }) => [
         styles.addChip,
         {
-          borderColor: colors.border,
+          borderColor: colors.primary,
           opacity: pressed ? 0.7 : 1,
         },
       ]}
     >
-      <Feather name="plus" size={12} color={colors.mutedForeground} />
-      <Text style={[styles.addLabel, { color: colors.mutedForeground }]}>Add tag</Text>
+      <Feather name="plus" size={14} color={colors.primary} />
     </Pressable>
   );
 }
@@ -184,12 +185,8 @@ const styles = StyleSheet.create({
     borderStyle: 'dashed',
     marginRight: 6,
     marginBottom: 5,
-    gap: 4,
-  },
-  addLabel: {
-    fontFamily: 'Inter_500Medium',
-    fontSize: 11,
-    letterSpacing: 0.1,
+    justifyContent: 'center',
+    minWidth: 34,
   },
 });
 
