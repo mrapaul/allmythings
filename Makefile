@@ -207,6 +207,13 @@ eval: ## Run eval harness on all configured candidate models
 eval-ci: ## Run eval gated by eval/baseline.json
 	node eval/harness.mjs gemini:gemini-2.5-flash gemma4:31b-cloud --ci
 
+e2e-mobile: ## Automated on-simulator detection E2E (Maestro) with seeded interior photos
+	@command -v maestro >/dev/null || export PATH="$$HOME/.maestro-cli/maestro/bin:$$PATH"; \
+	SIM=$$(xcrun simctl list devices booted | grep -oE '[0-9A-F-]{36}' | head -1); \
+	test -n "$$SIM" || { echo "Boot a simulator and install the app first (see docs)"; exit 1; }; \
+	xcrun simctl addmedia $$SIM eval/fixtures/1776173015803.jpg eval/fixtures/1776176976030.jpg test_images/living_room/living_room_01.jpg test_images/kitchen/kitchen_01.jpg 2>/dev/null; \
+	PATH="$$HOME/.maestro-cli/maestro/bin:$$PATH" maestro test mobile-app/.maestro/detection-flow.yaml
+
 dataset-export: ## Export the corrections flywheel as a COCO dataset under datasets/
 	cd api-service && npx tsx scripts/dataset-export.ts
 

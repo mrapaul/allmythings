@@ -1,6 +1,6 @@
 import { type ExpoSQLiteDatabase, drizzle } from 'drizzle-orm/expo-sqlite';
-import { migrate } from 'drizzle-orm/expo-sqlite/migrator';
 import { type SQLiteDatabase, openDatabaseSync } from 'expo-sqlite';
+import { type MigrationsBundle, runMigrationsSync } from './migrate-sync';
 import migrations from './migrations/migrations';
 import * as schema from './schema';
 import { FTS_STATEMENTS } from './triggers';
@@ -13,7 +13,9 @@ export function getDb(): ExpoSQLiteDatabase<typeof schema> {
     enableChangeListener: true,
   });
   const db = drizzle(sqlite, { schema, logger: false });
-  migrate(db, migrations);
+  // Synchronous: the schema must exist before the FTS DDL below and before
+  // any context issues its first query (fresh-install crash otherwise).
+  runMigrationsSync(sqlite, migrations as MigrationsBundle);
 
   // FTS5 virtual table + sync triggers. Run via expo-sqlite's execSync, which
   // handles full DDL statements (including CREATE TRIGGER ... BEGIN ... END);

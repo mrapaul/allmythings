@@ -1,0 +1,91 @@
+{
+  "api:production": {
+    "perFixture": [
+      {
+        "fixture": "1776173015803",
+        "recall": 100,
+        "itemCount": 32,
+        "expectedMin": 8,
+        "expectedMax": 15,
+        "countWithinRange": false,
+        "matchedCount": 12,
+        "missed": [],
+        "elapsedMs": 893611,
+        "attempts": 1
+      },
+      {
+        "fixture": "1776174188547",
+        "recall": 0,
+        "itemCount": 0,
+        "expectedMin": 7,
+        "expectedMax": 13,
+        "countWithinRange": false,
+        "matchedCount": 0,
+        "missed": [
+          "tan leather cane-back office chair",
+          "snake plant (sansevieria)",
+          "small snake plant",
+          "two-tone ceramic planter",
+          "gold wire plant stand",
+          "wooden stool (plant support)",
+          "sheer white linen curtains",
+          "white venetian window blinds",
+          "dark navy couch / sofa",
+          "framed painting / artwork",
+          "white area rug"
+        ],
+        "elapsedMs": 300085,
+        "attempts": 1
+      },
+      {
+        "fixture": "1776175427607",
+        "recall": 0,
+        "itemCount": 0,
+        "expectedMin": 10,
+        "expectedMax": 16,
+        "countWithinRange": false,
+        "matchedCount": 0,
+        "missed": [
+          "tan leather cane-back office chair",
+          "black throw blanket",
+          "snake plant (sansevieria) large",
+          "snake plant small",
+          "two-tone ceramic planter",
+          "gold wire plant stand",
+          "wooden stool",
+          "gold candle holder",
+          "wooden side table",
+          "sheer white linen curtains",
+          "white venetian window blinds",
+          "dark navy couch / sofa",
+          "framed painting of figures",
+          "decorative wall plate"
+        ],
+        "elapsedMs": 300045,
+        "attempts": 1
+      },
+      {
+        "fixture": "1776176976030",
+        "recall": 84.6,
+        "itemCount": 27,
+        "expectedMin": 8,
+        "expectedMax": 14,
+        "countWithinRange": false,
+        "matchedCount": 11,
+        "missed": [
+          "gold candle holder",
+          "dark navy couch / sofa"
+        ],
+        "elapsedMs": 939163,
+        "attempts": 1
+      }
+    ],
+    "aggregate": {
+      "avgRecall": 46.1,
+      "avgItems": 14.8,
+      "avgLatencyMs": 608226,
+      "failures": 0,
+      "n": 4
+    }
+  }
+}

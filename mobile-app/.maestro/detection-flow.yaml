@@ -1,0 +1,49 @@
+appId: com.codesparktech.homeinventory
+tags:
+  - e2e
+  - detection
+---
+# Full detection E2E on a simulator seeded with complex interior photos
+# (xcrun simctl addmedia — see Makefile target e2e-mobile). Exercises:
+# library pick → detection stream against the LIVE api-service → review rows
+# → save to inventory. The wait budget is large because the free-tier cloud
+# model takes minutes on dense room scenes.
+
+- launchApp:
+    clearState: true
+    permissions:
+      photos: allow
+
+# Home screen renders (empty state on a clean install).
+- assertVisible: "A blank canvas"
+
+# Open the system photo picker via the library button.
+- tapOn:
+    id: "action-capsule-library"
+
+# PHPicker: tap the first (most recent) photo cell. The picker exposes photos
+# as accessibility images; tapping the first image element picks our seeded
+# complex interior shot.
+- extendedWaitUntil:
+    visible: "Photos"
+    timeout: 15000
+- tapOn:
+    point: "17%,32%"
+
+# Detection screen must receive the image (regression: "No image selected").
+- assertNotVisible: "No image selected"
+
+# The stream takes minutes on the free cloud model. Wait for review state:
+# either the item-count title ("N items") or the streaming counter.
+- extendedWaitUntil:
+    visible: "Save remaining .*"
+    timeout: 900000
+
+# Items were detected and rendered as rows with editable tags.
+- assertVisible: "Save remaining .*"
+
+# Save everything to the inventory and land back home.
+- tapOn: "Save remaining .*"
+- extendedWaitUntil:
+    visible: "A blank canvas|items|item"
+    timeout: 60000
