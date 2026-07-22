@@ -242,7 +242,12 @@ async function main() {
     ? JSON.parse(await fs.readFile(path.join(EVAL_ROOT, 'baseline.json'), 'utf-8').catch(() => '{}'))
     : null;
 
-  const fixtureFiles = (await fs.readdir(FIXTURES)).filter((f) => f.endsWith('.jpg')).sort();
+  // FIXTURES=name1,name2 narrows the run for fast spot-checks.
+  const only = (process.env.FIXTURES ?? '').split(',').map((s) => s.trim()).filter(Boolean);
+  const fixtureFiles = (await fs.readdir(FIXTURES))
+    .filter((f) => f.endsWith('.jpg'))
+    .filter((f) => only.length === 0 || only.includes(f.replace('.jpg', '')))
+    .sort();
   const oracles = {};
   for (const f of fixtureFiles) {
     const name = f.replace('.jpg', '');

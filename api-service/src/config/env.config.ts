@@ -73,7 +73,7 @@ export const envConfig: EnvConfig = {
   ollamaModel: process.env.OLLAMA_MODEL || 'qwen2.5vl:7b',
   ollamaEnabled: process.env.OLLAMA_ENABLED !== 'false',
   vlmTwoPass: process.env.VLM_TWO_PASS !== 'false',
-  vlmMaxImageSize: parseInt(process.env.VLM_MAX_IMAGE_SIZE || '1280', 10),
+  vlmMaxImageSize: parseInt(process.env.VLM_MAX_IMAGE_SIZE || '1024', 10),
   // Per model call. gemma4:31b-cloud (free tier) measures 28-138s per pass on
   // the eval fixtures, so the old 120s ceiling produced spurious timeouts.
   vlmTimeoutMs: parseInt(process.env.VLM_TIMEOUT_MS || '300000', 10),

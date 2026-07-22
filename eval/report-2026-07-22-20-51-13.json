@@ -1,0 +1,136 @@
+{
+  "api:production": {
+    "perFixture": [
+      {
+        "fixture": "1776173015803",
+        "recall": 100,
+        "itemCount": 29,
+        "expectedMin": 8,
+        "expectedMax": 15,
+        "countWithinRange": false,
+        "matchedCount": 12,
+        "missed": [],
+        "elapsedMs": 408428,
+        "attempts": 1
+      },
+      {
+        "fixture": "1776174188547",
+        "recall": 100,
+        "itemCount": 37,
+        "expectedMin": 7,
+        "expectedMax": 13,
+        "countWithinRange": false,
+        "matchedCount": 11,
+        "missed": [],
+        "elapsedMs": 860957,
+        "attempts": 1
+      },
+      {
+        "fixture": "1776175427607",
+        "recall": 100,
+        "itemCount": 36,
+        "expectedMin": 10,
+        "expectedMax": 16,
+        "countWithinRange": false,
+        "matchedCount": 14,
+        "missed": [],
+        "elapsedMs": 979545,
+        "attempts": 1
+      },
+      {
+        "fixture": "1776176976030",
+        "recall": 92.3,
+        "itemCount": 30,
+        "expectedMin": 8,
+        "expectedMax": 14,
+        "countWithinRange": false,
+        "matchedCount": 12,
+        "missed": [
+          "gold candle holder"
+        ],
+        "elapsedMs": 742759,
+        "attempts": 1
+      },
+      {
+        "fixture": "bedroom_01",
+        "recall": 0,
+        "itemCount": 0,
+        "expectedMin": 9,
+        "expectedMax": 18,
+        "countWithinRange": false,
+        "matchedCount": 0,
+        "missed": [
+          "wooden dining table",
+          "transparent acrylic chairs",
+          "gold serving tray",
+          "pink ceramic vases",
+          "blue flower in small vase",
+          "red armchair",
+          "black round tray table",
+          "floor lamp with grey shade",
+          "white sideboard cabinet",
+          "framed artwork",
+          "grey curtains",
+          "houndstooth red and white sofa",
+          "red throw pillows",
+          "built-in oven"
+        ],
+        "elapsedMs": 605041,
+        "attempts": 1
+      },
+      {
+        "fixture": "dining_room_01",
+        "recall": 75,
+        "itemCount": 8,
+        "expectedMin": 5,
+        "expectedMax": 10,
+        "countWithinRange": true,
+        "matchedCount": 6,
+        "missed": [
+          "white mug",
+          "slippers"
+        ],
+        "elapsedMs": 184126,
+        "attempts": 1
+      },
+      {
+        "fixture": "living_room_02",
+        "recall": 0,
+        "itemCount": 0,
+        "expectedMin": 12,
+        "expectedMax": 24,
+        "countWithinRange": false,
+        "matchedCount": 0,
+        "missed": [
+          "grey loveseat sofa",
+          "wooden coffee table",
+          "wooden bentwood chair",
+          "black mesh office chair",
+          "dark grey daybed / futon",
+          "wooden desk",
+          "laptop computer",
+          "white sideboard cabinet",
+          "books on shelves",
+          "hanging macrame planter with pothos",
+          "monstera potted plant",
+          "fern potted plant",
+          "small potted plant on coffee table",
+          "potted plant in dark pot on rug",
+          "terracotta plant pots",
+          "white area rug",
+          "window blinds",
+          "computer mouse"
+        ],
+        "elapsedMs": 605040,
+        "attempts": 1
+      }
+    ],
+    "aggregate": {
+      "avgRecall": 66.8,
+      "avgItems": 20,
+      "avgLatencyMs": 626557,
+      "failures": 0,
+      "n": 7
+    }
+  }
+}
