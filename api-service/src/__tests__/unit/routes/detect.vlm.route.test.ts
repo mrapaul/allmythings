@@ -15,6 +15,7 @@ import { envConfig } from '../../../config/env.config';
 import type { DetectedItem } from '../../../types/detected-item';
 import type { DetectionResult, VlmDetector } from '../../../services/vlm-detector';
 import { DEFAULT_SCENE } from '../../../services/vlm-detector.parse';
+import { VlmRunStore } from '../../../services/vlm-run-store';
 
 const ITEMS: DetectedItem[] = [
   { label: 'sofa', description: 'red velvet sofa', category: 'Furniture', tags: ['red', 'velvet'], box: { x: 0.1, y: 0.5, width: 0.5, height: 0.3 } },
@@ -45,6 +46,8 @@ describe('detect routes — VLM path', () => {
     await app.register(multipart, { limits: { fileSize: 10 * 1024 * 1024, files: 3 } });
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     (app as any).vlmDetector = fakeDetector();
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    (app as any).vlmRuns = new VlmRunStore(fakeDetector());
     await app.register(detectRoute);
     await app.register(detectStreamRoute);
     await app.register(detectStatusRoute);
@@ -101,9 +104,35 @@ describe('detect routes — VLM path', () => {
     expect(events[4]).toMatch(/^event: done\ndata: \{.*"totalItems":2/);
   });
 
-  it('GET /v1/detect/status returns 404 in VLM mode (no async runs)', async () => {
+  it('GET /v1/detect/status returns 404 in VLM mode for unknown runs', async () => {
     const res = await app.inject({ method: 'GET', url: '/v1/detect/status/anything' });
     expect(res.statusCode).toBe(404);
     expect(res.json().error).toBe('run_not_found');
+  });
+
+  it('POST /v1/detect?async=1 returns a runId; status serves partial then final results', async () => {
+    const form = new FormData();
+    form.append('photo', TINY_JPEG, { filename: 'frame.jpg', contentType: 'image/jpeg' });
+    const res = await app.inject({
+      method: 'POST',
+      url: '/v1/detect?async=1',
+      payload: form.getBuffer(),
+      headers: { ...form.getHeaders(), 'x-api-key': 'test-key' },
+    });
+    expect(res.statusCode).toBe(202);
+    const { runId, photoSha256, statusUrl } = res.json();
+    expect(runId).toMatch(/^[0-9a-f]{32}$/);
+    expect(photoSha256).toMatch(/^[0-9a-f]{64}$/);
+    expect(statusUrl).toBe(`/v1/detect/status/${runId}`);
+
+    // Fake detector completes on next tick.
+    await new Promise((r) => setTimeout(r, 5));
+    const status = await app.inject({ method: 'GET', url: statusUrl });
+    expect(status.statusCode).toBe(200);
+    const body = status.json();
+    expect(body.status).toBe('completed');
+    expect(body.result.items).toHaveLength(2);
+    expect(body.scene.type).toBe('room');
+    expect(body.photoSha256).toBe(photoSha256);
   });
 });

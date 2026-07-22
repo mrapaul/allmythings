@@ -1,4 +1,5 @@
-import { detectImageStream } from '@/api/detect';
+import { startDetection } from '@/api/detect';
+import { pollDetectionEvents } from '@/api/detect-poll';
 import { getDetectStatus } from '@/api/detect-status';
 import { labelCrop } from '@/api/label';
 import { BoundingBoxOverlay } from '@/components/BoundingBoxOverlay';
@@ -106,21 +107,25 @@ export default function DetectionScreen() {
 
     const controller = new AbortController();
 
+    // Consume a run's poll events into the store; shared by fresh + resumed runs.
+    const followRun = async (runId: string): Promise<void> => {
+      prefs.setLastDetectionRunId(runId);
+      for await (const ev of pollDetectionEvents(runId, { signal: controller.signal })) {
+        if (controller.signal.aborted) break;
+        if (ev.type === 'done' || ev.type === 'error') prefs.setLastDetectionRunId(null);
+        store.getState().handleEvent(ev);
+      }
+    };
+
     void (async () => {
-      // crash-resume: if a prior run is in prefs and is already completed,
-      // synthesize events and skip launching a new run.
+      // crash-resume: a prior run (completed OR still running server-side)
+      // resumes by polling the same runId — no re-upload, no lost work.
       const lastId = prefs.getLastDetectionRunId();
       if (lastId) {
         try {
           const st = await getDetectStatus(lastId);
-          if (st.status === 'completed' && st.result) {
-            const s = store.getState();
-            s.handleEvent({ type: 'meta', runId: lastId, traceId: '' });
-            for (const item of st.result.items) {
-              s.handleEvent({ type: 'item', item });
-            }
-            s.handleEvent({ type: 'done', runId: lastId, totalItems: st.result.items.length });
-            prefs.setLastDetectionRunId(null);
+          if (st.status === 'completed' || st.status === 'running') {
+            await followRun(lastId);
             return;
           }
         } catch {
@@ -152,22 +157,19 @@ export default function DetectionScreen() {
 
       const stream = async (): Promise<void> => {
         try {
-          await withSpan('detect.stream', async () => {
-            for await (const ev of detectImageStream(
-              { fileUri: uploadUri, fileName: 'frame.jpg', mimeType: 'image/jpeg' },
-              controller.signal,
-            )) {
-              if (controller.signal.aborted) break;
-              if (ev.type === 'meta') prefs.setLastDetectionRunId(ev.runId);
-              if (ev.type === 'done' || ev.type === 'error') prefs.setLastDetectionRunId(null);
-              store.getState().handleEvent(ev);
-            }
+          await withSpan('detect.run', async () => {
+            const handle = await startDetection({
+              fileUri: uploadUri,
+              fileName: 'frame.jpg',
+              mimeType: 'image/jpeg',
+            });
+            await followRun(handle.runId);
           });
         } catch (err) {
           if (!controller.signal.aborted) {
             store.getState().handleEvent({
               type: 'error',
-              code: 'detect_stream_failed',
+              code: 'detect_start_failed',
               message: err instanceof Error ? err.message : String(err),
             });
           }

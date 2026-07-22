@@ -12,6 +12,7 @@ import {
 } from '../clients/pipeline.client';
 import { mapSceneToItems } from './detect.mapper';
 import type { Detector } from '../services/vlm-detector';
+import type { VlmRunStore } from '../services/vlm-run-store';
 import { DetectorUnavailableError } from '../clients/vlm-client';
 
 const MAX_IMAGE_SIZE = 10 * 1024 * 1024;
@@ -23,6 +24,8 @@ export async function detectRoute(app: FastifyInstance): Promise<void> {
   const pipeline = (app as any).pipeline as PipelineClient | undefined;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const vlmDetector = (app as any).vlmDetector as Detector | undefined;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const vlmRuns = (app as any).vlmRuns as VlmRunStore | undefined;
 
   app.post(
     '/v1/detect',
@@ -55,6 +58,7 @@ export async function detectRoute(app: FastifyInstance): Promise<void> {
             properties: {
               runId: { type: 'string' },
               statusUrl: { type: 'string' },
+              photoSha256: { type: 'string' },
             },
           },
         },
@@ -112,6 +116,23 @@ export async function detectRoute(app: FastifyInstance): Promise<void> {
 
       // VLM path: synchronous two-pass detection, no sidecar required.
       if (envConfig.detector === 'vlm') {
+        // async=1: register a background run and return immediately — the
+        // mobile app polls /v1/detect/status/<runId> (survives disconnects).
+        const wantsAsync =
+          (request.query as Record<string, unknown> | undefined)?.async === '1';
+        if (wantsAsync) {
+          if (!vlmRuns) {
+            return reply.code(503).send({ error: 'detector_unavailable' });
+          }
+          const frame = frames[0]!;
+          await persistFrame(frame);
+          const run = vlmRuns.start(frame.buffer, frame.sha256);
+          return reply.code(202).send({
+            runId: run.runId,
+            photoSha256: frame.sha256,
+            statusUrl: `/v1/detect/status/${run.runId}`,
+          });
+        }
         if (!vlmDetector) {
           return reply.code(503).send({ error: 'detector_unavailable' });
         }

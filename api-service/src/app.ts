@@ -27,6 +27,7 @@ import { advertiseService } from './utils/bonjour-advertiser';
 import { CircuitBreaker } from './utils/circuit-breaker';
 import { createPipelineClient } from './clients/pipeline.client';
 import { createLabelClient, createVlmDetector } from './services/vlm-detector.factory';
+import { VlmRunStore } from './services/vlm-run-store';
 import { detectedItemSchema } from './schemas/detected-item.schema';
 
 process.on('uncaughtException', (err) => {
@@ -89,7 +90,10 @@ export async function buildApp(options?: { disableRateLimit?: boolean }): Promis
   // Dagster, or Florence/DINO stack required, just a reachable Ollama.
   if (envConfig.detector === 'vlm') {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    (app as any).vlmDetector = createVlmDetector();
+    const detector = createVlmDetector();
+    (app as any).vlmDetector = detector;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    (app as any).vlmRuns = new VlmRunStore(detector);
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     (app as any).labelClient = createLabelClient();
     // eslint-disable-next-line @typescript-eslint/no-explicit-any

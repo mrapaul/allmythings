@@ -46,16 +46,20 @@ const DEFAULT_EVENTS = [
   { type: 'done', runId: 'r-test', totalItems: 2 },
 ];
 
-vi.mock('@/api/detect', async () => {
-  const actual = await vi.importActual<typeof import('@/api/detect')>('@/api/detect');
-  return {
-    ...actual,
-    // eslint-disable-next-line @typescript-eslint/require-await
-    detectImageStream: async function* () {
-      for (const ev of sse.events) yield ev;
-    },
-  };
-});
+vi.mock('@/api/detect', () => ({
+  startDetection: vi.fn(async () => ({
+    runId: 'r-test',
+    photoSha256: 'ff'.repeat(32),
+    statusUrl: '/v1/detect/status/r-test',
+  })),
+}));
+
+vi.mock('@/api/detect-poll', () => ({
+  // eslint-disable-next-line @typescript-eslint/require-await
+  pollDetectionEvents: async function* () {
+    for (const ev of sse.events) yield ev;
+  },
+}));
 
 vi.mock('@/api/detect-status', () => ({
   getDetectStatus: vi.fn(async () => ({

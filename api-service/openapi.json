@@ -130,6 +130,9 @@
                     },
                     "statusUrl": {
                       "type": "string"
+                    },
+                    "photoSha256": {
+                      "type": "string"
                     }
                   }
                 }
