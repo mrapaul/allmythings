@@ -1,0 +1,17 @@
+{
+  "fixture": "dining_room_01.jpg",
+  "description": "Minimalist white room seen through an arch: black sofa, oval coffee table, tiny side table with mug, vase with dried grass, jute rug, slippers",
+  "expected_items": [
+    { "label": "black fabric sofa", "category": "Furniture", "colors": ["black", "dark grey"], "materials": ["fabric"] },
+    { "label": "oval coffee table", "category": "Furniture", "colors": ["white", "wood"], "materials": ["wood"] },
+    { "label": "small wooden side table", "category": "Furniture", "colors": ["brown"], "materials": ["wood"] },
+    { "label": "white mug", "category": "Tableware", "colors": ["white"], "materials": ["ceramic"] },
+    { "label": "glass vase with dried grass", "category": "Decor", "colors": ["smoke", "beige"], "materials": ["glass", "dried plant"] },
+    { "label": "jute area rug", "category": "Textiles", "colors": ["tan", "natural"], "materials": ["jute"] },
+    { "label": "slippers", "category": "Other", "colors": ["white"], "materials": ["fabric"] },
+    { "label": "open book on sofa", "category": "Books", "colors": ["white"], "materials": ["paper"] }
+  ],
+  "min_item_count": 5,
+  "max_item_count": 10,
+  "notes": "Sparse minimalist scene — precision test; the arch and walls are architectural, must not be items."
+}

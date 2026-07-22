@@ -1,0 +1,27 @@
+{
+  "fixture": "living_room_02.jpg",
+  "description": "Dense sunlit living/work room: grey loveseat, bookshelf wall, sideboard, many plants, desk corner with office chair and daybed",
+  "expected_items": [
+    { "label": "grey loveseat sofa", "category": "Furniture", "colors": ["grey"], "materials": ["fabric"] },
+    { "label": "wooden coffee table", "category": "Furniture", "colors": ["brown"], "materials": ["wood"] },
+    { "label": "wooden bentwood chair", "category": "Furniture", "colors": ["brown"], "materials": ["wood"] },
+    { "label": "black mesh office chair", "category": "Furniture", "colors": ["black"], "materials": ["mesh", "metal"] },
+    { "label": "dark grey daybed / futon", "category": "Furniture", "colors": ["dark grey"], "materials": ["fabric"] },
+    { "label": "wooden desk", "category": "Furniture", "colors": ["brown"], "materials": ["wood"] },
+    { "label": "laptop computer", "category": "Electronics", "colors": ["black"], "materials": ["metal"] },
+    { "label": "white sideboard cabinet", "category": "Furniture", "colors": ["white"], "materials": ["wood"] },
+    { "label": "books on shelves", "category": "Books", "colors": ["various"], "materials": ["paper"] },
+    { "label": "hanging macrame planter with pothos", "category": "Plants", "colors": ["green", "beige"], "materials": ["plant", "rope"] },
+    { "label": "monstera potted plant", "category": "Plants", "colors": ["green"], "materials": ["plant"] },
+    { "label": "fern potted plant", "category": "Plants", "colors": ["green"], "materials": ["plant"] },
+    { "label": "small potted plant on coffee table", "category": "Plants", "colors": ["green"], "materials": ["plant"] },
+    { "label": "potted plant in dark pot on rug", "category": "Plants", "colors": ["green", "dark blue"], "materials": ["plant"] },
+    { "label": "terracotta plant pots", "category": "Decor", "colors": ["terracotta"], "materials": ["clay"] },
+    { "label": "white area rug", "category": "Textiles", "colors": ["white", "cream"], "materials": ["wool"] },
+    { "label": "window blinds", "category": "Window Treatments", "colors": ["white"], "materials": ["metal"] },
+    { "label": "computer mouse", "category": "Electronics", "colors": ["white"], "materials": ["plastic"] }
+  ],
+  "min_item_count": 12,
+  "max_item_count": 24,
+  "notes": "Walls, window frame, floor are architectural. Books may be grouped. Very busy scene — recall stress test."
+}

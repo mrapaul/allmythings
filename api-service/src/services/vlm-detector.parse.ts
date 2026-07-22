@@ -479,7 +479,7 @@ For EACH object, return a JSON object with:
 - "tags": {"color": "...", "material": "...", "style": "...", "condition": "new|good|fair|worn|damaged|unknown", "size_estimate": "small|medium|large", "brand": null, "notable_features": ["..."]}
 
 Rules:
-- Be exhaustive: list EVERY movable object, including small decorative items — throw pillows, vases, plants, lamps, artwork, rugs, books, candles, bowls, trays, remotes, coasters, figurines.
+- Be exhaustive: list EVERY movable object, including small decorative items — throw pillows, vases, plants, lamps, artwork, rugs (even partially covered), books, candles, bowls, trays, remotes, coasters, figurines. Include stands/stools under plants as separate items, transparent/acrylic furniture, and window blinds behind curtains.
 - Bounding boxes must be tight and accurate, and NORMALIZED 0.0-1.0.
 - CRITICAL: NEVER output architectural surfaces as items. Do NOT include wall, walls, floor, flooring, ceiling, window, door, doorway, archway, baseboard, molding, beam, column, or "room"/"background". These are structure, not inventory.
 - DO include window treatments (curtains, blinds), light fixtures, and wall-mounted objects (mirrors, art, sconces).
@@ -511,7 +511,7 @@ export function buildPass2Prompt(
 
 ${summary}
 
-Find EVERY object that was MISSED. Look for: items hidden behind/under others, small items on tables/shelves (candles, coasters, remotes, trays, figurines), items at frame edges, hardware/fixtures, picture frames separate from the art, throw blankets, clustered decor counted as one, side/end tables, baskets/boxes used as organizers, flowers separate from vases.
+Find EVERY object that was MISSED. Look for: items hidden behind/under others, small items on tables/shelves (candles, coasters, remotes, trays, figurines), items at frame edges, hardware/fixtures, picture frames separate from the art, throw blankets, clustered decor counted as one, side/end tables, baskets/boxes used as organizers, flowers separate from vases, stands/stools/tables UNDERNEATH plants or lamps (the support is its own item), transparent or acrylic furniture (easy to overlook), pillows/blankets/books lying ON sofas and beds, small electronics (mouse, keyboard, remote, chargers), footwear on the floor, window blinds behind curtains, and rugs even when mostly covered by furniture.
 
 Return ONLY newly found items. Continue IDs from ${nextId}. Same JSON shape:
 {"new_items": [{"id": int, "object": "specific name", "category": "${categories}", "bounding_box": {"x_min": float, "y_min": float, "x_max": float, "y_max": float}, "confidence": float, "tags": {"color":"...","material":"...","style":"...","condition":"good","size_estimate":"...","brand":null,"notable_features":["..."]}, "missed_reason": "why missed"}]}

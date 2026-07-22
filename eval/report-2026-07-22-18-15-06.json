@@ -1,0 +1,125 @@
+{
+  "gemma4:31b-cloud": {
+    "perFixture": [
+      {
+        "fixture": "1776173015803",
+        "recall": 83.3,
+        "itemCount": 11,
+        "expectedMin": 8,
+        "expectedMax": 15,
+        "countWithinRange": true,
+        "matchedCount": 10,
+        "missed": [
+          "decorative wall plate",
+          "white area rug"
+        ],
+        "elapsedMs": 112990,
+        "attempts": 1
+      },
+      {
+        "fixture": "1776174188547",
+        "recall": 90.9,
+        "itemCount": 12,
+        "expectedMin": 7,
+        "expectedMax": 13,
+        "countWithinRange": true,
+        "matchedCount": 10,
+        "missed": [
+          "dark navy couch / sofa"
+        ],
+        "elapsedMs": 73555,
+        "attempts": 1
+      },
+      {
+        "fixture": "1776175427607",
+        "recall": 71.4,
+        "itemCount": 12,
+        "expectedMin": 10,
+        "expectedMax": 16,
+        "countWithinRange": true,
+        "matchedCount": 10,
+        "missed": [
+          "gold wire plant stand",
+          "wooden stool",
+          "gold candle holder",
+          "wooden side table"
+        ],
+        "elapsedMs": 91977,
+        "attempts": 1
+      },
+      {
+        "fixture": "1776176976030",
+        "recall": 76.9,
+        "itemCount": 11,
+        "expectedMin": 8,
+        "expectedMax": 14,
+        "countWithinRange": true,
+        "matchedCount": 10,
+        "missed": [
+          "gold wire plant stand",
+          "gold candle holder",
+          "wooden sideboard / cabinet"
+        ],
+        "elapsedMs": 33944,
+        "attempts": 1
+      },
+      {
+        "fixture": "bedroom_01",
+        "recall": 71.4,
+        "itemCount": 12,
+        "expectedMin": 9,
+        "expectedMax": 18,
+        "countWithinRange": true,
+        "matchedCount": 10,
+        "missed": [
+          "transparent acrylic chairs",
+          "pink ceramic vases",
+          "blue flower in small vase",
+          "red throw pillows"
+        ],
+        "elapsedMs": 34814,
+        "attempts": 1
+      },
+      {
+        "fixture": "dining_room_01",
+        "recall": 87.5,
+        "itemCount": 7,
+        "expectedMin": 5,
+        "expectedMax": 10,
+        "countWithinRange": true,
+        "matchedCount": 7,
+        "missed": [
+          "slippers"
+        ],
+        "elapsedMs": 41104,
+        "attempts": 1
+      },
+      {
+        "fixture": "living_room_02",
+        "recall": 66.7,
+        "itemCount": 13,
+        "expectedMin": 12,
+        "expectedMax": 24,
+        "countWithinRange": true,
+        "matchedCount": 12,
+        "missed": [
+          "laptop computer",
+          "small potted plant on coffee table",
+          "potted plant in dark pot on rug",
+          "terracotta plant pots",
+          "window blinds",
+          "computer mouse"
+        ],
+        "elapsedMs": 22118,
+        "attempts": 1
+      }
+    ],
+    "aggregate": {
+      "avgRecall": 78.3,
+      "avgItems": 11.1,
+      "avgLatencyMs": 58643,
+      "failures": 0,
+      "n": 7
+    }
+  }
+}

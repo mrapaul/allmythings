@@ -1,0 +1,23 @@
+{
+  "fixture": "bedroom_01.jpg",
+  "description": "Open-plan apartment: dining table with acrylic chairs and gold tray, red armchair, houndstooth sofa, floor lamp, sideboard, framed art, curtains, built-in oven",
+  "expected_items": [
+    { "label": "wooden dining table", "category": "Furniture", "colors": ["light wood"], "materials": ["wood"] },
+    { "label": "transparent acrylic chairs", "category": "Furniture", "colors": ["clear"], "materials": ["acrylic"] },
+    { "label": "gold serving tray", "category": "Tableware", "colors": ["gold"], "materials": ["metal"] },
+    { "label": "pink ceramic vases", "category": "Decor", "colors": ["pink"], "materials": ["ceramic"] },
+    { "label": "blue flower in small vase", "category": "Decor", "colors": ["blue"], "materials": ["flower"] },
+    { "label": "red armchair", "category": "Furniture", "colors": ["red"], "materials": ["fabric"] },
+    { "label": "black round tray table", "category": "Furniture", "colors": ["black"], "materials": ["metal", "wood"] },
+    { "label": "floor lamp with grey shade", "category": "Lighting", "colors": ["grey"], "materials": ["fabric", "metal"] },
+    { "label": "white sideboard cabinet", "category": "Furniture", "colors": ["white"], "materials": ["wood"] },
+    { "label": "framed artwork", "category": "Art", "colors": ["various"], "materials": ["paper", "frame"] },
+    { "label": "grey curtains", "category": "Window Treatments", "colors": ["grey"], "materials": ["fabric"] },
+    { "label": "houndstooth red and white sofa", "category": "Furniture", "colors": ["red", "white"], "materials": ["fabric"] },
+    { "label": "red throw pillows", "category": "Textiles", "colors": ["red"], "materials": ["fabric"] },
+    { "label": "built-in oven", "category": "Appliances", "colors": ["stainless"], "materials": ["metal"] }
+  ],
+  "min_item_count": 9,
+  "max_item_count": 18,
+  "notes": "Kitchen cabinets, radiator, doors, windows are architectural/fixtures — not counted. Two framed artworks may match one entry."
+}
