@@ -20,7 +20,8 @@
         "NSCameraUsageDescription": "Home Inventory uses the camera to photograph shelves, drawers, and rooms so their contents can be detected and added to your inventory.",
         "NSPhotoLibraryUsageDescription": "Home Inventory reads photos you choose so their contents can be detected and added to your inventory.",
         "NSPhotoLibraryAddUsageDescription": "Home Inventory can save processed photos of your items back to your photo library.",
-        "ITSAppUsesNonExemptEncryption": false
+        "ITSAppUsesNonExemptEncryption": false,
+        "NSLocalNetworkUsageDescription": "Home Inventory connects to your own inventory server on your home network to detect objects in your photos."
       }
     },
     "android": {
