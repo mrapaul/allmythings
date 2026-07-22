@@ -1,0 +1,44 @@
+{
+  "api:production": {
+    "perFixture": [
+      {
+        "fixture": "1776173015803",
+        "recall": 75,
+        "itemCount": 14,
+        "expectedMin": 8,
+        "expectedMax": 15,
+        "countWithinRange": true,
+        "matchedCount": 9,
+        "missed": [
+          "two-tone ceramic planter",
+          "dark navy couch / sofa",
+          "white area rug"
+        ],
+        "elapsedMs": 236758,
+        "attempts": 1
+      },
+      {
+        "fixture": "1776174188547",
+        "error": "TypeError: fetch failed",
+        "elapsedMs": 301364
+      },
+      {
+        "fixture": "1776175427607",
+        "error": "TypeError: fetch failed",
+        "elapsedMs": 301716
+      },
+      {
+        "fixture": "1776176976030",
+        "error": "TypeError: fetch failed",
+        "elapsedMs": 301521
+      }
+    ],
+    "aggregate": {
+      "avgRecall": 75,
+      "avgItems": 14,
+      "avgLatencyMs": 236758,
+      "failures": 3,
+      "n": 4
+    }
+  }
+}

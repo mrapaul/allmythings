@@ -119,6 +119,41 @@ async function runGemini(model, imagePath, apiKey) {
   return { text: '', elapsedMs: Date.now() - t0, error: String(lastErr), attempt: MAX_ATTEMPTS };
 }
 
+// Score the PRODUCTION detector (two-pass + adaptive tiling + dedupe) via the
+// live api-service, instead of a raw single model call. Tag: api:<anything>.
+async function runProductionApi(imagePath) {
+  const t0 = Date.now();
+  const apiUrl = process.env.API_URL ?? 'http://localhost:14000';
+  const form = new FormData();
+  form.append('frame', new Blob([await fs.readFile(imagePath)], { type: 'image/jpeg' }), 'frame.jpg');
+  try {
+    // The SSE endpoint sends headers immediately, so long detections don't
+    // trip undici's 300s response-headers timeout like sync /v1/detect does.
+    const res = await fetch(`${apiUrl}/v1/detect/stream`, {
+      method: 'POST',
+      headers: { 'x-api-key': 'eval' },
+      body: form,
+      signal: AbortSignal.timeout(1_800_000),
+    });
+    if (!res.ok) return { text: '', elapsedMs: Date.now() - t0, error: `HTTP ${res.status}`, attempt: 1 };
+    const sse = await res.text();
+    const items = [];
+    for (const block of sse.split('\n\n')) {
+      const lines = block.split('\n');
+      if (lines[0] !== 'event: item') continue;
+      const dataLine = lines.find((l) => l.startsWith('data: '));
+      if (!dataLine) continue;
+      try {
+        const d = JSON.parse(dataLine.slice(6));
+        items.push({ label: d.label ?? 'unknown', category: d.category ?? 'unknown', count: 1 });
+      } catch { /* skip malformed */ }
+    }
+    return { text: JSON.stringify(items), elapsedMs: Date.now() - t0, attempt: 1 };
+  } catch (e) {
+    return { text: '', elapsedMs: Date.now() - t0, error: String(e), attempt: 1 };
+  }
+}
+
 async function runPipelineEndpoint(imagePath) {
   const t0 = Date.now();
   const form = new FormData();
@@ -224,11 +259,13 @@ async function main() {
       const imagePath = path.join(FIXTURES, f);
       process.stdout.write(`  ${name}: `);
       const useEndpoint = model.startsWith('hybrid:') || model.startsWith('florence:');
-      const runResult = model.startsWith('gemini:')
-        ? await runGemini(model.slice('gemini:'.length), imagePath, geminiKey)
-        : useEndpoint
-          ? await runPipelineEndpoint(imagePath)
-          : await runModel(model, imagePath);
+      const runResult = model.startsWith('api:')
+        ? await runProductionApi(imagePath)
+        : model.startsWith('gemini:')
+          ? await runGemini(model.slice('gemini:'.length), imagePath, geminiKey)
+          : useEndpoint
+            ? await runPipelineEndpoint(imagePath)
+            : await runModel(model, imagePath);
       if (runResult.error) {
         failures++;
         console.log(`ERROR (${runResult.elapsedMs}ms): ${runResult.error.slice(0, 80)}`);

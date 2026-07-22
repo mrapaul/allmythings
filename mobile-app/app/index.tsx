@@ -95,8 +95,8 @@ export default function HomeScreen() {
     return out;
   }, [baseItems, activeCategory, sort]);
 
-  const goToDetection = () => {
-    router.push('/detection');
+  const goToDetection = (imageUri: string) => {
+    router.push({ pathname: '/detection', params: { imageUri } });
   };
 
   const handleCamera = async () => {
@@ -109,8 +109,9 @@ export default function HomeScreen() {
       mediaTypes: 'images',
       quality: 0.8,
     });
-    if (!result.canceled) {
-      goToDetection();
+    const uri = result.canceled ? undefined : result.assets?.[0]?.uri;
+    if (uri) {
+      goToDetection(uri);
     }
   };
 
@@ -124,8 +125,9 @@ export default function HomeScreen() {
       mediaTypes: 'images',
       quality: 0.8,
     });
-    if (!result.canceled) {
-      goToDetection();
+    const uri = result.canceled ? undefined : result.assets?.[0]?.uri;
+    if (uri) {
+      goToDetection(uri);
     }
   };
 
