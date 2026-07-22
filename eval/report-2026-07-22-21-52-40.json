@@ -1,0 +1,25 @@
+{
+  "api:production": {
+    "perFixture": [
+      {
+        "fixture": "living_room_02",
+        "recall": 100,
+        "itemCount": 77,
+        "expectedMin": 12,
+        "expectedMax": 24,
+        "countWithinRange": false,
+        "matchedCount": 18,
+        "missed": [],
+        "elapsedMs": 1004024,
+        "attempts": 1
+      }
+    ],
+    "aggregate": {
+      "avgRecall": 100,
+      "avgItems": 77,
+      "avgLatencyMs": 1004024,
+      "failures": 0,
+      "n": 1
+    }
+  }
+}
