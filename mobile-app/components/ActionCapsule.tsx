@@ -42,6 +42,7 @@ export function ActionCapsule({ onCamera, onLibrary, onSearchToggle, searchActiv
         ]}
       >
         <Pressable
+          testID="action-capsule-library"
           accessibilityLabel="Pick from library"
           onPress={() => {
             tap();
