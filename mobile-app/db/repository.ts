@@ -10,6 +10,25 @@ function newId(): string {
   return Date.now().toString(36) + Math.random().toString(36).slice(2, 10);
 }
 
+/**
+ * item_tags is UNIQUE(item_id, tag). Merged detections and user edits can
+ * repeat a tag ("white" from the label and from the model's tags), and one
+ * duplicate must never abort a whole bulk save. Case-insensitive, first
+ * spelling wins, blanks dropped.
+ */
+export function uniqueTags(tags: string[]): string[] {
+  const seen = new Set<string>();
+  const out: string[] = [];
+  for (const raw of tags) {
+    const tag = raw.trim();
+    const key = tag.toLowerCase();
+    if (!tag || seen.has(key)) continue;
+    seen.add(key);
+    out.push(tag);
+  }
+  return out;
+}
+
 export interface AddItemInput {
   label: string;
   description: string;
@@ -122,8 +141,9 @@ export class Repo {
         createdAt: now,
         updatedAt: now,
       });
-      if (it.tags.length > 0) {
-        await this.db.insert(itemTags).values(it.tags.map((tag) => ({ itemId: id, tag })));
+      const tags = uniqueTags(it.tags);
+      if (tags.length > 0) {
+        await this.db.insert(itemTags).values(tags.map((tag) => ({ itemId: id, tag })));
       }
     }
     return ids;
@@ -172,8 +192,9 @@ export class Repo {
     await this.db.update(inventoryItems).set(updates).where(eq(inventoryItems.id, id));
     if (patch.tags) {
       await this.db.delete(itemTags).where(eq(itemTags.itemId, id));
-      if (patch.tags.length > 0) {
-        await this.db.insert(itemTags).values(patch.tags.map((tag) => ({ itemId: id, tag })));
+      const tags = uniqueTags(patch.tags);
+      if (tags.length > 0) {
+        await this.db.insert(itemTags).values(tags.map((tag) => ({ itemId: id, tag })));
       }
     }
   }

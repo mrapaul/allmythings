@@ -40,6 +40,33 @@ describe('Repo', () => {
     expect(hits[0]?.label).toBe('Sofa');
   });
 
+  it('addItems and updateItem tolerate duplicate tags instead of failing the whole save', async () => {
+    // Merged detections can carry the same tag twice ("white" from the label
+    // and from the model's tags); item_tags is UNIQUE(item_id, tag), and one
+    // bad row must never abort a 30-item bulk save.
+    const h = await repo.addHome({ name: 'A', icon: '🏠' });
+    const [id] = await repo.addItems(h.id, [
+      {
+        label: 'white ceramic planter',
+        description: '',
+        category: 'Decor',
+        tags: ['white ceramic planter', 'white', 'ceramic', 'white', ' White '],
+        primaryPhotoUri: 'file:///a.jpg',
+        additionalPhotoUris: [],
+        notes: '',
+        box: { x: 0, y: 0, width: 0.5, height: 0.5 },
+      },
+    ]);
+    const saved = await repo.getItem(id as string);
+    expect([...(saved?.tags ?? [])].sort()).toEqual(['ceramic', 'white', 'white ceramic planter']);
+
+    await repo.updateItem(id as string, { tags: ['glossy', 'glossy', 'white'] });
+    expect([...((await repo.getItem(id as string))?.tags ?? [])].sort()).toEqual([
+      'glossy',
+      'white',
+    ]);
+  });
+
   it('updateItem updates the FTS row', async () => {
     const h = await repo.addHome({ name: 'A', icon: '🏠' });
     const [id] = await repo.addItems(h.id, [

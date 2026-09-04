@@ -54,6 +54,12 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 /** How long the post-save Undo snackbar stays before the loop continues. */
 const UNDO_WINDOW_MS = 5_000;
 
+/** Human copy for a failed save; the raw error goes to the console for diagnosis. */
+function saveFailureMessage(err: unknown): string {
+  console.error('[detection] save failed', err instanceof Error ? err.message : err);
+  return "Couldn't save those items — tap Retry, or check the photo is still available.";
+}
+
 export default function DetectionScreen() {
   const params = useLocalSearchParams<{ imageUri?: string; runId?: string }>();
   const imageUri = typeof params.imageUri === 'string' ? params.imageUri : undefined;
@@ -92,6 +98,8 @@ export default function DetectionScreen() {
   const [qaAdvice, setQaAdvice] = useState<string | null>(null);
   const [verdictDismissed, setVerdictDismissed] = useState(false);
   // Post-save undo window (2b/4): count + created item ids + review row ids.
+  /** A save that threw (database/photo error): shown, never swallowed. */
+  const [saveError, setSaveError] = useState<string | null>(null);
   const [saveToast, setSaveToast] = useState<{
     count: number;
     itemIds: string[];
@@ -441,6 +449,9 @@ export default function DetectionScreen() {
       if (ids[0]) {
         getDetectionStore().getState().endSave([row.id]);
       }
+    } catch (err) {
+      getDetectionStore().getState().failSave([row.id]);
+      setSaveError(saveFailureMessage(err));
     } finally {
       setSavingIds((s) => {
         const next = new Set(s);
@@ -482,6 +493,16 @@ export default function DetectionScreen() {
         setSaveToast(null);
         void continueCapture();
       }, UNDO_WINDOW_MS);
+    } catch (err) {
+      // ponytail: addItems is not transactional, so a mid-batch failure can
+      // leave earlier rows persisted while the store still shows them
+      // pending; a retry re-saves only what the DB rejected once the cause
+      // (e.g. a duplicate tag) is fixed. Wrap addItems in a transaction if
+      // partial saves ever show up in practice.
+      getDetectionStore()
+        .getState()
+        .failSave(pending.map((p) => p.id));
+      setSaveError(saveFailureMessage(err));
     } finally {
       setIsBulkSaving(false);
     }
@@ -940,6 +961,18 @@ export default function DetectionScreen() {
           </View>
         )}
 
+        <Snackbar
+          visible={saveError !== null}
+          testID="save-error-snackbar"
+          message={saveError ?? ''}
+          actionLabel="Retry"
+          onAction={() => {
+            setSaveError(null);
+            void saveAllPending();
+          }}
+          secondaryLabel="Dismiss"
+          onSecondary={() => setSaveError(null)}
+        />
         <Snackbar
           visible={saveToast !== null}
           testID="save-undo-snackbar"

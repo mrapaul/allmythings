@@ -29,6 +29,8 @@ interface DetectionState {
   patchRow: (id: string, patch: Partial<Omit<DetectionRow, 'id'>>) => void;
   beginSave: (ids: string[]) => void;
   endSave: (ids: string[]) => void;
+  /** A save that threw: rows go back to pending so the user can retry. */
+  failSave: (ids: string[]) => void;
   reset: () => void;
 }
 
@@ -87,6 +89,10 @@ export function createDetectionStore() {
     endSave: (ids) =>
       set((s) => ({
         rows: s.rows.map((r) => (ids.includes(r.id) ? { ...r, saving: false, saved: true } : r)),
+      })),
+    failSave: (ids) =>
+      set((s) => ({
+        rows: s.rows.map((r) => (ids.includes(r.id) ? { ...r, saving: false } : r)),
       })),
     reset: () =>
       set({
