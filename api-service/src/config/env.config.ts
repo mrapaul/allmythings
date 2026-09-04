@@ -74,13 +74,6 @@ export interface EnvConfig {
   precheckMaxDimension: number;
   precheckKeepAlive: string;
 
-  // Item enrichment (POST /v1/enrich — close-look second pass on a saved
-  // item's crop). Deliberately the DETECTION model: a single-item crop is
-  // where the big model's brand/era/material reading pays off, and this is
-  // async background work where 10-20s per item is acceptable.
-  enrichModel: string;
-  enrichTimeoutMs: number;
-  enrichMaxDimension: number;
 }
 
 export const envConfig: EnvConfig = {
@@ -155,13 +148,4 @@ export const envConfig: EnvConfig = {
   // Memory note: 4B holds ~3.3GB next to the detector's ~20GB of 48GB, so
   // keeping it warm cannot evict the detection model mid-pipeline.
   precheckKeepAlive: process.env.PRECHECK_KEEP_ALIVE || '30m',
-  // Defaults to the detection model (same resolution chain as OLLAMA_MODEL
-  // above) so enrichment never forces a second big model into memory.
-  enrichModel: process.env.ENRICH_MODEL || process.env.OLLAMA_MODEL || 'qwen2.5vl:7b',
-  // Generous: enrichment is queued background work, and the big model on the
-  // free cloud tier measures well past a minute under congestion.
-  enrichTimeoutMs: parseInt(process.env.ENRICH_TIMEOUT_MS || '120000', 10),
-  // Item crops carry brand marks and texture detail, so give the model more
-  // pixels than the 384px precheck preview.
-  enrichMaxDimension: parseInt(process.env.ENRICH_MAX_DIMENSION || '512', 10),
 };

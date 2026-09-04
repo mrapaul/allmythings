@@ -36,9 +36,7 @@ import {
   warmDetectorModel,
 } from './services/vlm-detector.factory';
 import { vocabRoute } from './routes/vocab.route';
-import { enrichRoute } from './routes/enrich.route';
 import { createPrecheckService } from './services/precheck.service';
-import { createEnrichService } from './services/enrich.service';
 import { VlmRunStore } from './services/vlm-run-store';
 import { detectedItemSchema } from './schemas/detected-item.schema';
 
@@ -130,12 +128,6 @@ export async function buildApp(options?: { disableRateLimit?: boolean }): Promis
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   (app as any).precheckService = createPrecheckService();
 
-  // Item enrichment — close-look second pass on saved item crops using the
-  // detection model. Fail-open and internally serialized (concurrency 1), so
-  // it is always wired like the precheck.
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  (app as any).enrichService = createEnrichService();
-
   // Provider health service (periodic probes against pipeline + tier-1 LLM)
   const health = new ProviderHealthService({
     florenceUrl: envConfig.florenceUrl,
@@ -165,7 +157,6 @@ export async function buildApp(options?: { disableRateLimit?: boolean }): Promis
   await app.register(labelRoute);
   await app.register(vocabRoute);
   await app.register(precheckRoute);
-  await app.register(enrichRoute);
   await app.register(correctionsRoute);
   await app.register(detectStreamRoute);
   await app.register(detectStatusRoute);

@@ -366,8 +366,7 @@
                     },
                     "visibleObjectCount": {
                       "type": "integer",
-                      "nullable": true,
-                      "description": "Raw model count behind objectDensity; null when the model gave no usable number"
+                      "nullable": true
                     },
                     "peoplePresent": {
                       "type": "boolean"
@@ -378,67 +377,6 @@
                     "advice": {
                       "type": "string",
                       "nullable": true
-                    }
-                  }
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/v1/enrich": {
-      "post": {
-        "summary": "Enrich a single saved item crop with resale-grade attributes",
-        "tags": [
-          "vision"
-        ],
-        "responses": {
-          "200": {
-            "description": "Default Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "required": [
-                    "label",
-                    "attributes",
-                    "confidence",
-                    "description"
-                  ],
-                  "properties": {
-                    "label": {
-                      "type": "string"
-                    },
-                    "attributes": {
-                      "type": "object",
-                      "properties": {
-                        "color": {
-                          "type": "string"
-                        },
-                        "material": {
-                          "type": "string"
-                        },
-                        "style": {
-                          "type": "string"
-                        },
-                        "era": {
-                          "type": "string"
-                        },
-                        "brand": {
-                          "type": "string"
-                        },
-                        "model": {
-                          "type": "string"
-                        }
-                      }
-                    },
-                    "confidence": {
-                      "type": "number",
-                      "nullable": true
-                    },
-                    "description": {
-                      "type": "string"
                     }
                   }
                 }
