@@ -11,11 +11,11 @@
 
 // NOTE: this default is baked into release-style builds at build time and
 // caused the silent-shutter incident when the Mac's DHCP lease moved
-// (.14 → .90): every request hung against a dead IP. Keep it current with
+// (.14 → .90 → 2.42): every request hung against a dead IP. Keep it current with
 // `ipconfig getifaddr en0`, or better, pass API_BASE_URL explicitly.
 // mDNS discovery normally papers over this, but only when the server's
 // Bonjour advertisement is actually working.
-const DEFAULT_LAN_API = 'http://192.168.178.90:14000';
+const DEFAULT_LAN_API = 'http://192.168.2.42:14000';
 
 module.exports = ({ config }) => ({
   ...config,
