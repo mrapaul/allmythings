@@ -41,6 +41,13 @@ interface OllamaGenerateResponse {
   error?: string;
 }
 
+/**
+ * A cold load of a 4-20 GB model from this disk takes 50-130 s, far longer
+ * than any per-request timeout. The warm-up must wait for the load, or the
+ * model never becomes resident and every real request dies mid-load.
+ */
+const WARM_LOAD_TIMEOUT_MS = 10 * 60 * 1000;
+
 export class OllamaVlmClient implements VlmClient {
   private readonly baseUrl: string;
   private readonly model: string;
@@ -78,7 +85,7 @@ export class OllamaVlmClient implements VlmClient {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
         body: JSON.stringify({ model: this.model, keep_alive: this.keepAlive }),
-        signal: AbortSignal.timeout(this.timeoutMs),
+        signal: AbortSignal.timeout(WARM_LOAD_TIMEOUT_MS),
       });
       logger.info({ model: this.model, ok: resp.ok, keepAlive: this.keepAlive }, 'ollama_model_warmed');
     } catch (err: unknown) {

@@ -158,7 +158,9 @@ export const envConfig: EnvConfig = {
   precheckModel: process.env.PRECHECK_MODEL || 'qwen3-vl:4b-instruct',
   precheckMaxObjects: parseInt(process.env.PRECHECK_MAX_OBJECTS || '35', 10),
   // 6s leaves ~2x headroom over the measured 3.0s before failing open.
-  precheckTimeoutMs: parseInt(process.env.PRECHECK_TIMEOUT_MS || '6000', 10),
+  // Resident 4B answers a new frame in ~3 s; 10 s absorbs GPU contention
+  // (the detector or another Ollama client running at the same time).
+  precheckTimeoutMs: parseInt(process.env.PRECHECK_TIMEOUT_MS || '10000', 10),
   precheckMaxDimension: parseInt(process.env.PRECHECK_MAX_DIMENSION || '384', 10),
   // Pin the small precheck model resident so the first shot of a session is not
   // a cold load (measured cold load: 3.1s for 4B, on top of the inference).
