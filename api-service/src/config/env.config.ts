@@ -24,6 +24,8 @@ export interface EnvConfig {
   vlmTimeoutMs: number;
   /** Ollama keep_alive for the detection model; a cold load costs ~2 min. */
   vlmKeepAlive: string;
+  /** VLM_THINK=false|true; unset omits the field (required for non-thinking models). */
+  vlmThink: boolean | undefined;
   vlmCoordMode: 'auto' | 'norm' | 'thousand' | 'pixel';
   // Text embeddings (Ollama /api/embed) — power the vocabulary-free semantic
   // layer: same-kind label matching during dedupe, and /v1/vocab/match.
@@ -99,6 +101,8 @@ export const envConfig: EnvConfig = {
   // the eval fixtures, so the old 120s ceiling produced spurious timeouts.
   vlmTimeoutMs: parseInt(process.env.VLM_TIMEOUT_MS || '300000', 10),
   vlmKeepAlive: process.env.VLM_KEEP_ALIVE || '1h',
+  vlmThink:
+    process.env.VLM_THINK === 'false' ? false : process.env.VLM_THINK === 'true' ? true : undefined,
   vlmCoordMode: (['auto', 'norm', 'thousand', 'pixel'] as const).includes(
     process.env.VLM_COORD_MODE as 'auto' | 'norm' | 'thousand' | 'pixel',
   )

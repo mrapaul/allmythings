@@ -29,6 +29,7 @@ export function createLabelClient(): VlmClient {
     model: envConfig.ollamaModel,
     timeoutMs: envConfig.vlmTimeoutMs,
     keepAlive: envConfig.vlmKeepAlive,
+    think: envConfig.vlmThink,
   });
 }
 
@@ -57,6 +58,7 @@ export function createPossessionJudge(): PossessionJudge {
     model: envConfig.ollamaModel,
     timeoutMs: envConfig.possessionJudgeTimeoutMs,
     enabled: envConfig.possessionJudgeEnabled,
+    think: envConfig.vlmThink,
   });
 }
 
@@ -73,6 +75,7 @@ export function createVlmDetector(possessionJudge: PossessionJudge | null = null
       model: envConfig.ollamaModel,
       timeoutMs: envConfig.vlmTimeoutMs,
       keepAlive: envConfig.vlmKeepAlive,
+      think: envConfig.vlmThink,
     }),
     opts,
     possessionJudge,
@@ -116,5 +119,6 @@ export function warmDetectorModel(): void {
     model: envConfig.ollamaModel,
     timeoutMs: envConfig.vlmTimeoutMs,
     keepAlive: envConfig.vlmKeepAlive,
+    think: envConfig.vlmThink,
   }).warm();
 }

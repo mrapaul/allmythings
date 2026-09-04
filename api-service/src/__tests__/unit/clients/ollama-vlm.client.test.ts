@@ -108,3 +108,34 @@ describe('OllamaVlmClient residency', () => {
     expect(fetchMock).toHaveBeenCalledTimes(2);
   });
 });
+
+describe('OllamaVlmClient think flag', () => {
+  beforeEach(() => {
+    vi.stubGlobal('fetch', vi.fn());
+  });
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it('forwards think=false when configured', async () => {
+    const fetchMock = fetch as unknown as ReturnType<typeof vi.fn>;
+    fetchMock.mockResolvedValue(okResponse('{"items":[]}'));
+    const client = new OllamaVlmClient({
+      baseUrl: 'http://localhost:11434',
+      model: 'qwen3.6:35b-a3b',
+      timeoutMs: 50,
+      think: false,
+    });
+    await client.generateJson('p', 'img');
+    const body = JSON.parse(fetchMock.mock.calls[0]?.[1]?.body as string);
+    expect(body.think).toBe(false);
+  });
+
+  it('omits think when not configured (models without thinking reject it)', async () => {
+    const fetchMock = fetch as unknown as ReturnType<typeof vi.fn>;
+    fetchMock.mockResolvedValue(okResponse('{"items":[]}'));
+    await makeClient().generateJson('p', 'img');
+    const body = JSON.parse(fetchMock.mock.calls[0]?.[1]?.body as string);
+    expect('think' in body).toBe(false);
+  });
+});

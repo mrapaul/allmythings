@@ -27,6 +27,13 @@ export interface OllamaVlmClientOptions {
   temperature?: number;
   /** Pause before the single retry of a transient failure (timeout/5xx). */
   retryDelayMs?: number;
+  /**
+   * Ollama `think` switch for hybrid reasoning models (qwen3.5/3.6, gemma4).
+   * Left on, the JSON answer lands in the `thinking` field and `response` is
+   * empty — zero detections. Omit for models without thinking: Ollama
+   * rejects the field on those.
+   */
+  think?: boolean;
 }
 
 interface OllamaGenerateResponse {
@@ -42,6 +49,7 @@ export class OllamaVlmClient implements VlmClient {
   private readonly numPredict: number;
   private readonly temperature: number;
   private readonly retryDelayMs: number;
+  private readonly think: boolean | undefined;
 
   constructor(opts: OllamaVlmClientOptions) {
     this.baseUrl = opts.baseUrl.replace(/\/$/, '');
@@ -51,6 +59,7 @@ export class OllamaVlmClient implements VlmClient {
     this.numPredict = opts.numPredict ?? 8192;
     this.temperature = opts.temperature ?? 0.1;
     this.retryDelayMs = opts.retryDelayMs ?? 5_000;
+    this.think = opts.think;
   }
 
   get modelName(): string {
@@ -116,6 +125,7 @@ export class OllamaVlmClient implements VlmClient {
       stream: false,
       format: 'json',
       keep_alive: this.keepAlive,
+      ...(this.think === undefined ? {} : { think: this.think }),
       options: {
         temperature: this.temperature,
         num_predict: this.numPredict,

@@ -31,6 +31,8 @@ export interface PossessionJudgeOptions {
   baseUrl: string;
   model: string;
   timeoutMs?: number;
+  /** Same semantics as OllamaVlmClientOptions.think. */
+  think?: boolean;
   /** Max distinct labels memoized. */
   cacheSize?: number;
   /** Max labels asked about in one call. */
@@ -65,6 +67,7 @@ export class PossessionJudge {
   private readonly baseUrl: string;
   private readonly model: string;
   private readonly timeoutMs: number;
+  private readonly think: boolean | undefined;
   private readonly cacheSize: number;
   private readonly batchSize: number;
   private readonly failureThreshold: number;
@@ -84,6 +87,7 @@ export class PossessionJudge {
     this.baseUrl = opts.baseUrl.replace(/\/$/, '');
     this.model = opts.model;
     this.timeoutMs = opts.timeoutMs ?? DEFAULT_TIMEOUT_MS;
+    this.think = opts.think;
     this.cacheSize = opts.cacheSize ?? DEFAULT_CACHE_SIZE;
     this.batchSize = opts.batchSize ?? DEFAULT_BATCH_SIZE;
     this.failureThreshold = opts.failureThreshold ?? DEFAULT_FAILURE_THRESHOLD;
@@ -171,6 +175,7 @@ export class PossessionJudge {
         headers: { 'content-type': 'application/json' },
         body: JSON.stringify({
           model: this.model,
+          ...(this.think === undefined ? {} : { think: this.think }),
           prompt: buildJudgePrompt(batch),
           stream: false,
           format: 'json',
