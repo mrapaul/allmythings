@@ -13,10 +13,12 @@ import { Snackbar } from '@/components/Snackbar';
 import TopBar from '@/components/TopBar';
 import { useHomes } from '@/contexts/HomesContext';
 import { useInventory } from '@/contexts/InventoryContext';
+import { useArrangeMode } from '@/hooks/useArrangeMode';
 import { useColors } from '@/hooks/useColors';
 import { useResponsive } from '@/hooks/useResponsive';
 import { useSearch } from '@/hooks/useSearch';
 import { useServerHealth } from '@/hooks/useServerHealth';
+import { useWalkCapture } from '@/hooks/useWalkCapture';
 import { isDetectedBox } from '@/lib/bbox-layout';
 import { categoryIcon } from '@/lib/category-icons';
 import { stageTitle } from '@/lib/detect-stages';
@@ -25,22 +27,17 @@ import { labelsForDisplay, primaryChips, typeHandle } from '@/lib/labels';
 import { groupByCategory, toggleCollapsed } from '@/lib/overview';
 import { visibilityVerdict } from '@/lib/partial-visibility';
 import { pushRecentSearch } from '@/lib/search-query';
-import { checkShotQuality, dispatchShot } from '@/services/walk-capture';
+import { dispatchShot } from '@/services/walk-capture';
 import { useHomeScreenStore } from '@/stores/home-screen.store';
 import { removeJob, useJobsStore } from '@/stores/jobs.store';
 import { type CollectionViewMode, Prefs } from '@/stores/prefs';
 import { refreshLocalSuggestions, useSuggestionsStore } from '@/stores/suggestions.store';
 import type { InventoryItem } from '@/types/inventory';
 import { Feather } from '@expo/vector-icons';
-import * as Haptics from 'expo-haptics';
-import * as ImagePicker from 'expo-image-picker';
 import { useRouter } from 'expo-router';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
-  Alert,
-  BackHandler,
-  Platform,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -92,32 +89,7 @@ export default function HomeScreen() {
 
   const [pickerVisible, setPickerVisible] = useState(false);
   const [searchFocused, setSearchFocused] = useState(false);
-  /**
-   * Arrange mode (iPhone home-screen idiom): long-press any tile to reveal ×
-   * badges on every item. Deletes go through the normal soft-delete + undo
-   * snackbar, so there is no confirmation dialog to dismiss.
-   */
-  const [isArranging, setIsArranging] = useState(false);
-  const enterArrangeMode = () => {
-    if (isArranging) return;
-    if (Platform.OS !== 'web') void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-    setIsArranging(true);
-  };
-  const exitArrangeMode = () => setIsArranging(false);
-
-  // The Android system back gesture leaves arrange mode before anything else.
-  useEffect(() => {
-    if (!isArranging) return;
-    const sub = BackHandler.addEventListener('hardwareBackPress', () => {
-      setIsArranging(false);
-      return true;
-    });
-    return () => sub.remove();
-  }, [isArranging]);
-  // Walk mode: precheck advice awaiting a decision, and a brief passing hint.
-  const [shotAdvice, setShotAdvice] = useState<{ uri: string; advice: string } | null>(null);
-  /** Dispatches currently uploading (pre-job); drives the Sending… pill. */
-  const [sendingCount, setSendingCount] = useState(0);
+  const { isArranging, enterArrangeMode, exitArrangeMode } = useArrangeMode();
   const jobs = useJobsStore((s) => s.jobs);
   const runningJob = jobs.find((j) => j.status === 'running');
   const inboxBadgeCount = inboxCount(jobs);
@@ -231,90 +203,8 @@ export default function HomeScreen() {
     router.push({ pathname: '/detection', params: { imageUri: job.photoUri, runId: job.runId } });
   };
 
-  /**
-   * Walk mode. The ONLY thing between the shutter and the next shot is the
-   * on-device quality check (pure pixel math, no network). If the frame is
-   * unusable the user hears about it instantly; otherwise detection is
-   * dispatched immediately and the slow server precheck runs detached, its
-   * verdict landing on the inbox card rather than interrupting the walk.
-   */
-  const captureAndDispatch = async (imageUri: string) => {
-    const quality = await checkShotQuality(imageUri);
-    if (quality?.advice) {
-      setShotAdvice({ uri: imageUri, advice: quality.advice });
-      return;
-    }
-    // Visible from the first millisecond of dispatch: the "Sending…" pill
-    // holds the slot until either the processing toast (success) or the
-    // inbox badge (failure) takes over. Never silence.
-    setSendingCount((n) => n + 1);
-    try {
-      await dispatchShot(prefs, imageUri);
-    } finally {
-      setSendingCount((n) => Math.max(0, n - 1));
-    }
-  };
-
-  const handleCamera = async () => {
-    // Primary path: our own viewfinder, which coaches the frame BEFORE the
-    // shutter (app/capture.tsx). It asks for camera permission itself.
-    try {
-      router.push('/capture');
-      return;
-    } catch {
-      // The custom viewfinder needs expo-camera's native module; if that is
-      // missing (e.g. a build predating the rebuild) fall through to the
-      // system camera rather than stranding the button.
-    }
-
-    const perm = await ImagePicker.requestCameraPermissionsAsync();
-    if (!perm.granted) {
-      Alert.alert(
-        'One quick step',
-        'Allow camera access in Settings and we can start photographing your things.',
-      );
-      return;
-    }
-    let uri: string | undefined;
-    try {
-      const result = await ImagePicker.launchCameraAsync({
-        mediaTypes: 'images',
-        quality: 0.8,
-      });
-      uri = result.canceled ? undefined : result.assets?.[0]?.uri;
-    } catch {
-      // Simulators have no camera, and a real device's can be unavailable
-      // (in use elsewhere, restricted by policy). Whatever the reason, a
-      // button that silently does nothing is the worst possible answer.
-      Alert.alert(
-        'No camera available',
-        'This device has no camera we can open — you can still add photos from your library.',
-      );
-      return;
-    }
-    if (uri) {
-      void captureAndDispatch(uri);
-    }
-  };
-
-  const handleLibrary = async () => {
-    const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    if (!perm.granted) {
-      Alert.alert(
-        'One quick step',
-        'Allow photo access in Settings and we can catalogue shots you already have.',
-      );
-      return;
-    }
-    const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: 'images',
-      quality: 0.8,
-    });
-    const uri = result.canceled ? undefined : result.assets?.[0]?.uri;
-    if (uri) {
-      void captureAndDispatch(uri);
-    }
-  };
+  const { shotAdvice, sendingCount, handleCamera, handleLibrary, sendAnyway, retake } =
+    useWalkCapture(prefs);
 
   const focusSearch = () => {
     scrollRef.current?.scrollTo({ y: 0, animated: true });
@@ -822,16 +712,9 @@ export default function HomeScreen() {
         testID="quality-advice"
         message={shotAdvice?.advice ?? ''}
         actionLabel="Use anyway"
-        onAction={() => {
-          const shot = shotAdvice;
-          setShotAdvice(null);
-          if (shot) void dispatchShot(prefs, shot.uri);
-        }}
+        onAction={sendAnyway}
         secondaryLabel="Retake"
-        onSecondary={() => {
-          setShotAdvice(null);
-          void handleCamera();
-        }}
+        onSecondary={retake}
       />
 
       <HomePickerSheet visible={pickerVisible} onClose={() => setPickerVisible(false)} />
