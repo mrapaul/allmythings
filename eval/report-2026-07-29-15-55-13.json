@@ -1,0 +1,300 @@
+{
+  "qwen3-vl:8b-instruct": {
+    "perFixture": [
+      {
+        "fixture": "1776173015803",
+        "recall": 58.3,
+        "itemCount": 9,
+        "expectedMin": 8,
+        "expectedMax": 15,
+        "countWithinRange": true,
+        "matchedCount": 7,
+        "missed": [
+          "two-tone ceramic planter",
+          "wooden stool (plant support)",
+          "dark navy couch / sofa",
+          "framed painting / artwork",
+          "white area rug"
+        ],
+        "elapsedMs": 23006,
+        "attempts": 1
+      },
+      {
+        "fixture": "1776174188547",
+        "recall": 63.6,
+        "itemCount": 8,
+        "expectedMin": 7,
+        "expectedMax": 13,
+        "countWithinRange": true,
+        "matchedCount": 7,
+        "missed": [
+          "small snake plant",
+          "two-tone ceramic planter",
+          "dark navy couch / sofa",
+          "framed painting / artwork"
+        ],
+        "elapsedMs": 113530,
+        "attempts": 1
+      },
+      {
+        "fixture": "1776175427607",
+        "recall": 57.1,
+        "itemCount": 9,
+        "expectedMin": 10,
+        "expectedMax": 16,
+        "countWithinRange": false,
+        "matchedCount": 8,
+        "missed": [
+          "snake plant small",
+          "two-tone ceramic planter",
+          "wooden stool",
+          "gold candle holder",
+          "framed painting of figures",
+          "decorative wall plate"
+        ],
+        "elapsedMs": 71036,
+        "attempts": 1
+      },
+      {
+        "fixture": "1776176976030",
+        "recall": 76.9,
+        "itemCount": 11,
+        "expectedMin": 8,
+        "expectedMax": 14,
+        "countWithinRange": true,
+        "matchedCount": 10,
+        "missed": [
+          "two-tone ceramic planter",
+          "white venetian window blinds",
+          "framed painting"
+        ],
+        "elapsedMs": 70476,
+        "attempts": 1
+      },
+      {
+        "fixture": "bedroom_01",
+        "recall": 85.7,
+        "itemCount": 13,
+        "expectedMin": 9,
+        "expectedMax": 18,
+        "countWithinRange": true,
+        "matchedCount": 12,
+        "missed": [
+          "pink ceramic vases",
+          "red throw pillows"
+        ],
+        "elapsedMs": 47881,
+        "attempts": 1
+      },
+      {
+        "fixture": "dining_room_01",
+        "recall": 75,
+        "itemCount": 6,
+        "expectedMin": 5,
+        "expectedMax": 10,
+        "countWithinRange": true,
+        "matchedCount": 6,
+        "missed": [
+          "white mug",
+          "slippers"
+        ],
+        "elapsedMs": 16832,
+        "attempts": 1
+      },
+      {
+        "fixture": "living_room_02",
+        "recall": 72.2,
+        "itemCount": 15,
+        "expectedMin": 12,
+        "expectedMax": 24,
+        "countWithinRange": true,
+        "matchedCount": 13,
+        "missed": [
+          "black mesh office chair",
+          "dark grey daybed / futon",
+          "books on shelves",
+          "terracotta plant pots",
+          "computer mouse"
+        ],
+        "elapsedMs": 39338,
+        "attempts": 1
+      }
+    ],
+    "aggregate": {
+      "avgRecall": 69.8,
+      "avgItems": 10.1,
+      "avgLatencyMs": 54586,
+      "failures": 0,
+      "n": 7
+    }
+  },
+  "qwen3-vl:30b-a3b-instruct": {
+    "perFixture": [
+      {
+        "fixture": "1776173015803",
+        "recall": 66.7,
+        "itemCount": 10,
+        "expectedMin": 8,
+        "expectedMax": 15,
+        "countWithinRange": true,
+        "matchedCount": 8,
+        "missed": [
+          "two-tone ceramic planter",
+          "dark navy couch / sofa",
+          "framed painting / artwork",
+          "white area rug"
+        ],
+        "elapsedMs": 30885,
+        "attempts": 1
+      },
+      {
+        "fixture": "1776174188547",
+        "recall": 72.7,
+        "itemCount": 10,
+        "expectedMin": 7,
+        "expectedMax": 13,
+        "countWithinRange": true,
+        "matchedCount": 8,
+        "missed": [
+          "two-tone ceramic planter",
+          "dark navy couch / sofa",
+          "white area rug"
+        ],
+        "elapsedMs": 16491,
+        "attempts": 1
+      },
+      {
+        "fixture": "1776175427607",
+        "recall": 64.3,
+        "itemCount": 12,
+        "expectedMin": 10,
+        "expectedMax": 16,
+        "countWithinRange": true,
+        "matchedCount": 9,
+        "missed": [
+          "two-tone ceramic planter",
+          "wooden stool",
+          "wooden side table",
+          "framed painting of figures",
+          "decorative wall plate"
+        ],
+        "elapsedMs": 16007,
+        "attempts": 1
+      },
+      {
+        "fixture": "1776176976030",
+        "recall": 61.5,
+        "itemCount": 10,
+        "expectedMin": 8,
+        "expectedMax": 14,
+        "countWithinRange": true,
+        "matchedCount": 8,
+        "missed": [
+          "two-tone ceramic planter",
+          "wooden stool",
+          "gold candle holder",
+          "dark navy couch / sofa",
+          "framed painting"
+        ],
+        "elapsedMs": 14948,
+        "attempts": 1
+      },
+      {
+        "fixture": "bedroom_01",
+        "recall": 85.7,
+        "itemCount": 15,
+        "expectedMin": 9,
+        "expectedMax": 18,
+        "countWithinRange": true,
+        "matchedCount": 12,
+        "missed": [
+          "gold serving tray",
+          "pink ceramic vases"
+        ],
+        "elapsedMs": 21338,
+        "attempts": 1
+      },
+      {
+        "fixture": "dining_room_01",
+        "recall": 100,
+        "itemCount": 8,
+        "expectedMin": 5,
+        "expectedMax": 10,
+        "countWithinRange": true,
+        "matchedCount": 8,
+        "missed": [],
+        "elapsedMs": 14195,
+        "attempts": 1
+      },
+      {
+        "fixture": "living_room_02",
+        "recall": 83.3,
+        "itemCount": 15,
+        "expectedMin": 12,
+        "expectedMax": 24,
+        "countWithinRange": true,
+        "matchedCount": 15,
+        "missed": [
+          "dark grey daybed / futon",
+          "laptop computer",
+          "computer mouse"
+        ],
+        "elapsedMs": 23602,
+        "attempts": 1
+      }
+    ],
+    "aggregate": {
+      "avgRecall": 76.3,
+      "avgItems": 11.4,
+      "avgLatencyMs": 19638,
+      "failures": 0,
+      "n": 7
+    }
+  },
+  "gemma4:31b-cloud": {
+    "perFixture": [
+      {
+        "fixture": "1776173015803",
+        "error": "Error: 502: {\"error\":\"Post \\\"https://ollama.com:443/api/generate?ts=1785339775\\\": unexpected EOF\"}",
+        "elapsedMs": 123160
+      },
+      {
+        "fixture": "1776174188547",
+        "error": "Error: 502: {\"error\":\"Post \\\"https://ollama.com:443/api/generate?ts=1785339957\\\": unexpected EOF\"}",
+        "elapsedMs": 182032
+      },
+      {
+        "fixture": "1776175427607",
+        "error": "Error: 500: {\"error\":\"Internal Server Error (ref: 7f9604ae-0881-4453-ad20-b00550d334fb)\"}\n",
+        "elapsedMs": 63300
+      },
+      {
+        "fixture": "1776176976030",
+        "error": "Error: 502: {\"error\":\"Post \\\"https://ollama.com:443/api/generate?ts=1785340144\\\": unexpected EOF\"}",
+        "elapsedMs": 123734
+      },
+      {
+        "fixture": "bedroom_01",
+        "error": "Error: 502: {\"error\":\"Post \\\"https://ollama.com:443/api/generate?ts=1785340266\\\": unexpected EOF\"}",
+        "elapsedMs": 121926
+      },
+      {
+        "fixture": "dining_room_01",
+        "error": "Error: 500: {\"error\":\"Internal Server Error (ref: 5dba477a-955b-4bfc-9ca0-72a43f447b42)\"}\n",
+        "elapsedMs": 63436
+      },
+      {
+        "fixture": "living_room_02",
+        "error": "Error: 500: {\"error\":\"Internal Server Error (ref: 7b53df3e-cdf7-4ddc-9a89-62fb243cebf1)\"}\n",
+        "elapsedMs": 122920
+      }
+    ],
+    "aggregate": {
+      "avgRecall": 0,
+      "avgItems": 0,
+      "avgLatencyMs": 0,
+      "failures": 7,
+      "n": 7
+    }
+  }
+}

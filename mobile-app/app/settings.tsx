@@ -1,8 +1,12 @@
 import GlowBackdrop from '@/components/GlowBackdrop';
+import { Snackbar } from '@/components/Snackbar';
 import { useHomes } from '@/contexts/HomesContext';
 import { useInventory } from '@/contexts/InventoryContext';
 import { useColors } from '@/hooks/useColors';
+import { buildInventoryCsv, buildInventoryJson } from '@/lib/export';
+import { shareExportFile } from '@/services/export-share';
 import { Prefs } from '@/stores/prefs';
+import type { InventoryItem } from '@/types/inventory';
 import { Feather } from '@expo/vector-icons';
 import Constants from 'expo-constants';
 import * as Haptics from 'expo-haptics';
@@ -27,7 +31,7 @@ export default function SettingsScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const { homes, activeHomeId, renameHome, deleteHome, addHome, setActiveHomeId } = useHomes();
-  const { counts, deleteAllInActiveHome } = useInventory();
+  const { counts, items, repo, softDelete, undoDelete, pendingDelete } = useInventory();
 
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editName, setEditName] = useState('');
@@ -63,7 +67,7 @@ export default function SettingsScreen() {
 
   const handleDeleteHome = (id: string, name: string) => {
     if (homes.length <= 1) {
-      Alert.alert('Cannot delete', 'You need at least one home.');
+      Alert.alert('Keep one home', 'Your collection needs at least one home to live in.');
       return;
     }
     Alert.alert(
@@ -91,24 +95,52 @@ export default function SettingsScreen() {
     );
   };
 
+  // Bulk delete goes through the same 5s-undo snackbar as single deletes —
+  // no scolding confirm dialog.
   const handleDeleteAll = () => {
-    Alert.alert(
-      'Empty current home?',
-      'All items in the active home will be removed. This cannot be undone.',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Empty home',
-          style: 'destructive',
-          onPress: async () => {
-            if (Platform.OS !== 'web') {
-              Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
-            }
-            await deleteAllInActiveHome();
-          },
-        },
-      ],
+    if (items.length === 0) return;
+    if (Platform.OS !== 'web') {
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
+    }
+    softDelete(
+      items.map((it) => it.id),
+      'everything here',
     );
+  };
+
+  const [isExporting, setIsExporting] = useState(false);
+  const handleExport = async (format: 'json' | 'csv') => {
+    if (isExporting) return;
+    setIsExporting(true);
+    try {
+      const itemsByHome: Record<string, InventoryItem[]> = {};
+      for (const home of homes) {
+        itemsByHome[home.id] = await repo.getItemsByHome(home.id);
+      }
+      const stamp = new Date().toISOString().slice(0, 10);
+      const result =
+        format === 'json'
+          ? await shareExportFile(
+              `inventory-${stamp}.json`,
+              buildInventoryJson(homes, itemsByHome),
+              'application/json',
+            )
+          : await shareExportFile(
+              `inventory-${stamp}.csv`,
+              buildInventoryCsv(homes, itemsByHome),
+              'text/csv',
+            );
+      if (result === 'unavailable') {
+        Alert.alert(
+          'Almost there',
+          'Sharing needs the newest app build. Update the app and your export will be one tap away.',
+        );
+      }
+    } catch {
+      Alert.alert('Export hiccup', "That export didn't go through — mind trying once more?");
+    } finally {
+      setIsExporting(false);
+    }
   };
 
   const handleAddHome = async () => {
@@ -123,6 +155,8 @@ export default function SettingsScreen() {
 
       <View style={[styles.header, { paddingTop }]}>
         <Pressable
+          testID="settings-back"
+          accessibilityLabel="Back"
           onPress={() => router.back()}
           style={({ pressed }) => [
             styles.iconBtn,
@@ -246,6 +280,7 @@ export default function SettingsScreen() {
             <View style={styles.rowBody}>
               <Text style={[styles.rowTitle, { color: colors.foreground }]}>Server URL</Text>
               <TextInput
+                testID="settings-server-url"
                 accessibilityLabel="Server URL"
                 value={serverUrl}
                 onChangeText={setServerUrl}
@@ -264,6 +299,45 @@ export default function SettingsScreen() {
               </Text>
             </View>
           </View>
+        </View>
+
+        <Text style={[styles.section, { color: colors.mutedForeground }]}>YOUR DATA</Text>
+        <View style={[styles.group, { backgroundColor: colors.card, borderColor: colors.border }]}>
+          <Pressable
+            testID="export-json"
+            onPress={() => void handleExport('json')}
+            style={styles.row}
+          >
+            <View style={[styles.addIcon, { backgroundColor: colors.glowMint }]}>
+              <Feather name="download" size={16} color={colors.foreground} />
+            </View>
+            <View style={styles.rowBody}>
+              <Text style={[styles.rowTitle, { color: colors.foreground }]}>
+                Export inventory (JSON)
+              </Text>
+              <Text style={[styles.rowMeta, { color: colors.mutedForeground }]}>
+                Everything — labels, categories, dates — in one file you keep
+              </Text>
+            </View>
+          </Pressable>
+          <View style={[styles.rowDivider, { backgroundColor: colors.border }]} />
+          <Pressable
+            testID="export-csv"
+            onPress={() => void handleExport('csv')}
+            style={styles.row}
+          >
+            <View style={[styles.addIcon, { backgroundColor: colors.glowMint }]}>
+              <Feather name="grid" size={16} color={colors.foreground} />
+            </View>
+            <View style={styles.rowBody}>
+              <Text style={[styles.rowTitle, { color: colors.foreground }]}>
+                Export inventory (CSV)
+              </Text>
+              <Text style={[styles.rowMeta, { color: colors.mutedForeground }]}>
+                Spreadsheet-ready list of every item
+              </Text>
+            </View>
+          </Pressable>
         </View>
 
         <Text style={[styles.section, { color: colors.mutedForeground }]}>DANGER ZONE</Text>
@@ -287,6 +361,20 @@ export default function SettingsScreen() {
           Photos are stored on this device only.
         </Text>
       </ScrollView>
+
+      <Snackbar
+        visible={pendingDelete !== null}
+        testID="delete-undo-snackbar"
+        message={
+          pendingDelete
+            ? pendingDelete.ids.length === 1
+              ? `Removed ${pendingDelete.label}`
+              : `Removed ${pendingDelete.ids.length} items`
+            : ''
+        }
+        actionLabel="Undo"
+        onAction={undoDelete}
+      />
     </View>
   );
 }

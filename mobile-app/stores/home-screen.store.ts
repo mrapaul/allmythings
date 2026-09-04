@@ -31,3 +31,8 @@ const homeScreenStore = createHomeScreenStore();
 export function useHomeScreenStore<T>(selector: (s: HomeScreenState) => T): T {
   return useStore(homeScreenStore, selector);
 }
+
+/** Non-hook access for cross-screen actions (attribute chip → search). */
+export function getHomeScreenStore() {
+  return homeScreenStore;
+}

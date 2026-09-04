@@ -1,0 +1,28 @@
+{
+  "api:embed-smoke": {
+    "perFixture": [
+      {
+        "fixture": "mockup_living_01",
+        "recall": 81.8,
+        "itemCount": 20,
+        "expectedMin": 8,
+        "expectedMax": 14,
+        "countWithinRange": false,
+        "matchedCount": 9,
+        "missed": [
+          "marble decorative cube",
+          "books on console"
+        ],
+        "elapsedMs": 222796,
+        "attempts": 1
+      }
+    ],
+    "aggregate": {
+      "avgRecall": 81.8,
+      "avgItems": 20,
+      "avgLatencyMs": 222796,
+      "failures": 0,
+      "n": 1
+    }
+  }
+}

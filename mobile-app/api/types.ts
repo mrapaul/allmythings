@@ -10,6 +10,7 @@
 // API surface that doesn't match what the generator emits. We use `ofetch`
 // for HTTP, so only the type definitions are needed here.
 export type { Def0 as DetectedItem } from './generated/types.gen';
+export type PrecheckResult = import('./generated/types.gen').PostV1PrecheckResponses[200];
 
 export type DetectError = { error: string; runId?: string; message?: string };
 
@@ -28,6 +29,12 @@ export type DetectStreamEvent =
   | { type: 'scene'; scene: SceneInfo }
   | { type: 'item'; item: import('./generated/types.gen').Def0 }
   | { type: 'done'; runId: string; totalItems: number }
+  /**
+   * Server-side duplicate hints (detect payload `mergeSuggestions` / SSE
+   * `merge-suggestion`). Carried as `unknown` and parsed defensively by
+   * lib/suggestions.ts — the contract is still landing server-side.
+   */
+  | { type: 'merge-suggestions'; suggestions: unknown }
   | {
       type: 'error';
       code: string;

@@ -1,8 +1,6 @@
 import { DetectorUnavailableError } from '../clients/vlm-client';
 import { logger } from '../utils/logger';
-import { DEFAULT_SCENE, type SceneInfo } from './vlm-detector.parse';
-import type { DetectedItem } from '../types/detected-item';
-import type { Detector, DetectionResult, DetectorEvent } from './vlm-detector';
+import { collectDetection, type Detector, type DetectionResult, type DetectorEvent } from './vlm-detector';
 
 /**
  * Composes a primary and an optional secondary detector. If the primary is
@@ -17,13 +15,7 @@ export class FallbackDetector implements Detector {
   ) {}
 
   async detect(imageBuffer: Buffer): Promise<DetectionResult> {
-    let scene: SceneInfo = { ...DEFAULT_SCENE };
-    const items: DetectedItem[] = [];
-    for await (const ev of this.detectStream(imageBuffer)) {
-      if (ev.kind === 'scene') scene = ev.scene;
-      else items.push(ev.item);
-    }
-    return { scene, items };
+    return collectDetection(this.detectStream(imageBuffer));
   }
 
   async *detectStream(imageBuffer: Buffer): AsyncGenerator<DetectorEvent> {

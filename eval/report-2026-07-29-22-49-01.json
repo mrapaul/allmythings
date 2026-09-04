@@ -1,0 +1,57 @@
+{
+  "qwen3-vl:8b-instruct": {
+    "perFixture": [
+      {
+        "fixture": "mockup_living_01",
+        "recall": 54.5,
+        "itemCount": 9,
+        "expectedMin": 8,
+        "expectedMax": 14,
+        "countWithinRange": true,
+        "matchedCount": 6,
+        "missed": [
+          "glass vase with flowering branches",
+          "marble decorative cube",
+          "white TV console",
+          "wall-mounted television",
+          "dark wardrobe cabinet"
+        ],
+        "elapsedMs": 25481,
+        "attempts": 1
+      }
+    ],
+    "aggregate": {
+      "avgRecall": 54.5,
+      "avgItems": 9,
+      "avgLatencyMs": 25481,
+      "failures": 0,
+      "n": 1
+    }
+  },
+  "gemma4:31b-cloud": {
+    "perFixture": [
+      {
+        "fixture": "mockup_living_01",
+        "recall": 81.8,
+        "itemCount": 9,
+        "expectedMin": 8,
+        "expectedMax": 14,
+        "countWithinRange": true,
+        "matchedCount": 9,
+        "missed": [
+          "marble decorative cube",
+          "dark wardrobe cabinet"
+        ],
+        "elapsedMs": 73255,
+        "attempts": 2
+      }
+    ],
+    "aggregate": {
+      "avgRecall": 81.8,
+      "avgItems": 9,
+      "avgLatencyMs": 73255,
+      "failures": 0,
+      "n": 1
+    }
+  }
+}

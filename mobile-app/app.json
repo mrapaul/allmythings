@@ -21,8 +21,10 @@
         "NSPhotoLibraryUsageDescription": "Home Inventory reads photos you choose so their contents can be detected and added to your inventory.",
         "NSPhotoLibraryAddUsageDescription": "Home Inventory can save processed photos of your items back to your photo library.",
         "ITSAppUsesNonExemptEncryption": false,
-        "NSLocalNetworkUsageDescription": "Home Inventory connects to your own inventory server on your home network to detect objects in your photos."
-      }
+        "NSLocalNetworkUsageDescription": "Home Inventory connects to your own inventory server on your home network to detect objects in your photos.",
+        "NSBonjourServices": ["_http._tcp"]
+      },
+      "appleTeamId": "93LZ247AMZ"
     },
     "android": {
       "adaptiveIcon": {
@@ -31,9 +33,19 @@
       },
       "package": "com.codesparktech.homeinventory",
       "versionCode": 1,
-      "permissions": ["android.permission.CAMERA", "android.permission.READ_MEDIA_IMAGES"]
+      "permissions": [
+        "android.permission.CAMERA",
+        "android.permission.READ_MEDIA_IMAGES",
+        "android.permission.CHANGE_WIFI_MULTICAST_STATE"
+      ]
     },
-    "plugins": ["expo-router", "expo-font", "expo-sqlite", "@sentry/react-native"],
+    "plugins": [
+      "expo-router",
+      "expo-font",
+      "expo-sqlite",
+      "@sentry/react-native",
+      "./plugins/withUIScene"
+    ],
     "experiments": {
       "typedRoutes": true
     },

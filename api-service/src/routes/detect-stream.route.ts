@@ -30,6 +30,8 @@ export async function detectStreamRoute(app: FastifyInstance): Promise<void> {
       preHandler: authMiddleware,
       schema: {
         summary: 'Detect home objects, streaming items via SSE',
+        description:
+          'SSE event types: `meta` (runId/traceId), `scene` (pass-1 assessment), `item` (one DetectedItem), `merge-suggestion` ({itemIndexA, itemIndexB, reason, confidence} indexing the emitted item sequence — a pair the pipeline suspects is one object but did not merge), `error`, `done`.',
         tags: ['vision'],
         consumes: ['multipart/form-data'],
         produces: ['text/event-stream'],
@@ -118,6 +120,12 @@ export async function detectStreamRoute(app: FastifyInstance): Promise<void> {
               if (aborted) return;
               if (ev.kind === 'scene') {
                 writeEvent('scene', ev.scene);
+                continue;
+              }
+              if (ev.kind === 'merge-suggestion') {
+                // Distinct event: the app collects these and asks the user
+                // later, so a suggestion never delays or replaces an item.
+                writeEvent('merge-suggestion', ev.suggestion);
                 continue;
               }
               writeEvent('item', ev.item);

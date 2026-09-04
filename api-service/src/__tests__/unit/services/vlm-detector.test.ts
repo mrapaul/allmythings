@@ -3,6 +3,8 @@ import sharp from 'sharp';
 import { VlmDetector } from '../../../services/vlm-detector';
 import type { OllamaVlmClient } from '../../../clients/ollama-vlm.client';
 import { OllamaUnavailableError } from '../../../clients/ollama-vlm.client';
+import { normalizeText } from '../../../services/embeddings.service';
+import type { PossessionJudge } from '../../../services/possession-judge.service';
 
 /**
  * A scripted stand-in for OllamaVlmClient: returns canned JSON per pass without
@@ -279,5 +281,177 @@ describe('VlmDetector', () => {
     });
     const { items } = await detector.detect(image);
     expect(items).toEqual([]);
+  });
+});
+
+/**
+ * End-to-end wiring of the possession filter and merge tiers through the
+ * detector, with the fallback judge replaced by a stub. Label equivalence is
+ * deterministic, so there is no embedding stub to build.
+ */
+/** Records which labels it was asked about; answers false for wall-ish names. */
+function stubJudge(): { judge: PossessionJudge; asked: string[][] } {
+  const asked: string[][] = [];
+  const judge = {
+    modelName: 'stub-judge',
+    available: true,
+    stats: () => ({ hits: 0, misses: 0, calls: asked.length, failures: 0, cached: 0, muted: false }),
+    judge: async (labels: readonly string[]) => {
+      asked.push([...labels]);
+      const out = new Map<string, boolean>();
+      for (const l of labels) out.set(normalizeText(l), !/wall/i.test(l));
+      return out;
+    },
+  } as unknown as PossessionJudge;
+  return { judge, asked };
+}
+
+const deadJudge = (): PossessionJudge =>
+  ({
+    modelName: 'dead-judge',
+    available: false,
+    stats: () => ({ hits: 0, misses: 0, calls: 0, failures: 2, cached: 0, muted: true }),
+    judge: async () => new Map<string, boolean>(),
+  }) as unknown as PossessionJudge;
+
+const item = (object: string, box: number[], extra: object = {}): object => ({
+  object,
+  category: 'Other',
+  bbox_2d: box,
+  tags: { color: 'white' },
+  ...extra,
+});
+
+describe('VlmDetector — model-decided possessions and merge tiers', () => {
+  const opts = { twoPass: false, maxImageSize: 1024, coordMode: 'auto' as const };
+
+  it('drops items the model flags as non-possessions', async () => {
+    const pass1 = JSON.stringify({
+      items: [
+        item('sectional sofa', [50, 500, 600, 900], { is_possession: true }),
+        item('plaster wall', [0, 0, 1000, 400], { is_possession: false }),
+      ],
+    });
+    const { judge, asked } = stubJudge();
+    const detector = new VlmDetector(makeClient([pass1]), opts, judge);
+    const { items } = await detector.detect(image);
+    expect(items.map((i) => i.label)).toEqual(['sectional sofa']);
+    // A `false` needs a second signal, so the judge is asked about the HEAD
+    // NOUN of the flagged item — and here it agrees, so the drop stands.
+    expect(asked).toEqual([['plaster wall']]);
+  });
+
+  it('keeps a belonging the model flagged false when the judge disagrees', async () => {
+    // Measured production failure: the model names a possession relative to the
+    // fixture holding it and then flags the whole phrase as building fabric.
+    // "window blinds behind curtains" heads at "window blinds", which the judge
+    // recognises as a belonging, so the owner keeps their blinds.
+    const pass1 = JSON.stringify({
+      items: [
+        item('sectional sofa', [50, 500, 600, 900], { is_possession: true }),
+        item('window blinds behind curtains', [570, 30, 840, 520], { is_possession: false }),
+        item('plaster wall', [0, 0, 1000, 400], { is_possession: false }),
+      ],
+    });
+    const { judge, asked } = stubJudge();
+    const detector = new VlmDetector(makeClient([pass1]), opts, judge);
+    const { items } = await detector.detect(image);
+    expect(items.map((i) => i.label)).toEqual([
+      'sectional sofa',
+      'window blinds behind curtains',
+    ]);
+    // Judged on head nouns and clause heads, never the full phrases.
+    expect(asked[0]).toEqual(['window blinds', 'curtains', 'plaster wall']);
+  });
+
+  it('asks the judge only about items missing the flag', async () => {
+    const pass1 = JSON.stringify({
+      items: [
+        item('sectional sofa', [50, 500, 600, 900], { is_possession: true }),
+        item('plaster wall', [0, 0, 1000, 400]),
+      ],
+    });
+    const { judge, asked } = stubJudge();
+    const detector = new VlmDetector(makeClient([pass1]), opts, judge);
+    const { items } = await detector.detect(image);
+    expect(items.map((i) => i.label)).toEqual(['sectional sofa']);
+    expect(asked).toEqual([['plaster wall']]);
+  });
+
+  it('keeps unflagged items when the judge is unavailable (fail open)', async () => {
+    const pass1 = JSON.stringify({
+      items: [item('sectional sofa', [50, 500, 600, 900]), item('plaster wall', [0, 0, 1000, 400])],
+    });
+    const detector = new VlmDetector(makeClient([pass1]), opts, deadJudge());
+    const { items } = await detector.detect(image);
+    expect(items.map((i) => i.label)).toEqual(['sectional sofa', 'plaster wall']);
+  });
+
+  it('keeps unflagged items when no judge is wired at all', async () => {
+    const pass1 = JSON.stringify({
+      items: [item('sectional sofa', [50, 500, 600, 900]), item('plaster wall', [0, 0, 1000, 400])],
+    });
+    const detector = new VlmDetector(makeClient([pass1]), opts, null);
+    const { items } = await detector.detect(image);
+    expect(items.map((i) => i.label)).toEqual(['sectional sofa', 'plaster wall']);
+  });
+
+  it('auto-merges a subsuming label on one region', async () => {
+    const pass1 = JSON.stringify({
+      items: [
+        item('sectional sofa', [50, 500, 600, 900], { is_possession: true }),
+        // Contained in the sofa box: same spot by IoMin, strict IoU below the
+        // cross-label floor, so the merge rests on head-phrase subsumption.
+        item('sofa', [100, 550, 300, 700], { is_possession: true }),
+      ],
+    });
+    const detector = new VlmDetector(makeClient([pass1]), opts, null);
+    const { items, mergeSuggestions } = await detector.detect(image);
+    expect(items).toHaveLength(1);
+    expect(mergeSuggestions).toHaveLength(0);
+  });
+
+  it('emits a merge suggestion for a partial re-detection and keeps both items', async () => {
+    // Production shape: one object emitted twice with an offset, IoU under the
+    // exact-label floor. Both are kept and the user is asked.
+    const pass1 = JSON.stringify({
+      items: [
+        item('green glass bottle', [300, 300, 500, 500], { is_possession: true }),
+        item('green glass bottle', [400, 300, 600, 500], { is_possession: true }),
+      ],
+    });
+    const detector = new VlmDetector(makeClient([pass1]), opts, null);
+    const { items, mergeSuggestions } = await detector.detect(image);
+    expect(items).toHaveLength(2);
+    expect(mergeSuggestions).toEqual([
+      expect.objectContaining({ itemIndexA: 0, itemIndexB: 1 }),
+    ]);
+  });
+
+  it('streams suggestions as their own events, after the item they concern', async () => {
+    const pass1 = JSON.stringify({
+      items: [
+        item('green glass bottle', [300, 300, 500, 500], { is_possession: true }),
+        item('green glass bottle', [400, 300, 600, 500], { is_possession: true }),
+      ],
+    });
+    const detector = new VlmDetector(makeClient([pass1]), opts, null);
+    const kinds: string[] = [];
+    for await (const ev of detector.detectStream(image)) kinds.push(ev.kind);
+    expect(kinds).toEqual(['scene', 'item', 'item', 'merge-suggestion']);
+  });
+
+  it('needs no embedding backend at all to dedupe', async () => {
+    // The detector takes no EmbeddingsService: merge decisions are structural,
+    // so an embedding outage cannot affect detection.
+    const pass1 = JSON.stringify({
+      items: [
+        item('area rug', [300, 800, 800, 1000], { is_possession: true }),
+        item('white area rug', [300, 800, 800, 1000], { is_possession: true }),
+      ],
+    });
+    const detector = new VlmDetector(makeClient([pass1]), opts, null);
+    const { items } = await detector.detect(image);
+    expect(items).toHaveLength(1);
   });
 });

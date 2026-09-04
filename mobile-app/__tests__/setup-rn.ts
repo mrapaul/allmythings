@@ -55,6 +55,7 @@ vi.mock('react-native-reanimated', () => {
     },
     useSharedValue: (initial: number) => ({ value: initial }),
     useAnimatedStyle: (cb: () => Record<string, unknown>) => cb(),
+    interpolate: (_v: number, _input: number[], output: number[]) => output[output.length - 1],
     withTiming: (v: number) => v,
     withSpring: (v: number) => v,
     withDelay: (_d: number, v: number) => v,
@@ -62,8 +63,10 @@ vi.mock('react-native-reanimated', () => {
     withSequence: (...vs: unknown[]) => vs[vs.length - 1],
     runOnJS: <T extends (...args: unknown[]) => unknown>(fn: T): T => fn,
     FadeIn: { delay: () => ({ duration: () => ({}) }), duration: () => ({}) },
+    FadeInDown: { delay: () => ({ duration: () => ({}) }), duration: () => ({}) },
     FadeOut: { delay: () => ({ duration: () => ({}) }), duration: () => ({}) },
     Layout: { springify: () => ({ damping: () => ({}) }) },
+    LinearTransition: { springify: () => ({ damping: () => ({}) }), duration: () => ({}) },
   };
 });
 
@@ -106,28 +109,130 @@ vi.mock('react-native-gesture-handler', () => {
 });
 
 // `@shopify/flash-list` requires native bindings (Fabric renderer) that
-// Vite/JSDOM can't load. Replace with string-element stand-ins.
-vi.mock('@shopify/flash-list', () => ({
-  FlashList: 'FlashList',
-  MasonryFlashList: 'MasonryFlashList',
-}));
+// Vite/JSDOM can't load. The stub renders the same `FlashList` host element
+// as before, but actually invokes `renderItem` for each row so tile-level
+// behaviour (arrange mode, badges, presses) is testable. Header and empty
+// components are honoured to match the real list's contract.
+vi.mock('@shopify/flash-list', async () => {
+  const { createElement } = await import('react');
+  type ListProps<T> = {
+    data?: readonly T[];
+    renderItem?: (info: { item: T; index: number }) => React.ReactNode;
+    keyExtractor?: (item: T, index: number) => string;
+    ListEmptyComponent?: React.ReactNode;
+    ListHeaderComponent?: React.ReactNode;
+  };
+  const FlashList = <T>(props: ListProps<T>) => {
+    const data = props.data ?? [];
+    const children: unknown[] = [];
+    if (props.ListHeaderComponent) {
+      children.push(createElement('FlashListHeader', { key: 'header' }, props.ListHeaderComponent));
+    }
+    data.forEach((item, index) => {
+      children.push(
+        createElement(
+          'FlashListItem',
+          { key: props.keyExtractor?.(item, index) ?? String(index) },
+          props.renderItem?.({ item, index }) as never,
+        ),
+      );
+    });
+    if (data.length === 0 && props.ListEmptyComponent) {
+      children.push(createElement('FlashListEmpty', { key: 'empty' }, props.ListEmptyComponent));
+    }
+    return createElement('FlashList', null, children as never);
+  };
+  return { FlashList, MasonryFlashList: FlashList };
+});
 
-// `expo-image` ships ESM that pulls native modules. The string-stub keeps
-// snapshots and component trees parseable in tests.
-vi.mock('expo-image', () => ({
-  Image: 'ExpoImage',
-}));
+// `expo-image` ships ESM that pulls native modules. The stub renders the
+// same `ExpoImage` host element as the old string-stub (keeping snapshots
+// and component trees parseable) while also exposing the static
+// `Image.loadAsync` surface the detection screen's EXIF-safe decode uses.
+vi.mock('expo-image', async () => {
+  const { createElement } = await import('react');
+  const Image = Object.assign(
+    (props: Record<string, unknown>) => createElement('ExpoImage', props),
+    {
+      loadAsync: async () => ({
+        width: 1280,
+        height: 960,
+        release: () => undefined,
+      }),
+    },
+  );
+  return { Image };
+});
 
 // `expo-image-manipulator` requires `expo-modules-core`'s native event
-// emitter at module init. Stub the surface we use for test-time renders.
-vi.mock('expo-image-manipulator', () => ({
-  manipulateAsync: async (uri: string) => ({ uri, width: 1280, height: 960 }),
-  SaveFormat: { JPEG: 'jpeg', PNG: 'png' },
+// emitter at module init. Stub the surface we use for test-time renders:
+// the legacy `manipulateAsync` and the contextual
+// `ImageManipulator.manipulate(...).resize(...).renderAsync()` chain.
+vi.mock('expo-image-manipulator', () => {
+  class MockManipulatorContext {
+    resize() {
+      return this;
+    }
+    crop() {
+      return this;
+    }
+    async renderAsync() {
+      return {
+        width: 1280,
+        height: 960,
+        saveAsync: async () => ({ uri: 'file:///processed.jpg', width: 1280, height: 960 }),
+        release: () => undefined,
+      };
+    }
+  }
+  return {
+    manipulateAsync: async (uri: string) => ({ uri, width: 1280, height: 960 }),
+    ImageManipulator: { manipulate: () => new MockManipulatorContext() },
+    SaveFormat: { JPEG: 'jpeg', PNG: 'png' },
+  };
+});
+
+// `expo-image-picker` reaches into `expo-modules-core` native bindings at
+// import time. Stub the surface the screens touch; individual test files
+// override with richer mocks where a flow depends on picker results.
+vi.mock('expo-image-picker', () => ({
+  requestCameraPermissionsAsync: async () => ({ granted: false }),
+  getCameraPermissionsAsync: async () => ({ granted: false }),
+  requestMediaLibraryPermissionsAsync: async () => ({ granted: false }),
+  launchCameraAsync: async () => ({ canceled: true, assets: [] }),
+  launchImageLibraryAsync: async () => ({ canceled: true, assets: [] }),
 }));
 
-// `expo-file-system` needs native bindings; the detection screen only reads
-// File(uri).size for the pre-upload quality heuristic. A healthy size keeps
-// the QA gate open in tests.
+// `expo-camera` is a native module (viewfinder + takePictureAsync). The stub
+// renders a host element and reports permission granted so the capture screen
+// can be exercised without a camera.
+vi.mock('expo-camera', async () => {
+  const { createElement, forwardRef } = await import('react');
+  const CameraView = forwardRef((props: Record<string, unknown>, _ref) =>
+    createElement('CameraView', props),
+  );
+  return {
+    CameraView,
+    useCameraPermissions: () => [{ granted: true }, async () => ({ granted: true })],
+  };
+});
+
+// `expo-sensors` reads the accelerometer for motion coaching. The stub never
+// emits, so tests see the "no motion signal" path.
+vi.mock('expo-sensors', () => ({
+  Accelerometer: {
+    setUpdateInterval: () => undefined,
+    addListener: () => ({ remove: () => undefined }),
+    removeAllListeners: () => undefined,
+  },
+}));
+
+// `expo-file-system` needs native bindings. Nothing imports the modern `File`
+// API statically any more (the byte-size quality heuristic that used it was
+// replaced by real pixel analysis), but the mock stays because the module is
+// still reachable and would pull native bindings if anything imports it.
+// The `/legacy` subpath used for file writes/deletes is required lazily at
+// call time, so it never loads under test.
 vi.mock('expo-file-system', () => ({
   File: class {
     size = 500_000;

@@ -1,0 +1,20 @@
+{
+  "fixture": "mockup_living_01.jpg",
+  "description": "Clean minimalist living room mockup: yellow armchair, brass floor lamp, framed abstract art, vase with branches on brass side table, marble cube, white TV console with books, wall TV, gray rug, dark wardrobe at left",
+  "expected_items": [
+    { "label": "yellow fabric armchair", "category": "Furniture", "colors": ["yellow", "mustard"], "materials": ["fabric"] },
+    { "label": "brass floor lamp", "category": "Lighting", "colors": ["gold", "brass"], "materials": ["metal"] },
+    { "label": "framed abstract art print", "category": "Art", "colors": ["black", "beige"], "materials": ["paper", "wood"] },
+    { "label": "glass vase with flowering branches", "category": "Decor", "colors": ["clear", "green"], "materials": ["glass"] },
+    { "label": "brass round side table", "category": "Furniture", "colors": ["gold", "brass"], "materials": ["metal"] },
+    { "label": "marble decorative cube", "category": "Decor", "colors": ["grey", "marble"], "materials": ["stone"] },
+    { "label": "white TV console", "category": "Furniture", "colors": ["white"], "materials": ["wood"] },
+    { "label": "wall-mounted television", "category": "Electronics", "colors": ["black"], "materials": ["metal", "glass"] },
+    { "label": "books on console", "category": "Books", "colors": ["white"], "materials": ["paper"] },
+    { "label": "gray fringed area rug", "category": "Textiles", "colors": ["grey"], "materials": ["fabric"] },
+    { "label": "dark wardrobe cabinet", "category": "Furniture", "colors": ["black", "dark green"], "materials": ["wood"] }
+  ],
+  "min_item_count": 8,
+  "max_item_count": 14,
+  "notes": "Duplicate-free acceptance test from the product owner: every listed item appears exactly once in the scene. Walls, wood floor, and the wall niche are architectural. The dark wardrobe at left may read as a built-in closet — accept either wardrobe-as-item or its absence, hence min 8. Two book stacks may be one or two items."
+}

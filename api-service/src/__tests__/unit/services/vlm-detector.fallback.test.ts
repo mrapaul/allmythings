@@ -16,7 +16,7 @@ const ITEM: DetectedItem = {
 function okDetector(label: string): Detector {
   return {
     async detect() {
-      return { scene: { ...DEFAULT_SCENE }, items: [{ ...ITEM, label }] };
+      return { scene: { ...DEFAULT_SCENE }, items: [{ ...ITEM, label }], mergeSuggestions: [] };
     },
     // eslint-disable-next-line @typescript-eslint/require-await
     async *detectStream(): AsyncGenerator<DetectorEvent> {

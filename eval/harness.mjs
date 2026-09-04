@@ -5,6 +5,8 @@
 
 import fs from 'node:fs/promises';
 import path from 'node:path';
+import { buildColourLexicon, parseLabel, scoreRun } from './scoring.mjs';
+import { buildTokenEq, tokenUniverse } from './synonyms.mjs';
 
 const EVAL_ROOT = path.dirname(new URL(import.meta.url).pathname);
 const FIXTURES = path.join(EVAL_ROOT, 'fixtures');
@@ -192,40 +194,8 @@ function extractJson(text) {
   }
 }
 
-// Token-based fuzzy match: does candidate label match any oracle expected label
-function labelsMatch(candidate, expected) {
-  const norm = (s) => String(s).toLowerCase().replace(/[^a-z0-9 ]/g, ' ').split(/\s+/).filter(Boolean);
-  const c = new Set(norm(candidate));
-  const e = new Set(norm(expected));
-  // Expected is matched if any non-trivial token overlaps
-  const shared = [...e].filter((t) => c.has(t) && t.length > 2);
-  return shared.length >= 1;
-}
-
-function scoreRun(extracted, oracle) {
-  const expected = oracle.expected_items;
-  const matchedOracle = new Set();
-  for (const cand of extracted) {
-    const label = cand.label ?? '';
-    for (let i = 0; i < expected.length; i++) {
-      if (matchedOracle.has(i)) continue;
-      if (labelsMatch(label, expected[i].label)) {
-        matchedOracle.add(i);
-        break;
-      }
-    }
-  }
-  const recall = matchedOracle.size / expected.length;
-  return {
-    recall: +(recall * 100).toFixed(1),
-    itemCount: extracted.length,
-    expectedMin: oracle.min_item_count,
-    expectedMax: oracle.max_item_count,
-    countWithinRange: extracted.length >= oracle.min_item_count && extracted.length <= oracle.max_item_count,
-    matchedCount: matchedOracle.size,
-    missed: expected.filter((_, i) => !matchedOracle.has(i)).map((e) => e.label),
-  };
-}
+// Matching/scoring lives in scoring.mjs so eval/rescore.mjs can re-score saved
+// runs and eval/scoring.test.mjs can unit-test the matcher.
 
 async function main() {
   const args = process.argv.slice(2);
@@ -253,6 +223,17 @@ async function main() {
     const name = f.replace('.jpg', '');
     oracles[name] = JSON.parse(await fs.readFile(path.join(ORACLES, `${name}.json`), 'utf-8'));
   }
+  // Colour words come from the answer key's own `colors` fields, so the
+  // conflict veto never depends on a hardcoded colour list.
+  const colourLexicon = buildColourLexicon(Object.values(oracles));
+  const scoreOpts = async (oracle, extracted) => {
+    const labels = [
+      ...(oracle.expected_items ?? []).map((e) => e.label),
+      ...extracted.map((c) => c?.label ?? ''),
+    ];
+    const tokenEq = await buildTokenEq(tokenUniverse(parseLabel, labels));
+    return { colourLexicon, ...(tokenEq ? { tokenEq } : {}) };
+  };
 
   const summary = {};
   for (const model of models) {
@@ -278,7 +259,7 @@ async function main() {
         continue;
       }
       const extracted = extractJson(runResult.text);
-      const score = scoreRun(extracted, oracles[name]);
+      const score = scoreRun(extracted, oracles[name], await scoreOpts(oracles[name], extracted));
       const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
       const runPath = path.join(RUNS, `${model.replace(/[/:]/g, '_')}__${name}__${timestamp}.json`);
       await fs.writeFile(runPath, JSON.stringify({ model, fixture: name, extracted, raw: runResult.text, score, elapsedMs: runResult.elapsedMs, attempts: runResult.attempt }, null, 2));

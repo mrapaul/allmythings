@@ -17,11 +17,14 @@ OS_MAJOR=$(echo "$OS_VER" | cut -d. -f1)
 if [ "$OS_MAJOR" -lt 14 ]; then fail "macOS $OS_VER is < 14.0"; fi
 ok "macOS $OS_VER"
 
-# Docker daemon
-if ! docker info >/dev/null 2>&1; then
-  fail "Docker is not running — start Docker Desktop (or OrbStack/Colima) first"
+# Docker daemon — only the observability stack needs it. Detection must never
+# be hostage to a dashboard: warn and let start-all skip obs instead of dying.
+if docker info >/dev/null 2>&1; then
+  ok "Docker reachable"
+else
+  warn "Docker not running — observability (Grafana/Loki) will be skipped; core stack unaffected"
+  export SKIP_OBS=1
 fi
-ok "Docker reachable"
 
 # Node version
 NODE_VER=$(node -v 2>/dev/null || echo "none")

@@ -214,6 +214,18 @@ e2e-mobile: ## Automated on-simulator detection E2E (Maestro) with seeded interi
 	xcrun simctl addmedia $$SIM eval/fixtures/1776173015803.jpg eval/fixtures/1776176976030.jpg test_images/living_room/living_room_01.jpg test_images/kitchen/kitchen_01.jpg 2>/dev/null; \
 	PATH="$$HOME/.maestro-cli/maestro/bin:$$PATH" maestro test mobile-app/.maestro/detection-flow.yaml
 
+e2e-all: ## Full on-simulator Maestro suite: detection first (seeds inventory, clearState), then non-detection flows in order
+	@command -v maestro >/dev/null || export PATH="$$HOME/.maestro-cli/maestro/bin:$$PATH"; \
+	SIM=$$(xcrun simctl list devices booted | grep -oE '[0-9A-F-]{36}' | head -1); \
+	test -n "$$SIM" || { echo "Boot a simulator and install the app first (see docs)"; exit 1; }; \
+	xcrun simctl addmedia $$SIM eval/fixtures/1776173015803.jpg eval/fixtures/1776176976030.jpg test_images/living_room/living_room_01.jpg test_images/kitchen/kitchen_01.jpg 2>/dev/null; \
+	PATH="$$HOME/.maestro-cli/maestro/bin:$$PATH" maestro test \
+		mobile-app/.maestro/detection-flow.yaml \
+		mobile-app/.maestro/search-and-edit.yaml \
+		mobile-app/.maestro/settings-flow.yaml \
+		mobile-app/.maestro/inbox-flow.yaml \
+		mobile-app/.maestro/tidy-flow.yaml
+
 dataset-export: ## Export the corrections flywheel as a COCO dataset under datasets/
 	cd api-service && npx tsx scripts/dataset-export.ts
 
@@ -223,3 +235,49 @@ eval-promote: ## Promote a corrected photo into the eval oracle: make eval-promo
 eval-baseline: ## Re-snapshot current results as new baseline (commit after)
 	node eval/harness.mjs gemini:gemini-2.5-flash gemma4:31b-cloud
 	@latest=$$(ls -t eval/report-*.json | head -1); cp "$$latest" eval/baseline.json; echo "Baseline = $$latest"
+
+## ── Model training (training/) ────────────────────────────────────
+# Newest flywheel COCO export produced by `make dataset-export`.
+TRAIN_EXPORT = $(shell ls -td datasets/export-* 2>/dev/null | head -1)
+# Every downloaded bootstrap set (training/dataset/fetch_bootstrap.py).
+TRAIN_BOOTSTRAPS = $(shell ls -d training/data/bootstrap/*/ 2>/dev/null)
+TRAIN_FLYWHEEL_FLAG = $(if $(TRAIN_EXPORT),--flywheel $(TRAIN_EXPORT),)
+TRAIN_BOOTSTRAP_FLAGS = $(foreach d,$(TRAIN_BOOTSTRAPS),--bootstrap $(d))
+
+train-test: ## Run training pipeline unit tests (pytest + node)
+	python3 -m pytest training/tests
+	node --test training/tests/*.test.mjs
+
+train-fetch-bootstrap: ## Download CC-BY bootstrap sets (needs ROBOFLOW_API_KEY)
+	python3 training/dataset/fetch_bootstrap.py
+
+train-dataset-vlm: ## Build Qwen3-VL LoRA JSONL from flywheel export + bootstrap sets
+	@test -n "$(TRAIN_EXPORT)$(TRAIN_BOOTSTRAPS)" || { echo "No datasets/export-* and no bootstrap sets. Run 'make dataset-export' or 'make train-fetch-bootstrap'."; exit 1; }
+	python3 training/dataset/build_vlm_dataset.py $(TRAIN_FLYWHEEL_FLAG) $(TRAIN_BOOTSTRAP_FLAGS) --out training/data/vlm
+
+train-taxonomy: ## Derive the detector class list from the data (embeds labels via local Ollama)
+	@test -n "$(TRAIN_EXPORT)$(TRAIN_BOOTSTRAPS)" || { echo "No datasets/export-* and no bootstrap sets. Run 'make dataset-export' or 'make train-fetch-bootstrap'."; exit 1; }
+	python3 training/dataset/derive_taxonomy.py $(TRAIN_FLYWHEEL_FLAG) $(TRAIN_BOOTSTRAP_FLAGS)
+
+train-dataset-detr: train-taxonomy ## Build merged RF-DETR COCO dataset (derived taxonomy, regenerated first)
+	python3 training/dataset/build_detr_dataset.py $(TRAIN_FLYWHEEL_FLAG) $(TRAIN_BOOTSTRAP_FLAGS) --out training/data/detr
+
+train-status: ## Flywheel counts vs retrain threshold (TRAIN_MIN_NEW_IMAGES/TRAIN_GROWTH_PCT)
+	-python3 training/dataset/flywheel_status.py
+
+train-continuous: ## Export flywheel, rebuild both datasets, print launch cmd when threshold met
+	-$(MAKE) dataset-export
+	@$(MAKE) train-dataset-vlm train-dataset-detr
+	@python3 training/dataset/flywheel_status.py || echo "Below threshold — nothing to launch (no cloud spend)."
+
+train-benchmark: ## Benchmark every available contender against the home-inventory oracle
+	node training/benchmarks/run_benchmark.mjs $(if $(CANDIDATE),--candidate-name $(CANDIDATE),) $(if $(CANDIDATE_URL),--candidate-url $(CANDIDATE_URL),)
+
+train-promote: ## Release gate for a candidate: make train-promote CANDIDATE=<name> [CANDIDATE_URL=…]
+	@test -n "$(CANDIDATE)" || { echo "Usage: make train-promote CANDIDATE=<name> [CANDIDATE_URL=http://localhost:8000/v1]"; exit 1; }
+	node training/release/promote.mjs --candidate $(CANDIDATE) $(if $(CANDIDATE_URL),--candidate-url $(CANDIDATE_URL),)
+
+train-rollback: ## Revert the model registry to the previously active entry
+	node training/release/promote.mjs --rollback
+
+.PHONY: train-test train-fetch-bootstrap train-taxonomy train-dataset-vlm train-dataset-detr train-status train-continuous train-benchmark train-promote train-rollback

@@ -1,4 +1,7 @@
-import { describe, it, expect, vi } from 'vitest';
+import fs from 'node:fs';
+import os from 'node:os';
+import path from 'node:path';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { VlmRunStore } from '../../../services/vlm-run-store';
 import type { Detector, DetectorEvent } from '../../../services/vlm-detector';
 import { DEFAULT_SCENE } from '../../../services/vlm-detector.parse';
@@ -80,7 +83,7 @@ describe('VlmRunStore', () => {
     try {
       const gate = makeGate();
       gate.release();
-      const store = new VlmRunStore(slowDetector(gate), 1000);
+      const store = new VlmRunStore(slowDetector(gate), { ttlMs: 1000 });
       const run = store.start(Buffer.from('img'), 'c'.repeat(64));
       await vi.advanceTimersByTimeAsync(1);
       expect(store.get(run.runId)).not.toBeNull();
@@ -95,5 +98,116 @@ describe('VlmRunStore', () => {
     const gate = makeGate();
     const store = new VlmRunStore(slowDetector(gate));
     expect(store.get('deadbeef')).toBeNull();
+  });
+});
+
+describe('VlmRunStore persistence', () => {
+  let dataDir: string;
+
+  beforeEach(() => {
+    dataDir = fs.mkdtempSync(path.join(os.tmpdir(), 'vlm-run-store-'));
+  });
+
+  afterEach(() => {
+    fs.rmSync(dataDir, { recursive: true, force: true });
+  });
+
+  const runFile = (runId: string) => path.join(dataDir, 'runs', `${runId}.json`);
+
+  it('round-trips a completed run across a simulated restart', async () => {
+    // Arrange — complete a run in one store instance.
+    const gate = makeGate();
+    gate.release();
+    const store = new VlmRunStore(slowDetector(gate), { dataDir });
+    const run = store.start(Buffer.from('img'), 'a'.repeat(64));
+    await tick();
+    await tick();
+    expect(store.get(run.runId)?.status).toBe('completed');
+    await store.flushPersistence();
+    expect(fs.existsSync(runFile(run.runId))).toBe(true);
+
+    // Act — "restart": a brand-new store instance over the same directory.
+    const reborn = new VlmRunStore(slowDetector(makeGate()), { dataDir });
+    const restored = reborn.get(run.runId);
+
+    // Assert — the completed run survived, items intact.
+    expect(restored).not.toBeNull();
+    expect(restored?.status).toBe('completed');
+    expect(restored?.photoSha256).toBe('a'.repeat(64));
+    expect(restored?.items.map((i) => i.label)).toEqual(['sofa', 'lamp']);
+  });
+
+  it('marks a run that was mid-flight during the restart as failed, not lost', async () => {
+    // Arrange — a run persisted as 'running' whose process then died.
+    const gate = makeGate(); // never released: the stream never finishes
+    const store = new VlmRunStore(slowDetector(gate), { dataDir });
+    const run = store.start(Buffer.from('img'), 'b'.repeat(64));
+    await store.flushPersistence();
+
+    // Act — restart.
+    const reborn = new VlmRunStore(slowDetector(makeGate()), { dataDir });
+    const restored = reborn.get(run.runId);
+
+    // Assert — surfaced as failed (its stream is gone), never run_not_found.
+    expect(restored?.status).toBe('failed');
+    expect(restored?.error).toContain('restart');
+  });
+
+  it('TTL pruning also deletes the run file on disk', async () => {
+    vi.useFakeTimers();
+    try {
+      // Arrange
+      const gate = makeGate();
+      gate.release();
+      const store = new VlmRunStore(slowDetector(gate), { dataDir, ttlMs: 1000 });
+      const run = store.start(Buffer.from('img'), 'c'.repeat(64));
+      await vi.advanceTimersByTimeAsync(1);
+      await store.flushPersistence();
+      expect(fs.existsSync(runFile(run.runId))).toBe(true);
+
+      // Act — cross the TTL and trigger a prune.
+      await vi.advanceTimersByTimeAsync(60_000);
+      expect(store.get(run.runId)).toBeNull();
+      await store.flushPersistence();
+
+      // Assert
+      expect(fs.existsSync(runFile(run.runId))).toBe(false);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('skips expired and torn files at boot instead of crashing', async () => {
+    // Arrange — one expired run, one torn file, one healthy completed run.
+    const runsDir = path.join(dataDir, 'runs');
+    fs.mkdirSync(runsDir, { recursive: true });
+    const healthyId = 'f'.repeat(32);
+    const expiredId = 'e'.repeat(32);
+    const baseRun = {
+      photoSha256: 'd'.repeat(64),
+      status: 'completed',
+      scene: null,
+      items: [ITEM],
+      mergeSuggestions: [],
+      completedAt: Date.now(),
+    };
+    fs.writeFileSync(
+      path.join(runsDir, `${healthyId}.json`),
+      JSON.stringify({ ...baseRun, runId: healthyId, startedAt: Date.now() }),
+    );
+    fs.writeFileSync(
+      path.join(runsDir, `${expiredId}.json`),
+      JSON.stringify({ ...baseRun, runId: expiredId, startedAt: Date.now() - 60 * 60_000 }),
+    );
+    fs.writeFileSync(path.join(runsDir, 'torn.json'), '{"runId": "tr');
+
+    // Act
+    const store = new VlmRunStore(slowDetector(makeGate()), { dataDir });
+
+    // Assert
+    expect(store.get(healthyId)?.status).toBe('completed');
+    expect(store.get(expiredId)).toBeNull();
+    expect(fs.existsSync(path.join(runsDir, `${expiredId}.json`))).toBe(false);
+    expect(fs.existsSync(path.join(runsDir, 'torn.json'))).toBe(false);
   });
 });

@@ -1,0 +1,72 @@
+appId: com.codesparktech.homeinventory
+tags:
+  - e2e
+  - tidy
+---
+# Tidy-up (merge duplicates) E2E: home → tidy (badge or deep link) → assert
+# it renders → back home.
+#
+# STATE ASSUMPTION: none. launchApp uses clearState: false so it can run
+# after other flows. The home tidy badge (id tidy-badge) only exists when the
+# duplicate scan has suggestions, so entry is conditional: tap the badge when
+# present, otherwise open the route via the app scheme (app.json:
+# "homeinventory"). Suggestions depend on what detection saved, so BOTH
+# outcomes are valid: the tidy-empty state or a tidy-card suggestion pair.
+# No merge is performed — the flow asserts render only, leaving state as
+# found.
+
+- launchApp:
+    clearState: false
+
+- extendedWaitUntil:
+    visible:
+      id: "top-bar-settings"
+    timeout: 30000
+
+- runFlow:
+    when:
+      visible:
+        id: "tidy-badge"
+    commands:
+      - tapOn:
+          id: "tidy-badge"
+- runFlow:
+    when:
+      notVisible:
+        id: "tidy-badge"
+    commands:
+      - openLink: "homeinventory:///tidy"
+      # iOS confirms custom-scheme links with a system dialog — dismiss it
+      # (see inbox-flow for the incident this guards against).
+      - runFlow:
+          when:
+            visible: "Open"
+          commands:
+            - tapOn: "Open"
+
+- extendedWaitUntil:
+    visible: "Tidy up"
+    timeout: 15000
+
+# Empty state OR a suggestion card — both paths conditional, one must hold.
+- extendedWaitUntil:
+    visible:
+      id: "tidy-empty"
+    timeout: 5000
+    optional: true
+- runFlow:
+    when:
+      notVisible:
+        id: "tidy-empty"
+    commands:
+      - assertVisible:
+          id: "tidy-card"
+      - assertVisible:
+          id: "tidy-merge"
+
+# Back home (tidy back button carries accessibilityLabel "Back").
+- tapOn: "Back"
+- extendedWaitUntil:
+    visible:
+      id: "top-bar-settings"
+    timeout: 15000

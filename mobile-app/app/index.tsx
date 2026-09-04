@@ -5,24 +5,42 @@ import CategoryStrip, {
 } from '@/components/CategoryStrip';
 import GlowBackdrop from '@/components/GlowBackdrop';
 import HomePickerSheet from '@/components/HomePickerSheet';
+import { ItemThumb } from '@/components/ItemThumb';
+import { JiggleView } from '@/components/JiggleView';
 import MasonryGrid from '@/components/MasonryGrid';
-import QuickActionsSheet from '@/components/QuickActionsSheet';
 import SearchHeader from '@/components/SearchHeader';
+import { Snackbar } from '@/components/Snackbar';
 import TopBar from '@/components/TopBar';
 import { useHomes } from '@/contexts/HomesContext';
 import { useInventory } from '@/contexts/InventoryContext';
 import { useColors } from '@/hooks/useColors';
 import { useResponsive } from '@/hooks/useResponsive';
 import { useSearch } from '@/hooks/useSearch';
+import { useServerHealth } from '@/hooks/useServerHealth';
+import { isDetectedBox } from '@/lib/bbox-layout';
+import { categoryIcon } from '@/lib/category-icons';
+import { stageTitle } from '@/lib/detect-stages';
+import { type DetectionJob, autoRetryableJobs, inboxCount } from '@/lib/jobs';
+import { labelsForDisplay, primaryChips, typeHandle } from '@/lib/labels';
+import { groupByCategory, toggleCollapsed } from '@/lib/overview';
+import { visibilityVerdict } from '@/lib/partial-visibility';
+import { pushRecentSearch } from '@/lib/search-query';
+import { checkShotQuality, dispatchShot } from '@/services/walk-capture';
 import { useHomeScreenStore } from '@/stores/home-screen.store';
+import { removeJob, useJobsStore } from '@/stores/jobs.store';
+import { type CollectionViewMode, Prefs } from '@/stores/prefs';
+import { refreshLocalSuggestions, useSuggestionsStore } from '@/stores/suggestions.store';
 import type { InventoryItem } from '@/types/inventory';
-import { Image } from 'expo-image';
+import { Feather } from '@expo/vector-icons';
+import * as Haptics from 'expo-haptics';
 import * as ImagePicker from 'expo-image-picker';
 import { useRouter } from 'expo-router';
-import { useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
+  BackHandler,
+  Platform,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -33,6 +51,21 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 const ALL = '__all__';
+
+// The symmetric grid keeps a fixed three-column layout of square tiles so
+// every row lines up regardless of each item's crop aspect ratio — compact
+// enough to scan a full collection at a glance without zooming.
+const GRID_COLUMNS = 3;
+// Total gap between adjacent tiles (each tile carries half on every side).
+// Gallery-grade: tight seams so the imagery reads as one continuous surface.
+const GRID_GUTTER = 3;
+
+/** overview → grid → list → overview. */
+function nextViewMode(mode: CollectionViewMode): CollectionViewMode {
+  if (mode === 'overview') return 'grid';
+  if (mode === 'grid') return 'list';
+  return 'overview';
+}
 
 // The Zustand store uses 'newest' | 'oldest' | 'alpha'; CategoryStrip expects
 // 'newest' | 'oldest' | 'az'. Map at the boundary so neither component
@@ -45,9 +78,10 @@ export default function HomeScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
   const router = useRouter();
-  const { items, isLoading, deleteItem } = useInventory();
+  const { items, isLoading, softDelete, undoDelete, pendingDelete } = useInventory();
   const { activeHome, activeHomeId } = useHomes();
-  const { columns, gutter, cardGap, contentMaxWidth, isCompact } = useResponsive();
+  const { gutter, contentMaxWidth, isCompact } = useResponsive();
+  const { health: serverHealth } = useServerHealth();
 
   const query = useHomeScreenStore((s) => s.query);
   const setQuery = useHomeScreenStore((s) => s.setQuery);
@@ -57,10 +91,101 @@ export default function HomeScreen() {
   const cycleSort = useHomeScreenStore((s) => s.cycleSort);
 
   const [pickerVisible, setPickerVisible] = useState(false);
-  const [actionItem, setActionItem] = useState<InventoryItem | null>(null);
+  const [searchFocused, setSearchFocused] = useState(false);
+  /**
+   * Arrange mode (iPhone home-screen idiom): long-press any tile to reveal ×
+   * badges on every item. Deletes go through the normal soft-delete + undo
+   * snackbar, so there is no confirmation dialog to dismiss.
+   */
+  const [isArranging, setIsArranging] = useState(false);
+  const enterArrangeMode = () => {
+    if (isArranging) return;
+    if (Platform.OS !== 'web') void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    setIsArranging(true);
+  };
+  const exitArrangeMode = () => setIsArranging(false);
+
+  // The Android system back gesture leaves arrange mode before anything else.
+  useEffect(() => {
+    if (!isArranging) return;
+    const sub = BackHandler.addEventListener('hardwareBackPress', () => {
+      setIsArranging(false);
+      return true;
+    });
+    return () => sub.remove();
+  }, [isArranging]);
+  // Walk mode: precheck advice awaiting a decision, and a brief passing hint.
+  const [shotAdvice, setShotAdvice] = useState<{ uri: string; advice: string } | null>(null);
+  /** Dispatches currently uploading (pre-job); drives the Sending… pill. */
+  const [sendingCount, setSendingCount] = useState(0);
+  const jobs = useJobsStore((s) => s.jobs);
+  const runningJob = jobs.find((j) => j.status === 'running');
+  const inboxBadgeCount = inboxCount(jobs);
+  // The home pill speaks the same staged vocabulary as the capture tray —
+  // one mental model wherever the user meets a processing shot.
+  const [pillTick, setPillTick] = useState(() => Date.now());
+  useEffect(() => {
+    if (!runningJob) return;
+    const timer = setInterval(() => setPillTick(Date.now()), 5_000);
+    return () => clearInterval(timer);
+  }, [runningJob]);
+
+  // Quiet duplicate scan across the WHOLE inventory — recomputed in the
+  // background whenever the collection changes; never interrupts anything.
+  const suggestions = useSuggestionsStore((s) => s.suggestions);
+  // The scan is idempotent and the store only publishes on a real change
+  // (see suggestions.store commit), so re-running it is cheap and safe.
+  useEffect(() => {
+    refreshLocalSuggestions(items);
+  }, [items]);
+  const tidyCount = suggestions.filter(
+    (s) => items.some((i) => i.id === s.keepId) && items.some((i) => i.id === s.mergeId),
+  ).length;
+
+  const prefs = useMemo(() => {
+    try {
+      return Prefs.makeMmkv();
+    } catch {
+      return Prefs.makeInMemory();
+    }
+  }, []);
+  const [viewMode, setViewMode] = useState<CollectionViewMode>(() => prefs.getCollectionViewMode());
+
+  // The offline banner's promise made good: shots whose dispatch never
+  // reached the server re-dispatch themselves the moment it comes back.
+  // Transition-gated (offline → online) so a flaky link can't storm retries.
+  const prevHealthRef = useRef(serverHealth);
+  useEffect(() => {
+    const cameOnline = serverHealth === 'online' && prevHealthRef.current === 'offline';
+    prevHealthRef.current = serverHealth;
+    if (!cameOnline) return;
+    for (const job of autoRetryableJobs(jobs)) {
+      removeJob(job.runId);
+      void dispatchShot(prefs, job.photoUri, { roomSessionId: job.roomSessionId });
+    }
+  }, [serverHealth, jobs, prefs]);
+  const toggleViewMode = () => {
+    const next = nextViewMode(viewMode);
+    setViewMode(next);
+    prefs.setCollectionViewMode(next);
+  };
+  // Overview sections the user has folded away; per-session by design — a
+  // fresh open should always show the whole organized collection.
+  const [collapsedSections, setCollapsedSections] = useState<Set<string>>(() => new Set());
 
   const scrollRef = useRef<ScrollView>(null);
   const searchRef = useRef<TextInput>(null);
+
+  // Recent searches (last 8, MMKV-backed) shown while the empty field has
+  // focus. Committing = keyboard search action or opening a result.
+  const [recentSearches, setRecentSearches] = useState<string[]>(() => prefs.getRecentSearches());
+  const recordSearch = () => {
+    const trimmed = query.trim();
+    if (!trimmed) return;
+    const next = pushRecentSearch(prefs.getRecentSearches(), trimmed);
+    prefs.setRecentSearches(next);
+    setRecentSearches(next);
+  };
 
   // FTS-backed search via TanStack Query — only fires when there's a query.
   const searchResults = useSearch(activeHomeId, query);
@@ -95,30 +220,90 @@ export default function HomeScreen() {
     return out;
   }, [baseItems, activeCategory, sort]);
 
-  const goToDetection = (imageUri: string) => {
-    router.push({ pathname: '/detection', params: { imageUri } });
+  // Label-first: tiles carry chips, not titles. Precompute per-item chips.
+  const chipsById = useMemo(() => {
+    const map = new Map<string, ReturnType<typeof primaryChips>>();
+    for (const it of visible) map.set(it.id, primaryChips(labelsForDisplay(it)));
+    return map;
+  }, [visible]);
+
+  const openLiveReview = (job: DetectionJob) => {
+    router.push({ pathname: '/detection', params: { imageUri: job.photoUri, runId: job.runId } });
+  };
+
+  /**
+   * Walk mode. The ONLY thing between the shutter and the next shot is the
+   * on-device quality check (pure pixel math, no network). If the frame is
+   * unusable the user hears about it instantly; otherwise detection is
+   * dispatched immediately and the slow server precheck runs detached, its
+   * verdict landing on the inbox card rather than interrupting the walk.
+   */
+  const captureAndDispatch = async (imageUri: string) => {
+    const quality = await checkShotQuality(imageUri);
+    if (quality?.advice) {
+      setShotAdvice({ uri: imageUri, advice: quality.advice });
+      return;
+    }
+    // Visible from the first millisecond of dispatch: the "Sending…" pill
+    // holds the slot until either the processing toast (success) or the
+    // inbox badge (failure) takes over. Never silence.
+    setSendingCount((n) => n + 1);
+    try {
+      await dispatchShot(prefs, imageUri);
+    } finally {
+      setSendingCount((n) => Math.max(0, n - 1));
+    }
   };
 
   const handleCamera = async () => {
+    // Primary path: our own viewfinder, which coaches the frame BEFORE the
+    // shutter (app/capture.tsx). It asks for camera permission itself.
+    try {
+      router.push('/capture');
+      return;
+    } catch {
+      // The custom viewfinder needs expo-camera's native module; if that is
+      // missing (e.g. a build predating the rebuild) fall through to the
+      // system camera rather than stranding the button.
+    }
+
     const perm = await ImagePicker.requestCameraPermissionsAsync();
     if (!perm.granted) {
-      Alert.alert('Permission needed', 'Camera access is required to take photos.');
+      Alert.alert(
+        'One quick step',
+        'Allow camera access in Settings and we can start photographing your things.',
+      );
       return;
     }
-    const result = await ImagePicker.launchCameraAsync({
-      mediaTypes: 'images',
-      quality: 0.8,
-    });
-    const uri = result.canceled ? undefined : result.assets?.[0]?.uri;
+    let uri: string | undefined;
+    try {
+      const result = await ImagePicker.launchCameraAsync({
+        mediaTypes: 'images',
+        quality: 0.8,
+      });
+      uri = result.canceled ? undefined : result.assets?.[0]?.uri;
+    } catch {
+      // Simulators have no camera, and a real device's can be unavailable
+      // (in use elsewhere, restricted by policy). Whatever the reason, a
+      // button that silently does nothing is the worst possible answer.
+      Alert.alert(
+        'No camera available',
+        'This device has no camera we can open — you can still add photos from your library.',
+      );
+      return;
+    }
     if (uri) {
-      goToDetection(uri);
+      void captureAndDispatch(uri);
     }
   };
 
   const handleLibrary = async () => {
     const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (!perm.granted) {
-      Alert.alert('Permission needed', 'Photo access is required to pick a photo.');
+      Alert.alert(
+        'One quick step',
+        'Allow photo access in Settings and we can catalogue shots you already have.',
+      );
       return;
     }
     const result = await ImagePicker.launchImageLibraryAsync({
@@ -127,33 +312,13 @@ export default function HomeScreen() {
     });
     const uri = result.canceled ? undefined : result.assets?.[0]?.uri;
     if (uri) {
-      goToDetection(uri);
+      void captureAndDispatch(uri);
     }
   };
 
   const focusSearch = () => {
     scrollRef.current?.scrollTo({ y: 0, animated: true });
     setTimeout(() => searchRef.current?.focus(), 250);
-  };
-
-  const handleAction = async (a: 'edit' | 'move' | 'delete') => {
-    const it = actionItem;
-    setActionItem(null);
-    if (!it) return;
-    if (a === 'edit') {
-      router.push(`/item/${it.id}`);
-    } else if (a === 'delete') {
-      Alert.alert('Delete item?', `Remove "${it.label}" from this home.`, [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Delete',
-          style: 'destructive',
-          onPress: () => {
-            void deleteItem(it.id);
-          },
-        },
-      ]);
-    }
   };
 
   const isFiltering = query.length > 0 || activeCategory !== ALL;
@@ -174,7 +339,7 @@ export default function HomeScreen() {
           ? 'Try a different search or tap All to see everything.'
           : 'Tap the camera below to capture your first piece. Each photo is catalogued automatically.'}
       </Text>
-      {isFiltering && (
+      {isFiltering ? (
         <Pressable
           onPress={() => {
             setQuery('');
@@ -189,53 +354,149 @@ export default function HomeScreen() {
             Clear filters
           </Text>
         </Pressable>
+      ) : (
+        <Pressable
+          testID="manual-add-empty"
+          onPress={() => router.push('/add-item')}
+          style={({ pressed }) => [
+            styles.emptyResetBtn,
+            styles.manualAddBtn,
+            { borderColor: colors.border, opacity: pressed ? 0.7 : 1 },
+          ]}
+        >
+          <Text style={[styles.emptyResetText, { color: colors.foreground }]}>
+            Or add one by hand
+          </Text>
+        </Pressable>
       )}
     </View>
   );
 
-  const renderTile = ({ item }: { item: InventoryItem; index: number }) => {
-    const ratio = (() => {
-      if (item.box && item.box.width > 0 && item.box.height > 0) {
-        const r = item.box.height / item.box.width;
-        return Math.max(0.7, Math.min(1.55, r));
-      }
-      return 1;
-    })();
-
+  const renderTile = ({ item, index }: { item: InventoryItem; index: number }) => {
+    const partial = visibilityVerdict(item.box) !== 'full';
     return (
-      <View style={[styles.tileWrap, { aspectRatio: 1 / ratio, margin: cardGap / 2 }]}>
-        <Pressable
-          onPress={() => router.push(`/item/${item.id}`)}
-          onLongPress={() => setActionItem(item)}
-          delayLongPress={350}
-          style={({ pressed }) => [
-            styles.card,
-            {
-              backgroundColor: colors.card,
-              borderColor: colors.border,
-              transform: [{ scale: pressed ? 0.97 : 1 }],
-            },
-          ]}
-        >
-          <Image
-            source={item.primaryPhotoUri}
-            style={StyleSheet.absoluteFill}
-            contentFit="cover"
-            transition={250}
-          />
-          <View style={styles.cardScrim} pointerEvents="none" />
-          <View style={styles.cardCaption}>
-            <Text numberOfLines={1} style={styles.cardLabel}>
-              {item.label || 'Untitled'}
-            </Text>
-            <Text numberOfLines={1} style={styles.cardCategory}>
-              {item.category}
-            </Text>
-          </View>
-        </Pressable>
+      <View style={[styles.tileWrap, { margin: GRID_GUTTER / 2 }]}>
+        <JiggleView active={isArranging} index={index} style={styles.tileFill}>
+          <Pressable
+            testID={`collection-tile-${index}`}
+            onPress={() => {
+              // In arrange mode a tap must not open the item — the only tap
+              // targets are the × badges and Done.
+              if (isArranging) return;
+              recordSearch();
+              router.push(`/item/${item.id}`);
+            }}
+            onLongPress={() => enterArrangeMode()}
+            delayLongPress={350}
+            style={({ pressed }) => [
+              styles.card,
+              {
+                backgroundColor: colors.card,
+                transform: [{ scale: pressed && !isArranging ? 0.97 : 1 }],
+              },
+            ]}
+          >
+            <ItemThumb
+              uri={item.primaryPhotoUri}
+              box={item.box}
+              thumbnailUri={item.thumbnailUri}
+              style={StyleSheet.absoluteFill}
+            />
+            {/* Pure imagery: no scrim, no text. Status glyphs are tiny and
+                faint — visible on inspection, invisible at a glance. */}
+            <View style={styles.badgeRow} pointerEvents="none">
+              {isDetectedBox(item.box) && (
+                <Feather name="crop" size={9} color="#ffffff" style={styles.quietGlyph} />
+              )}
+              {partial && (
+                <View testID={`partial-badge-${index}`}>
+                  <Feather name="maximize" size={9} color="#ffffff" style={styles.quietGlyph} />
+                </View>
+              )}
+            </View>
+            {/* Identity without text: the category's glyph, one corner,
+                consistent everywhere. */}
+            <View style={styles.categoryGlyph} pointerEvents="none">
+              <Feather name={categoryIcon(item.category)} size={12} color="#ffffff" />
+            </View>
+          </Pressable>
+
+          {isArranging && (
+            <Pressable
+              testID={`tile-delete-${index}`}
+              accessibilityLabel={`Remove ${typeHandle(labelsForDisplay(item))}`}
+              hitSlop={8}
+              onPress={() => softDelete([item.id], typeHandle(labelsForDisplay(item)))}
+              style={[styles.deleteBadge, { backgroundColor: colors.foreground }]}
+            >
+              <Feather name="x" size={13} color={colors.background} />
+            </Pressable>
+          )}
+        </JiggleView>
       </View>
     );
   };
+
+  const renderListRow = (item: InventoryItem, index: number) => (
+    <Pressable
+      key={item.id}
+      onPress={() => {
+        if (isArranging) return;
+        recordSearch();
+        router.push(`/item/${item.id}`);
+      }}
+      onLongPress={() => enterArrangeMode()}
+      delayLongPress={350}
+      style={({ pressed }) => [
+        styles.listRow,
+        {
+          backgroundColor: colors.card,
+          borderColor: colors.border,
+          opacity: pressed ? 0.9 : 1,
+        },
+      ]}
+    >
+      <ItemThumb
+        uri={item.primaryPhotoUri}
+        box={item.box}
+        thumbnailUri={item.thumbnailUri}
+        style={styles.listThumb}
+      />
+      <View style={styles.listRowBody}>
+        {/* List IS the text view; the restraint is typographic, not absence.
+            One name line, one quiet meta line — no bordered chips. */}
+        <Text numberOfLines={1} style={[styles.listName, { color: colors.foreground }]}>
+          {typeHandle(labelsForDisplay(item))}
+        </Text>
+        <Text numberOfLines={1} style={[styles.listMeta, { color: colors.mutedForeground }]}>
+          {[
+            ...(chipsById.get(item.id) ?? []).filter((c) => c.key !== 'type').map((c) => c.value),
+            new Date(item.createdAt).toLocaleDateString(undefined, {
+              month: 'short',
+              day: 'numeric',
+            }),
+          ].join(' · ')}
+        </Text>
+      </View>
+      {visibilityVerdict(item.box) !== 'full' && (
+        <Feather name="maximize" size={13} color={colors.mutedForeground} />
+      )}
+      {isDetectedBox(item.box) && <Feather name="crop" size={13} color={colors.mutedForeground} />}
+      {isArranging ? (
+        <Pressable
+          testID={`list-delete-${index}`}
+          accessibilityLabel={`Remove ${typeHandle(labelsForDisplay(item))}`}
+          hitSlop={8}
+          onPress={() => softDelete([item.id], typeHandle(labelsForDisplay(item)))}
+          style={[styles.listDeleteBadge, { backgroundColor: colors.foreground }]}
+        >
+          <Feather name="x" size={13} color={colors.background} />
+        </Pressable>
+      ) : (
+        <Feather name="chevron-right" size={16} color={colors.mutedForeground} />
+      )}
+    </Pressable>
+  );
 
   const headerTitle = query
     ? `Results · ${visible.length}`
@@ -250,6 +511,30 @@ export default function HomeScreen() {
       <View style={[styles.contentClamp, { maxWidth: contentMaxWidth }]}>
         <TopBar onPickHome={() => setPickerVisible(true)} />
 
+        {/* An unreachable server is a visible, actionable state — never a
+            silent one. Shots taken while offline queue and retry. */}
+        {serverHealth === 'offline' && (
+          <Pressable
+            testID="server-offline-banner"
+            accessibilityLabel="Server unreachable — open settings"
+            onPress={() => router.push('/settings')}
+            style={({ pressed }) => [
+              styles.offlineBanner,
+              {
+                backgroundColor: colors.card,
+                borderColor: colors.border,
+                opacity: pressed ? 0.8 : 1,
+              },
+            ]}
+          >
+            <View style={styles.offlineDot} />
+            <Text style={[styles.offlineText, { color: colors.foreground }]} numberOfLines={1}>
+              Server unreachable — new shots will wait
+            </Text>
+            <Feather name="chevron-right" size={14} color={colors.mutedForeground} />
+          </Pressable>
+        )}
+
         <ScrollView
           ref={scrollRef}
           contentContainerStyle={{
@@ -258,8 +543,44 @@ export default function HomeScreen() {
           }}
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
+          // Tapping empty space leaves arrange mode, like the home screen.
+          onStartShouldSetResponder={() => isArranging}
+          onResponderRelease={exitArrangeMode}
         >
-          <SearchHeader ref={searchRef} value={query} onChange={setQuery} />
+          <SearchHeader
+            ref={searchRef}
+            value={query}
+            onChange={setQuery}
+            onFocus={() => setSearchFocused(true)}
+            onBlur={() => {
+              // Delay so a tap on a recent-search chip lands before the row hides.
+              setTimeout(() => setSearchFocused(false), 150);
+            }}
+            onSubmit={recordSearch}
+          />
+
+          {searchFocused && query.trim().length === 0 && recentSearches.length > 0 && (
+            <View style={styles.recentRow} testID="recent-searches">
+              <Feather name="clock" size={13} color={colors.mutedForeground} />
+              {recentSearches.map((term) => (
+                <Pressable
+                  key={term}
+                  accessibilityLabel={`Search again: ${term}`}
+                  onPress={() => setQuery(term)}
+                  style={({ pressed }) => [
+                    styles.recentChip,
+                    {
+                      backgroundColor: colors.card,
+                      borderColor: colors.border,
+                      opacity: pressed ? 0.7 : 1,
+                    },
+                  ]}
+                >
+                  <Text style={[styles.recentChipText, { color: colors.foreground }]}>{term}</Text>
+                </Pressable>
+              ))}
+            </View>
+          )}
 
           {items.length > 0 && (
             <View style={styles.categoryStripWrap}>
@@ -281,34 +602,213 @@ export default function HomeScreen() {
             <View style={styles.emptyTopPad}>{renderEmpty()}</View>
           ) : (
             <>
-              <Text
-                style={[
-                  styles.gridTitle,
-                  { color: colors.foreground, fontSize: isCompact ? 22 : 28 },
-                ]}
-              >
-                {headerTitle}
-              </Text>
-
-              <View style={styles.gridContainer}>
-                <MasonryGrid<InventoryItem>
-                  items={visible}
-                  keyExtractor={(it) => it.id}
-                  getAspectRatio={(it) => {
-                    if (it.box && it.box.width > 0 && it.box.height > 0) {
-                      const r = it.box.height / it.box.width;
-                      return Math.max(0.7, Math.min(1.55, 1 / r));
-                    }
-                    return 1;
-                  }}
-                  renderItem={renderTile}
-                  columns={columns}
-                  gutter={cardGap / 2}
-                />
+              <View style={styles.gridHeaderRow}>
+                <Text
+                  style={[
+                    styles.gridTitle,
+                    { color: colors.foreground, fontSize: isCompact ? 22 : 28 },
+                  ]}
+                >
+                  {headerTitle}
+                </Text>
+                <View style={styles.gridHeaderActions}>
+                  {tidyCount > 0 && (
+                    <Pressable
+                      testID="tidy-badge"
+                      accessibilityLabel={`Tidy up, ${tidyCount} possible duplicates`}
+                      onPress={() => router.push('/tidy')}
+                      style={({ pressed }) => [
+                        styles.tidyBadge,
+                        {
+                          backgroundColor: colors.muted,
+                          borderColor: colors.border,
+                          opacity: pressed ? 0.8 : 1,
+                        },
+                      ]}
+                    >
+                      <Feather name="git-merge" size={15} color={colors.mutedForeground} />
+                      <View style={[styles.countDot, { backgroundColor: colors.primary }]}>
+                        <Text style={[styles.countDotText, { color: colors.primaryForeground }]}>
+                          {tidyCount}
+                        </Text>
+                      </View>
+                    </Pressable>
+                  )}
+                  <Pressable
+                    testID="manual-add"
+                    accessibilityLabel="Add an item by hand"
+                    onPress={() => router.push('/add-item')}
+                    style={({ pressed }) => [
+                      styles.viewToggle,
+                      {
+                        backgroundColor: colors.card,
+                        borderColor: colors.border,
+                        opacity: pressed ? 0.8 : 1,
+                      },
+                    ]}
+                  >
+                    <Feather name="plus" size={16} color={colors.foreground} />
+                  </Pressable>
+                  <Pressable
+                    testID="view-toggle"
+                    accessibilityLabel={`Switch to ${nextViewMode(viewMode)} view`}
+                    onPress={toggleViewMode}
+                    style={({ pressed }) => [
+                      styles.viewToggle,
+                      {
+                        backgroundColor: colors.card,
+                        borderColor: colors.border,
+                        opacity: pressed ? 0.8 : 1,
+                      },
+                    ]}
+                  >
+                    <Feather
+                      name={
+                        nextViewMode(viewMode) === 'grid'
+                          ? 'grid'
+                          : nextViewMode(viewMode) === 'list'
+                            ? 'list'
+                            : 'layers'
+                      }
+                      size={16}
+                      color={colors.foreground}
+                    />
+                  </Pressable>
+                </View>
               </View>
+
+              {viewMode === 'overview' ? (
+                <View style={styles.gridContainer} testID="collection-overview">
+                  {groupByCategory(visible).map((section) => (
+                    <View key={section.category}>
+                      <Pressable
+                        testID={`overview-section-${section.category}`}
+                        accessibilityLabel={`${section.category}, ${section.count} items, ${
+                          collapsedSections.has(section.category) ? 'collapsed' : 'expanded'
+                        }`}
+                        onPress={() =>
+                          setCollapsedSections((prev) => toggleCollapsed(prev, section.category))
+                        }
+                        style={({ pressed }) => [
+                          styles.sectionHeader,
+                          { opacity: pressed ? 0.7 : 1 },
+                        ]}
+                      >
+                        <Feather
+                          name={categoryIcon(section.category)}
+                          size={14}
+                          color={colors.foreground}
+                        />
+                        <Text style={[styles.sectionCount, { color: colors.foreground }]}>
+                          {section.count}
+                        </Text>
+                        <Text style={[styles.sectionLabel, { color: colors.mutedForeground }]}>
+                          {section.category}
+                        </Text>
+                        <View style={styles.sectionRule} />
+                        <Feather
+                          name={
+                            collapsedSections.has(section.category) ? 'chevron-down' : 'chevron-up'
+                          }
+                          size={13}
+                          color={colors.mutedForeground}
+                        />
+                      </Pressable>
+                      {!collapsedSections.has(section.category) && (
+                        <View style={styles.sectionTiles}>
+                          {section.items.map((it, i) => (
+                            <View key={it.id} style={styles.overviewTileSlot}>
+                              {renderTile({ item: it, index: section.startIndex + i })}
+                            </View>
+                          ))}
+                        </View>
+                      )}
+                    </View>
+                  ))}
+                </View>
+              ) : viewMode === 'grid' ? (
+                <View style={styles.gridContainer} testID="collection-grid">
+                  <MasonryGrid<InventoryItem>
+                    items={visible}
+                    keyExtractor={(it) => it.id}
+                    getAspectRatio={() => 1}
+                    renderItem={renderTile}
+                    columns={GRID_COLUMNS}
+                    gutter={GRID_GUTTER / 2}
+                  />
+                </View>
+              ) : (
+                <View style={styles.listContainer} testID="collection-list">
+                  {visible.map((it, i) => renderListRow(it, i))}
+                </View>
+              )}
             </>
           )}
         </ScrollView>
+      </View>
+
+      <View style={styles.walkRow} pointerEvents="box-none">
+        {sendingCount > 0 && !runningJob && (
+          <View
+            testID="sending-pill"
+            style={[styles.walkPill, { backgroundColor: colors.card, borderColor: colors.border }]}
+          >
+            <ActivityIndicator size="small" color={colors.primary} />
+            <Text style={[styles.walkPillText, { color: colors.foreground }]}>Sending…</Text>
+          </View>
+        )}
+        {runningJob && (
+          <Pressable
+            testID="processing-toast"
+            accessibilityLabel="Processing — open live review"
+            onPress={() => openLiveReview(runningJob)}
+            style={({ pressed }) => [
+              styles.walkPill,
+              {
+                backgroundColor: colors.card,
+                borderColor: colors.border,
+                opacity: pressed ? 0.8 : 1,
+              },
+            ]}
+          >
+            <ActivityIndicator size="small" color={colors.primary} />
+            <Text style={[styles.walkPillText, { color: colors.foreground }]}>
+              {stageTitle({
+                elapsedMs: Math.max(0, pillTick - runningJob.startedAt),
+                itemCount: 0,
+                expectedTotal: null,
+              })}
+            </Text>
+          </Pressable>
+        )}
+        {inboxBadgeCount > 0 && (
+          <Pressable
+            testID="inbox-badge"
+            accessibilityLabel={`Review inbox, ${inboxBadgeCount} waiting`}
+            onPress={() => router.push('/inbox')}
+            style={({ pressed }) => [
+              styles.glyphButton,
+              {
+                backgroundColor: colors.card,
+                borderColor: colors.border,
+                opacity: pressed ? 0.8 : 1,
+              },
+            ]}
+          >
+            <Feather name="inbox" size={16} color={colors.foreground} />
+            <View
+              style={[
+                styles.countDot,
+                styles.countDotFloating,
+                { backgroundColor: colors.primary },
+              ]}
+            >
+              <Text style={[styles.countDotText, { color: colors.primaryForeground }]}>
+                {inboxBadgeCount}
+              </Text>
+            </View>
+          </Pressable>
+        )}
       </View>
 
       <ActionCapsule
@@ -317,13 +817,55 @@ export default function HomeScreen() {
         onSearchToggle={focusSearch}
       />
 
+      <Snackbar
+        visible={shotAdvice !== null}
+        testID="quality-advice"
+        message={shotAdvice?.advice ?? ''}
+        actionLabel="Use anyway"
+        onAction={() => {
+          const shot = shotAdvice;
+          setShotAdvice(null);
+          if (shot) void dispatchShot(prefs, shot.uri);
+        }}
+        secondaryLabel="Retake"
+        onSecondary={() => {
+          setShotAdvice(null);
+          void handleCamera();
+        }}
+      />
+
       <HomePickerSheet visible={pickerVisible} onClose={() => setPickerVisible(false)} />
 
-      <QuickActionsSheet
-        visible={actionItem !== null}
-        {...(actionItem ? { itemLabel: actionItem.label } : {})}
-        onAction={handleAction}
-        onClose={() => setActionItem(null)}
+      {isArranging && (
+        <View style={styles.arrangeBar} pointerEvents="box-none">
+          <Pressable
+            testID="arrange-done"
+            accessibilityLabel="Done arranging"
+            onPress={exitArrangeMode}
+            style={({ pressed }) => [
+              styles.arrangeDone,
+              { backgroundColor: colors.foreground, opacity: pressed ? 0.85 : 1 },
+            ]}
+          >
+            <Feather name="check" size={15} color={colors.background} />
+            <Text style={[styles.arrangeDoneText, { color: colors.background }]}>Done</Text>
+          </Pressable>
+        </View>
+      )}
+
+      <Snackbar
+        visible={pendingDelete !== null}
+        testID="delete-undo-snackbar"
+        message={
+          pendingDelete
+            ? pendingDelete.ids.length === 1
+              ? `Removed ${pendingDelete.label}`
+              : `Removed ${pendingDelete.ids.length} items`
+            : ''
+        }
+        actionLabel="Undo"
+        actionTestID="delete-undo-action"
+        onAction={undoDelete}
       />
     </View>
   );
@@ -339,55 +881,275 @@ const styles = StyleSheet.create({
   contentClamp: { flex: 1, width: '100%', alignSelf: 'center' },
   loading: { paddingTop: 80, alignItems: 'center', justifyContent: 'center' },
   categoryStripWrap: { marginTop: 14 },
+  recentRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    alignItems: 'center',
+    gap: 8,
+    marginTop: 12,
+  },
+  recentChip: {
+    paddingHorizontal: 12,
+    height: 30,
+    borderRadius: 15,
+    borderWidth: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  recentChipText: {
+    fontFamily: 'Inter_500Medium',
+    fontSize: 12,
+    letterSpacing: 0.1,
+  },
   emptyTopPad: { paddingTop: 60 },
   gridContainer: { minHeight: 600 },
-  gridTitle: {
-    fontFamily: 'Fraunces_500Medium',
+  gridHeaderRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
     marginTop: 22,
     marginBottom: 14,
+  },
+  gridTitle: {
+    fontFamily: 'Fraunces_500Medium',
     letterSpacing: -0.4,
   },
+  viewToggle: {
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    borderWidth: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  gridHeaderActions: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  glyphButton: {
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    borderWidth: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  countDot: {
+    minWidth: 16,
+    height: 16,
+    borderRadius: 8,
+    paddingHorizontal: 4,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginLeft: 4,
+  },
+  countDotFloating: {
+    position: 'absolute',
+    top: -4,
+    right: -4,
+    marginLeft: 0,
+  },
+  countDotText: {
+    fontFamily: 'Inter_700Bold',
+    fontSize: 9,
+  },
+  sectionHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    paddingVertical: 12,
+    paddingHorizontal: 2,
+  },
+  sectionCount: {
+    fontFamily: 'Inter_600SemiBold',
+    fontSize: 13,
+  },
+  sectionLabel: {
+    fontFamily: 'Inter_400Regular',
+    fontSize: 12,
+    letterSpacing: 0.4,
+  },
+  sectionRule: {
+    flex: 1,
+  },
+  sectionTiles: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+  },
+  overviewTileSlot: {
+    width: '33.333%',
+    aspectRatio: 1,
+  },
+  listName: {
+    fontFamily: 'Fraunces_600SemiBold',
+    fontSize: 15,
+    letterSpacing: -0.2,
+  },
+  listMeta: {
+    fontFamily: 'Inter_400Regular',
+    fontSize: 12,
+    marginTop: 3,
+    letterSpacing: 0.2,
+  },
+  tidyBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    paddingHorizontal: 11,
+    height: 38,
+    borderRadius: 19,
+    borderWidth: 1,
+  },
+  walkRow: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    bottom: 118,
+    flexDirection: 'row',
+    justifyContent: 'center',
+    gap: 8,
+    zIndex: 5,
+  },
+  walkPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    paddingHorizontal: 14,
+    height: 36,
+    borderRadius: 18,
+    borderWidth: 1,
+    shadowColor: '#000',
+    shadowOpacity: 0.12,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 4,
+  },
+  walkPillText: {
+    fontFamily: 'Inter_600SemiBold',
+    fontSize: 12,
+    letterSpacing: 0.2,
+  },
+  manualAddBtn: {
+    backgroundColor: 'transparent',
+    borderWidth: 1,
+  },
   tileWrap: {
+    flex: 1,
+    aspectRatio: 1,
+  },
+  tileFill: {
+    flex: 1,
+  },
+  quietGlyph: {
+    opacity: 0.35,
+  },
+  categoryGlyph: {
+    position: 'absolute',
+    left: 6,
+    bottom: 6,
+    opacity: 0.4,
+  },
+  badgeRow: {
+    position: 'absolute',
+    top: 6,
+    right: 6,
+    flexDirection: 'row',
+    gap: 4,
+  },
+  deleteBadge: {
+    position: 'absolute',
+    top: -6,
+    left: -6,
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#000',
+    shadowOpacity: 0.22,
+    shadowRadius: 5,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 5,
+  },
+  listDeleteBadge: {
+    width: 26,
+    height: 26,
+    borderRadius: 13,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  offlineBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginHorizontal: 16,
+    marginBottom: 6,
+    paddingHorizontal: 12,
+    height: 34,
+    borderRadius: 17,
+    borderWidth: StyleSheet.hairlineWidth,
+  },
+  offlineDot: {
+    width: 7,
+    height: 7,
+    borderRadius: 3.5,
+    backgroundColor: '#C77D1E',
+  },
+  offlineText: {
+    flex: 1,
+    fontFamily: 'Inter_500Medium',
+    fontSize: 12,
+    letterSpacing: 0.1,
+  },
+  arrangeBar: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    bottom: 118,
+    alignItems: 'center',
+    zIndex: 6,
+  },
+  arrangeDone: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 7,
+    paddingHorizontal: 20,
+    height: 40,
+    borderRadius: 20,
+    shadowColor: '#000',
+    shadowOpacity: 0.18,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 6,
+  },
+  arrangeDoneText: {
+    fontFamily: 'Inter_600SemiBold',
+    fontSize: 13,
+    letterSpacing: 0.2,
+  },
+  listContainer: {
+    gap: 10,
+  },
+  listRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    padding: 10,
+    borderRadius: 18,
+    borderWidth: 1,
+  },
+  listThumb: {
+    width: 56,
+    height: 56,
+    borderRadius: 14,
+  },
+  listRowBody: {
     flex: 1,
   },
   card: {
     flex: 1,
-    borderRadius: 22,
-    borderWidth: 1,
+    borderRadius: 14,
     overflow: 'hidden',
-    shadowColor: '#1c1b3f',
-    shadowOpacity: 0.1,
-    shadowOffset: { width: 0, height: 8 },
-    shadowRadius: 14,
-    elevation: 4,
-  },
-  cardScrim: {
-    position: 'absolute',
-    left: 0,
-    right: 0,
-    bottom: 0,
-    height: '55%',
-    backgroundColor: 'rgba(28,27,63,0.55)',
-  },
-  cardCaption: {
-    position: 'absolute',
-    left: 12,
-    right: 12,
-    bottom: 12,
-  },
-  cardLabel: {
-    fontFamily: 'Fraunces_600SemiBold',
-    fontSize: 15,
-    color: '#ffffff',
-    letterSpacing: -0.2,
-  },
-  cardCategory: {
-    fontFamily: 'Inter_500Medium',
-    fontSize: 10,
-    color: 'rgba(255,255,255,0.85)',
-    marginTop: 2,
-    letterSpacing: 0.6,
-    textTransform: 'uppercase',
   },
   empty: {
     alignItems: 'center',

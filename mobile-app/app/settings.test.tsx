@@ -26,7 +26,10 @@ vi.mock('@/contexts/InventoryContext', () => ({
   useInventory: () => ({
     items: [],
     counts: { 'home-1': 3, 'home-2': 0 },
-    deleteAllInActiveHome: async () => {},
+    repo: { getItemsByHome: async () => [] },
+    softDelete: vi.fn(),
+    undoDelete: vi.fn(),
+    pendingDelete: null,
   }),
 }));
 

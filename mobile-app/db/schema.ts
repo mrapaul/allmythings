@@ -1,3 +1,5 @@
+import type { ItemAttributes } from '@/lib/attributes';
+import type { ItemLabel } from '@/lib/labels';
 import { index, integer, primaryKey, real, sqliteTable, text } from 'drizzle-orm/sqlite-core';
 
 export const homes = sqliteTable('homes', {
@@ -18,6 +20,24 @@ export const inventoryItems = sqliteTable(
     description: text('description').notNull().default(''),
     category: text('category').notNull(),
     primaryPhotoUri: text('primary_photo_uri').notNull(),
+    /**
+     * Pre-rendered per-item crop (bbox + padding from the capture) shown in
+     * grid/list tiles. Null for legacy items and full-frame captures — tiles
+     * then fall back to the runtime bbox-zoom transform.
+     */
+    thumbnailUri: text('thumbnail_uri'),
+    /**
+     * Characteristics from the detect response ({color, material, style,
+     * brand, era}). Null for legacy/manual items — the UI derives a
+     * render-time fallback from label + description (lib/attributes.ts).
+     */
+    attributes: text('attributes', { mode: 'json' }).$type<ItemAttributes | null>(),
+    /**
+     * Label-first model: ordered {key, value} chips (type/category/color/…
+     * plus free 'tag' labels). Null → derived at render from the legacy
+     * columns, which stay untouched as non-editable internals.
+     */
+    labels: text('labels', { mode: 'json' }).$type<ItemLabel[] | null>(),
     additionalPhotoUris: text('additional_photo_uris', { mode: 'json' })
       .$type<string[]>()
       .notNull()

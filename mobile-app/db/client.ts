@@ -3,7 +3,7 @@ import { type SQLiteDatabase, openDatabaseSync } from 'expo-sqlite';
 import { type MigrationsBundle, runMigrationsSync } from './migrate-sync';
 import migrations from './migrations/migrations';
 import * as schema from './schema';
-import { FTS_STATEMENTS } from './triggers';
+import { ensureFtsSchema } from './triggers';
 
 let _db: ExpoSQLiteDatabase<typeof schema> | null = null;
 
@@ -20,9 +20,12 @@ export function getDb(): ExpoSQLiteDatabase<typeof schema> {
   // FTS5 virtual table + sync triggers. Run via expo-sqlite's execSync, which
   // handles full DDL statements (including CREATE TRIGGER ... BEGIN ... END);
   // Drizzle's db.run() prepares a single statement and mangles the trigger body.
-  for (const stmt of FTS_STATEMENTS) {
-    sqlite.execSync(stmt);
-  }
+  // ensureFtsSchema also rebuilds + repopulates the index when an existing
+  // install predates the `attributes` column.
+  ensureFtsSchema({
+    execSync: (sql) => sqlite.execSync(sql),
+    getAllSync: (sql) => sqlite.getAllSync(sql),
+  });
   _db = db;
   return db;
 }

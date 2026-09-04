@@ -1,0 +1,29 @@
+{
+  "api:clause-proof": {
+    "perFixture": [
+      {
+        "fixture": "living_room_02",
+        "recall": 83.3,
+        "itemCount": 68,
+        "expectedMin": 12,
+        "expectedMax": 24,
+        "countWithinRange": false,
+        "matchedCount": 15,
+        "missed": [
+          "dark grey daybed / futon",
+          "hanging macrame planter with pothos",
+          "window blinds"
+        ],
+        "elapsedMs": 463124,
+        "attempts": 1
+      }
+    ],
+    "aggregate": {
+      "avgRecall": 83.3,
+      "avgItems": 68,
+      "avgLatencyMs": 463124,
+      "failures": 0,
+      "n": 1
+    }
+  }
+}

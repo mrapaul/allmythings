@@ -14,6 +14,16 @@ tags:
     permissions:
       photos: allow
 
+# Suite-start insurance: a system alert (e.g. the custom-scheme "Open in
+# Home Inventory?" confirm from an aborted earlier run) belongs to
+# SpringBoard, survives app relaunches, and occludes the ENTIRE app
+# hierarchy from XCUITest — every assert in every flow fails 20s in.
+- runFlow:
+    when:
+      visible: "Cancel"
+    commands:
+      - tapOn: "Cancel"
+
 # Home screen renders (empty state on a clean install).
 - assertVisible: "A blank canvas"
 
@@ -30,10 +40,32 @@ tags:
 - tapOn:
     point: "17%,32%"
 
-# Detection screen must receive the image (regression: "No image selected").
+# WALK MODE: picking a photo returns to the home screen and dispatches the
+# detection in the background. Nothing on the shutter path touches the
+# network — only the instant on-device quality check runs first, so the
+# processing pill should appear within a few hundred ms.
+#
+# If that check judges the seeded fixture unusable (dim/soft interior shots
+# are borderline by design), the warm advice hint appears instead. Accept it
+# and continue so the flow exercises the same downstream path either way.
+- runFlow:
+    when:
+      visible:
+        id: "quality-advice"
+    commands:
+      - tapOn: "Use anyway"
+
+- extendedWaitUntil:
+    visible:
+      id: "processing-toast"
+    timeout: 60000
+- tapOn:
+    id: "processing-toast"
+
+# Live review screen must receive the image (regression: "No image selected").
 - assertNotVisible: "No image selected"
 
-# Detection takes minutes on the free cloud model. The icon-only save-all
+# Detection takes minutes on the free cloud model. The labeled save-all
 # button appears once at least one item row has rendered.
 - extendedWaitUntil:
     visible:
@@ -46,11 +78,107 @@ tags:
 - assertVisible:
     id: "add-label-chip"
 
-# Save everything to the inventory and land back home with items showing.
+# Save everything. A non-blocking snackbar offers Undo + the running total for
+# 5s, then the camera-first loop continues — which now opens OUR viewfinder
+# (app/capture.tsx), not the OS picker. On a simulator that lands on the
+# permission state, whose close control shares the `capture-close` id, so
+# dismissing it works with or without a camera. Conditional: if the loop did
+# not open the viewfinder (permission already resolved to the Collection),
+# the flow proceeds unchanged. The snackbar itself is a 5s transient and is
+# deliberately never asserted — the stable end state is.
 - tapOn:
     id: "save-all"
+- extendedWaitUntil:
+    visible:
+      id: "capture-close"
+    timeout: 30000
+    optional: true
+- runFlow:
+    when:
+      visible:
+        id: "capture-close"
+    commands:
+      - tapOn:
+          id: "capture-close"
 - extendedWaitUntil:
     visible: "Collection"
     timeout: 60000
 # The saved items render as inventory cards with category chips.
 - assertVisible: "Collection"
+
+# Item detail: the first saved tile opens the item as a MODAL SHEET over the
+# grid (the grid is never navigated away from). The detected-region overlay
+# must render unconditionally (regression guard: overlay silently missing on
+# release builds when expo-image onLoad never fired for file:// sources).
+- tapOn:
+    id: "collection-tile-0"
+- extendedWaitUntil:
+    visible:
+      id: "detail-bbox-overlay"
+    timeout: 10000
+# The modal dismisses via "Done" — there is no back arrow, because the grid is
+# already underneath. (Swipe-down also works but is not asserted here.)
+- tapOn:
+    id: "item-modal-done"
+- extendedWaitUntil:
+    visible: "Collection"
+    timeout: 10000
+
+# ARRANGE MODE: long-press any tile to reveal per-tile × badges, delete one
+# through the undo snackbar, then leave the mode via the Done pill.
+- longPressOn:
+    id: "collection-tile-0"
+- extendedWaitUntil:
+    visible:
+      id: "arrange-done"
+    timeout: 10000
+- assertVisible:
+    id: "tile-delete-0"
+- tapOn:
+    id: "tile-delete-0"
+# The snackbar is now an 8s transient. On this grid Maestro's hierarchy dumps
+# can take 15-20s per step, so even seeing it is a race: optional, and the
+# undo tap below is conditional. The delete action itself already succeeded
+# (the tap completed); the stable post-state is asserted after arrange-done.
+- extendedWaitUntil:
+    visible:
+      id: "delete-undo-snackbar"
+    timeout: 10000
+    optional: true
+# The undo IS the safety net — put the item straight back. Tapped by testID,
+# not by text: the snackbar is a 5s transient and a text search through a full
+# collection hierarchy can lose that race (it did, at 17s). Conditional so a
+# missed window leaves the item deleted rather than failing the whole run —
+# the delete itself is already asserted above.
+- runFlow:
+    when:
+      visible:
+        id: "delete-undo-action"
+    commands:
+      - tapOn:
+          id: "delete-undo-action"
+# The undo tap can still lose the race a second way: Maestro taps coordinates
+# from a dump that may be 15-20s stale, and the walk-mode processing pill
+# shares the same bottom strip as the snackbar. While the run is still
+# streaming server-side that stale tap re-opens the live review (it did, at
+# step 31). Recover to Home, then leave arrange mode only if it survived —
+# a fall-through tap on empty grid space also exits it by design. Both paths
+# converge on the same asserted end state.
+- runFlow:
+    when:
+      visible:
+        id: "save-all"
+    commands:
+      - tapOn: "Close"
+      - extendedWaitUntil:
+          visible: "Collection"
+          timeout: 30000
+- runFlow:
+    when:
+      visible:
+        id: "arrange-done"
+    commands:
+      - tapOn:
+          id: "arrange-done"
+- assertNotVisible:
+    id: "arrange-done"

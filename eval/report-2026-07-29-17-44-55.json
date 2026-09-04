@@ -1,0 +1,155 @@
+{
+  "api:candidate-qwen-bbox2d-v1": {
+    "perFixture": [
+      {
+        "fixture": "1776173015803",
+        "recall": 16.7,
+        "itemCount": 2,
+        "expectedMin": 8,
+        "expectedMax": 15,
+        "countWithinRange": false,
+        "matchedCount": 2,
+        "missed": [
+          "snake plant (sansevieria) small",
+          "two-tone ceramic planter",
+          "gold wire plant stand",
+          "wooden stool (plant support)",
+          "sheer white linen curtains",
+          "white venetian window blinds",
+          "dark navy couch / sofa",
+          "framed painting / artwork",
+          "decorative wall plate",
+          "white area rug"
+        ],
+        "elapsedMs": 157628,
+        "attempts": 1
+      },
+      {
+        "fixture": "1776174188547",
+        "recall": 54.5,
+        "itemCount": 19,
+        "expectedMin": 7,
+        "expectedMax": 13,
+        "countWithinRange": false,
+        "matchedCount": 6,
+        "missed": [
+          "two-tone ceramic planter",
+          "wooden stool (plant support)",
+          "sheer white linen curtains",
+          "dark navy couch / sofa",
+          "framed painting / artwork"
+        ],
+        "elapsedMs": 125164,
+        "attempts": 1
+      },
+      {
+        "fixture": "1776175427607",
+        "recall": 14.3,
+        "itemCount": 2,
+        "expectedMin": 10,
+        "expectedMax": 16,
+        "countWithinRange": false,
+        "matchedCount": 2,
+        "missed": [
+          "black throw blanket",
+          "snake plant small",
+          "two-tone ceramic planter",
+          "gold wire plant stand",
+          "wooden stool",
+          "gold candle holder",
+          "wooden side table",
+          "sheer white linen curtains",
+          "white venetian window blinds",
+          "dark navy couch / sofa",
+          "framed painting of figures",
+          "decorative wall plate"
+        ],
+        "elapsedMs": 217209,
+        "attempts": 1
+      },
+      {
+        "fixture": "1776176976030",
+        "recall": 61.5,
+        "itemCount": 32,
+        "expectedMin": 8,
+        "expectedMax": 14,
+        "countWithinRange": false,
+        "matchedCount": 8,
+        "missed": [
+          "two-tone ceramic planter",
+          "gold candle holder",
+          "wooden sideboard / cabinet",
+          "sheer white curtains",
+          "framed painting"
+        ],
+        "elapsedMs": 159175,
+        "attempts": 1
+      },
+      {
+        "fixture": "bedroom_01",
+        "recall": 7.1,
+        "itemCount": 2,
+        "expectedMin": 9,
+        "expectedMax": 18,
+        "countWithinRange": false,
+        "matchedCount": 1,
+        "missed": [
+          "transparent acrylic chairs",
+          "gold serving tray",
+          "pink ceramic vases",
+          "blue flower in small vase",
+          "red armchair",
+          "black round tray table",
+          "floor lamp with grey shade",
+          "white sideboard cabinet",
+          "framed artwork",
+          "grey curtains",
+          "houndstooth red and white sofa",
+          "red throw pillows",
+          "built-in oven"
+        ],
+        "elapsedMs": 197719,
+        "attempts": 1
+      },
+      {
+        "fixture": "dining_room_01",
+        "recall": 87.5,
+        "itemCount": 16,
+        "expectedMin": 5,
+        "expectedMax": 10,
+        "countWithinRange": false,
+        "matchedCount": 7,
+        "missed": [
+          "white mug"
+        ],
+        "elapsedMs": 126905,
+        "attempts": 1
+      },
+      {
+        "fixture": "living_room_02",
+        "recall": 72.2,
+        "itemCount": 36,
+        "expectedMin": 12,
+        "expectedMax": 24,
+        "countWithinRange": false,
+        "matchedCount": 13,
+        "missed": [
+          "dark grey daybed / futon",
+          "laptop computer",
+          "books on shelves",
+          "white area rug",
+          "computer mouse"
+        ],
+        "elapsedMs": 367335,
+        "attempts": 1
+      }
+    ],
+    "aggregate": {
+      "avgRecall": 44.8,
+      "avgItems": 15.6,
+      "avgLatencyMs": 193019,
+      "failures": 0,
+      "n": 7
+    }
+  }
+}

@@ -115,7 +115,7 @@
       }
     ],
     "aggregate": {
-      "avgRecall": 78.3,
+      "avgRecall": 67.5,
       "avgItems": 11.1,
       "avgLatencyMs": 58643,
       "failures": 0,
@@ -219,11 +219,12 @@
       }
     ],
     "aggregate": {
-      "avgRecall": 94.2,
+      "avgRecall": 76.8,
       "avgItems": 37.9,
       "avgLatencyMs": 497596,
       "failures": 0,
       "n": 7
     }
-  }
+  },
+  "_note": "Recall re-derived 2026-07-30 from the SAME saved runs after eval/scoring.mjs replaced a matcher that counted any shared token >2 chars (so 'with'/'white' scored) and used greedy first-match. Detector unchanged; the ruler was fixed. Prior values: gemma4 78.3, api:production 94.2."
 }

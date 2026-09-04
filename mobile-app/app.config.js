@@ -9,7 +9,13 @@
 //   API_KEY        Bearer/api key for the backend (dev backend accepts any).
 //   SENTRY_DSN, OTEL_COLLECTOR_URL  Optional observability endpoints.
 
-const DEFAULT_LAN_API = 'http://192.168.178.14:14000';
+// NOTE: this default is baked into release-style builds at build time and
+// caused the silent-shutter incident when the Mac's DHCP lease moved
+// (.14 → .90): every request hung against a dead IP. Keep it current with
+// `ipconfig getifaddr en0`, or better, pass API_BASE_URL explicitly.
+// mDNS discovery normally papers over this, but only when the server's
+// Bonjour advertisement is actually working.
+const DEFAULT_LAN_API = 'http://192.168.178.90:14000';
 
 module.exports = ({ config }) => ({
   ...config,

@@ -2,6 +2,18 @@ import GlowBackdrop from '@/components/GlowBackdrop';
 import KeyboardAwareScrollViewCompat from '@/components/KeyboardAwareScrollViewCompat';
 import { useInventory } from '@/contexts/InventoryContext';
 import { useColors } from '@/hooks/useColors';
+import { boxToViewRect, computeCoverLayout, isDetectedBox } from '@/lib/bbox-layout';
+import {
+  type ItemLabel,
+  addLabel,
+  labelSuggestions,
+  labelsForDisplay,
+  parseLabelInput,
+  removeLabel,
+  typeHandle,
+} from '@/lib/labels';
+import { visibilityNote, visibilityVerdict } from '@/lib/partial-visibility';
+import { getHomeScreenStore } from '@/stores/home-screen.store';
 import { Feather } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import { Image } from 'expo-image';
@@ -29,21 +41,38 @@ export default function ItemDetailScreen() {
   const router = useRouter();
   const colors = useColors();
   const insets = useSafeAreaInsets();
-  const { items, updateItem, deleteItem, addPhotoToItem } = useInventory();
+  const { items, updateItem, softDelete, addPhotoToItem } = useInventory();
 
   const item = items.find((it) => it.id === id);
 
-  const [isEditingLabel, setIsEditingLabel] = useState(false);
-  const [labelValue, setLabelValue] = useState('');
-  const [isEditingDesc, setIsEditingDesc] = useState(false);
-  const [descValue, setDescValue] = useState('');
+  const [sourceSize, setSourceSize] = useState<{ width: number; height: number } | null>(null);
+  // Chip editor: input accepts "color: red" or a plain free label.
+  const [isAddingLabel, setIsAddingLabel] = useState(false);
+  const [labelInput, setLabelInput] = useState('');
 
+  // Natural size for box mapping. expo-image's onLoad can fail to fire for
+  // file:// sources on release builds, which silently hid the overlay — so
+  // read the source dimensions directly; the gallery onLoad below stays as
+  // a fast path, and a square mapping is the last-resort fallback.
+  const primaryUri = item?.primaryPhotoUri;
   useEffect(() => {
-    if (item) {
-      setLabelValue(item.label);
-      setDescValue(item.description);
-    }
-  }, [item]);
+    let cancelled = false;
+    if (!primaryUri) return;
+    void (async () => {
+      try {
+        const src = await Image.loadAsync(primaryUri);
+        if (!cancelled && src.width > 0 && src.height > 0) {
+          setSourceSize({ width: src.width, height: src.height });
+        }
+        src.release();
+      } catch {
+        // keep the square-mapping fallback — the overlay must never vanish
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [primaryUri]);
 
   const paddingTop = Platform.OS === 'web' ? 16 : insets.top + 4;
 
@@ -53,7 +82,7 @@ export default function ItemDetailScreen() {
         style={[styles.container, styles.notFoundCenter, { backgroundColor: colors.background }]}
       >
         <Text style={[styles.notFoundText, { color: colors.mutedForeground }]}>
-          Item not found.
+          We can't find that item — it may have just been removed.
         </Text>
         <Pressable
           onPress={() => router.back()}
@@ -74,7 +103,12 @@ export default function ItemDetailScreen() {
         ? await ImagePicker.requestCameraPermissionsAsync()
         : await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (!perm.granted) {
-      Alert.alert('Permission needed', 'Please grant access to add a photo.');
+      Alert.alert(
+        'One quick step',
+        source === 'camera'
+          ? 'Allow camera access in Settings and we can photograph this item.'
+          : 'Allow photo access in Settings and we can add a picture of this item.',
+      );
       return;
     }
     const result =
@@ -94,34 +128,94 @@ export default function ItemDetailScreen() {
     ]);
   };
 
+  // No confirm dialog: the collection screen shows a 5s Undo snackbar while
+  // the delete waits to commit (context soft-delete).
   const handleDelete = () => {
-    Alert.alert('Delete item?', 'This cannot be undone.', [
-      { text: 'Cancel', style: 'cancel' },
-      {
-        text: 'Delete',
-        style: 'destructive',
-        onPress: async () => {
-          if (Platform.OS !== 'web') {
-            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
-          }
-          await deleteItem(item.id);
-          router.back();
-        },
-      },
-    ]);
+    if (Platform.OS !== 'web') {
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
+    }
+    softDelete([item.id], typeHandle(labelsForDisplay(item)));
+    router.back();
   };
 
   const allPhotos = [item.primaryPhotoUri, ...(item.additionalPhotoUris || [])];
+
+  // The primary photo is the full source capture; the item's normalized box
+  // marks where it was detected. The overlay renders UNCONDITIONALLY for any
+  // valid detected box: measured dimensions when available, square mapping
+  // otherwise — never silently absent. (x=0 / y=0 are valid coordinates;
+  // only width/height decide validity via isDetectedBox.)
+  const effectiveSource = sourceSize ?? { width: GALLERY_SIZE, height: GALLERY_SIZE };
+  const boxRect = isDetectedBox(item.box)
+    ? boxToViewRect(
+        item.box,
+        computeCoverLayout(
+          GALLERY_SIZE,
+          GALLERY_SIZE,
+          effectiveSource.width,
+          effectiveSource.height,
+        ),
+      )
+    : null;
+  const chipBelow = boxRect ? boxRect.top + boxRect.height + 8 : 0;
+  const detectedChipTop = boxRect
+    ? chipBelow <= GALLERY_SIZE - 32
+      ? chipBelow
+      : Math.max(6, boxRect.top - 32)
+    : 0;
+  const detectedChipLeft = boxRect ? Math.min(Math.max(boxRect.left, 6), GALLERY_SIZE - 96) : 0;
+
+  // Label-first: persisted chips or derived-from-legacy-columns; editing
+  // materializes the full set into the labels JSON — the legacy label /
+  // description columns are never mutated.
+  const labels = labelsForDisplay(item);
+  const commitLabels = (next: ItemLabel[]) => {
+    void updateItem(item.id, { labels: next });
+  };
+  const handleAddLabel = (raw: string) => {
+    const parsed = parseLabelInput(raw);
+    if (!parsed) return;
+    commitLabels(addLabel(labels, parsed));
+    setLabelInput('');
+    setIsAddingLabel(false);
+  };
+  // Suggestions from values already used across the inventory, matching the
+  // value part of the current input (after any "key:" prefix).
+  const inputValuePart = labelInput.includes(':') ? (labelInput.split(':')[1] ?? '') : labelInput;
+  const suggestions =
+    isAddingLabel && inputValuePart.trim().length > 0
+      ? labelSuggestions(
+          items.map((it) => labelsForDisplay(it)),
+          inputValuePart,
+          5,
+        ).filter((s) => s.toLowerCase() !== inputValuePart.trim().toLowerCase())
+      : [];
+
+  // Partial visibility, derived from the stored box (retroactive, no migration).
+  const partialNote = visibilityNote(visibilityVerdict(item.box));
+
+  // Label chip → collection filtered by that term.
+  const searchAttribute = (term: string) => {
+    getHomeScreenStore().getState().setQuery(term);
+    router.back();
+  };
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
       <GlowBackdrop />
 
+      {/* Modal chrome: a grabber signals swipe-down-to-dismiss, and "Done"
+          replaces the back arrow — there is nowhere to go "back" to, the grid
+          is already underneath. */}
+      <View style={[styles.grabber, { backgroundColor: colors.border }]} />
+
       <View style={[styles.header, { paddingTop }]}>
         <Pressable
+          testID="item-modal-done"
+          accessibilityLabel="Done"
           onPress={() => router.back()}
           style={({ pressed }) => [
-            styles.iconBtn,
+            styles.doneBtn,
             {
               backgroundColor: colors.card,
               borderColor: colors.border,
@@ -129,7 +223,7 @@ export default function ItemDetailScreen() {
             },
           ]}
         >
-          <Feather name="chevron-left" size={20} color={colors.foreground} />
+          <Text style={[styles.doneText, { color: colors.foreground }]}>Done</Text>
         </Pressable>
         <Text style={[styles.headerTitle, { color: colors.mutedForeground }]}>{item.category}</Text>
         <Pressable
@@ -174,7 +268,71 @@ export default function ItemDetailScreen() {
                   style={styles.galleryImage}
                   contentFit="cover"
                   transition={250}
+                  onLoad={(e) => {
+                    if (idx === 0 && e.source.width > 0 && e.source.height > 0) {
+                      setSourceSize({ width: e.source.width, height: e.source.height });
+                    }
+                  }}
                 />
+                {idx === 0 && boxRect && (
+                  <View pointerEvents="none" style={StyleSheet.absoluteFill}>
+                    {/* Soft scrim over everything EXCEPT the detected region,
+                        so the item itself pops. */}
+                    <View
+                      style={[
+                        styles.scrim,
+                        { left: 0, right: 0, top: 0, height: Math.max(0, boxRect.top) },
+                      ]}
+                    />
+                    <View
+                      style={[
+                        styles.scrim,
+                        { left: 0, right: 0, top: boxRect.top + boxRect.height, bottom: 0 },
+                      ]}
+                    />
+                    <View
+                      style={[
+                        styles.scrim,
+                        {
+                          left: 0,
+                          width: Math.max(0, boxRect.left),
+                          top: Math.max(0, boxRect.top),
+                          height: boxRect.height,
+                        },
+                      ]}
+                    />
+                    <View
+                      style={[
+                        styles.scrim,
+                        {
+                          left: boxRect.left + boxRect.width,
+                          right: 0,
+                          top: Math.max(0, boxRect.top),
+                          height: boxRect.height,
+                        },
+                      ]}
+                    />
+                    <View
+                      testID="detail-bbox-overlay"
+                      style={[styles.bboxOverlay, boxRect, { borderColor: colors.primary }]}
+                    />
+                    <View
+                      style={[
+                        styles.detectedChip,
+                        {
+                          backgroundColor: colors.primary,
+                          left: detectedChipLeft,
+                          top: detectedChipTop,
+                        },
+                      ]}
+                    >
+                      <Feather name="crop" size={10} color={colors.primaryForeground} />
+                      <Text style={[styles.detectedChipText, { color: colors.primaryForeground }]}>
+                        detected
+                      </Text>
+                    </View>
+                  </View>
+                )}
               </View>
             ))}
             <Pressable
@@ -198,33 +356,7 @@ export default function ItemDetailScreen() {
         </View>
 
         <View style={styles.content}>
-          <View style={styles.editableField}>
-            {isEditingLabel ? (
-              <TextInput
-                style={[
-                  styles.labelInput,
-                  { color: colors.foreground, borderBottomColor: colors.primary },
-                ]}
-                value={labelValue}
-                onChangeText={setLabelValue}
-                autoFocus
-                onBlur={() => {
-                  setIsEditingLabel(false);
-                  if (labelValue !== item.label) {
-                    void updateItem(item.id, { label: labelValue });
-                  }
-                }}
-              />
-            ) : (
-              <Pressable onPress={() => setIsEditingLabel(true)}>
-                <Text style={[styles.label, { color: colors.foreground }]}>
-                  {item.label}
-                  {'  '}
-                  <Feather name="edit-2" size={14} color={colors.mutedForeground} />
-                </Text>
-              </Pressable>
-            )}
-          </View>
+          <Text style={[styles.label, { color: colors.foreground }]}>{typeHandle(labels)}</Text>
 
           <Text style={[styles.dateText, { color: colors.mutedForeground }]}>
             Catalogued{' '}
@@ -234,52 +366,118 @@ export default function ItemDetailScreen() {
               day: 'numeric',
             })}
           </Text>
-
-          {item.tags && item.tags.length > 0 && (
-            <View style={styles.tagsWrap}>
-              {item.tags.map((tag, i) => (
-                <View
-                  key={`${i}-${tag}`}
-                  style={[
-                    styles.tagChip,
-                    { backgroundColor: colors.muted, borderColor: colors.border },
-                  ]}
-                >
-                  <Text style={[styles.tagHash, { color: colors.primary }]}>#</Text>
-                  <Text style={[styles.tagLabel, { color: colors.foreground }]} numberOfLines={1}>
-                    {tag}
-                  </Text>
-                </View>
-              ))}
+          {isDetectedBox(item.box) && (
+            <Text style={[styles.dateText, { color: colors.mutedForeground }]}>
+              Detected in the source photo above — the outline marks this item.
+            </Text>
+          )}
+          {partialNote && (
+            <View style={styles.partialRow} testID="partial-indicator">
+              <Feather name="maximize" size={11} color={colors.mutedForeground} />
+              <Text style={[styles.dateText, { color: colors.mutedForeground, marginTop: 0 }]}>
+                {partialNote}
+              </Text>
             </View>
           )}
 
-          <View
-            style={[styles.descCard, { backgroundColor: colors.card, borderColor: colors.border }]}
-          >
-            <Text style={[styles.descLabel, { color: colors.mutedForeground }]}>Notes</Text>
-            {isEditingDesc ? (
-              <TextInput
-                style={[styles.descInput, { color: colors.foreground }]}
-                value={descValue}
-                onChangeText={setDescValue}
-                multiline
-                autoFocus
-                onBlur={() => {
-                  setIsEditingDesc(false);
-                  if (descValue !== item.description) {
-                    void updateItem(item.id, { description: descValue });
-                  }
-                }}
-              />
-            ) : (
-              <Pressable onPress={() => setIsEditingDesc(true)}>
-                <Text style={[styles.description, { color: colors.foreground }]}>
-                  {item.description || 'Tap to add notes about this piece.'}
+          <View style={styles.tagsWrap}>
+            {labels.map((chip) => (
+              <Pressable
+                key={`${chip.key}-${chip.value}`}
+                testID={`label-chip-${chip.key}-${chip.value}`}
+                accessibilityLabel={`Find everything ${chip.value}`}
+                onPress={() => searchAttribute(chip.value)}
+                style={({ pressed }) => [
+                  styles.tagChip,
+                  {
+                    backgroundColor: colors.muted,
+                    borderColor: colors.border,
+                    opacity: pressed ? 0.7 : 1,
+                  },
+                ]}
+              >
+                <Text style={[styles.labelChipKey, { color: colors.mutedForeground }]}>
+                  {chip.key}
                 </Text>
+                <Text style={[styles.tagLabel, { color: colors.foreground }]} numberOfLines={1}>
+                  {chip.value}
+                </Text>
+                <Pressable
+                  testID={`label-chip-remove-${chip.key}-${chip.value}`}
+                  accessibilityLabel={`Remove label ${chip.value}`}
+                  hitSlop={8}
+                  onPress={() => commitLabels(removeLabel(labels, chip))}
+                  style={styles.labelChipRemove}
+                >
+                  <Feather name="x" size={11} color={colors.mutedForeground} />
+                </Pressable>
               </Pressable>
-            )}
+            ))}
+
+            <Pressable
+              testID="label-editor-open"
+              accessibilityLabel="Add a label"
+              onPress={() => setIsAddingLabel(true)}
+              style={({ pressed }) => [
+                styles.tagChip,
+                styles.addLabelChip,
+                { borderColor: colors.border, opacity: pressed ? 0.7 : 1 },
+              ]}
+            >
+              <Feather name="plus" size={12} color={colors.primary} />
+              <Text style={[styles.tagLabel, { color: colors.primary }]}>label</Text>
+            </Pressable>
           </View>
+
+          {isAddingLabel && (
+            <View style={styles.labelEditor}>
+              <TextInput
+                testID="label-editor-input"
+                value={labelInput}
+                onChangeText={setLabelInput}
+                autoFocus
+                autoCapitalize="none"
+                placeholder={'red — or — color: red'}
+                placeholderTextColor={colors.mutedForeground}
+                onSubmitEditing={() => handleAddLabel(labelInput)}
+                style={[
+                  styles.labelEditorInput,
+                  {
+                    backgroundColor: colors.card,
+                    borderColor: colors.border,
+                    color: colors.foreground,
+                  },
+                ]}
+              />
+              {suggestions.length > 0 && (
+                <View style={styles.tagsWrap}>
+                  {suggestions.map((s) => (
+                    <Pressable
+                      key={s}
+                      testID={`label-suggestion-${s}`}
+                      accessibilityLabel={`Use label ${s}`}
+                      onPress={() => {
+                        const prefix = labelInput.includes(':')
+                          ? `${labelInput.split(':')[0]}: `
+                          : '';
+                        handleAddLabel(`${prefix}${s}`);
+                      }}
+                      style={({ pressed }) => [
+                        styles.tagChip,
+                        {
+                          backgroundColor: colors.card,
+                          borderColor: colors.border,
+                          opacity: pressed ? 0.7 : 1,
+                        },
+                      ]}
+                    >
+                      <Text style={[styles.tagLabel, { color: colors.foreground }]}>{s}</Text>
+                    </Pressable>
+                  ))}
+                </View>
+              )}
+            </View>
+          )}
 
           <Pressable
             onPress={handleAddPhoto}
@@ -320,6 +518,27 @@ const styles = StyleSheet.create({
     paddingBottom: 12,
     gap: 10,
   },
+  grabber: {
+    width: 40,
+    height: 4,
+    borderRadius: 2,
+    alignSelf: 'center',
+    marginTop: 8,
+    opacity: 0.8,
+  },
+  doneBtn: {
+    height: 44,
+    minWidth: 64,
+    paddingHorizontal: 14,
+    borderRadius: 22,
+    borderWidth: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  doneText: {
+    fontFamily: 'Inter_600SemiBold',
+    fontSize: 14,
+  },
   iconBtn: {
     width: 44,
     height: 44,
@@ -353,6 +572,35 @@ const styles = StyleSheet.create({
     width: '100%',
     height: '100%',
   },
+  bboxOverlay: {
+    position: 'absolute',
+    borderWidth: 2,
+    borderRadius: 8,
+  },
+  scrim: {
+    position: 'absolute',
+    backgroundColor: 'rgba(20, 18, 40, 0.28)',
+  },
+  detectedChip: {
+    position: 'absolute',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingHorizontal: 8,
+    height: 22,
+    borderRadius: 11,
+  },
+  detectedChipText: {
+    fontFamily: 'Inter_600SemiBold',
+    fontSize: 10,
+    letterSpacing: 0.4,
+  },
+  attrChipText: {
+    fontFamily: 'Inter_500Medium',
+    fontSize: 13,
+    letterSpacing: 0.1,
+    marginLeft: 5,
+  },
   addPhotoFrame: {
     borderRadius: 28,
     borderWidth: 1,
@@ -379,43 +627,17 @@ const styles = StyleSheet.create({
     letterSpacing: -0.6,
     lineHeight: 36,
   },
-  labelInput: {
-    fontFamily: 'Fraunces_700Bold',
-    fontSize: 30,
-    letterSpacing: -0.6,
-    borderBottomWidth: 1,
-    paddingBottom: 2,
-  },
   dateText: {
     fontFamily: 'Inter_400Regular',
     fontSize: 12,
     marginTop: 6,
     letterSpacing: 0.2,
   },
-  descCard: {
-    marginTop: 24,
-    padding: 16,
-    borderRadius: 22,
-    borderWidth: 1,
-  },
-  descLabel: {
-    fontFamily: 'Inter_600SemiBold',
-    fontSize: 11,
-    letterSpacing: 0.5,
-    textTransform: 'uppercase',
-    marginBottom: 8,
-  },
-  description: {
-    fontFamily: 'Fraunces_400Regular',
-    fontSize: 16,
-    lineHeight: 24,
-  },
-  descInput: {
-    fontFamily: 'Fraunces_400Regular',
-    fontSize: 16,
-    lineHeight: 24,
-    minHeight: 60,
-    textAlignVertical: 'top',
+  partialRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginTop: 6,
   },
   tagsWrap: {
     flexDirection: 'row',
@@ -432,15 +654,36 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     maxWidth: 200,
   },
-  tagHash: {
-    fontFamily: 'Inter_600SemiBold',
-    fontSize: 12,
-    marginRight: 3,
-  },
   tagLabel: {
     fontFamily: 'Inter_500Medium',
     fontSize: 13,
     letterSpacing: 0.1,
+  },
+  labelChipKey: {
+    fontFamily: 'Inter_600SemiBold',
+    fontSize: 9,
+    letterSpacing: 0.5,
+    textTransform: 'uppercase',
+    marginRight: 6,
+  },
+  labelChipRemove: {
+    marginLeft: 6,
+  },
+  addLabelChip: {
+    backgroundColor: 'transparent',
+    borderStyle: 'dashed',
+    gap: 4,
+  },
+  labelEditor: {
+    marginTop: 10,
+  },
+  labelEditorInput: {
+    height: 44,
+    borderRadius: 14,
+    borderWidth: 1,
+    paddingHorizontal: 14,
+    fontFamily: 'Inter_500Medium',
+    fontSize: 14,
   },
   addPhotoBtn: {
     marginTop: 18,

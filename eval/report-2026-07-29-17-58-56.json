@@ -1,0 +1,119 @@
+{
+  "api:candidate-qwen-bbox2d-v1b": {
+    "perFixture": [
+      {
+        "fixture": "1776173015803",
+        "recall": 91.7,
+        "itemCount": 43,
+        "expectedMin": 8,
+        "expectedMax": 15,
+        "countWithinRange": false,
+        "matchedCount": 11,
+        "missed": [
+          "two-tone ceramic planter"
+        ],
+        "elapsedMs": 66686,
+        "attempts": 1
+      },
+      {
+        "fixture": "1776174188547",
+        "recall": 72.7,
+        "itemCount": 36,
+        "expectedMin": 7,
+        "expectedMax": 13,
+        "countWithinRange": false,
+        "matchedCount": 8,
+        "missed": [
+          "two-tone ceramic planter",
+          "sheer white linen curtains",
+          "dark navy couch / sofa"
+        ],
+        "elapsedMs": 61452,
+        "attempts": 1
+      },
+      {
+        "fixture": "1776175427607",
+        "recall": 71.4,
+        "itemCount": 46,
+        "expectedMin": 10,
+        "expectedMax": 16,
+        "countWithinRange": false,
+        "matchedCount": 10,
+        "missed": [
+          "two-tone ceramic planter",
+          "wooden stool",
+          "gold candle holder",
+          "sheer white linen curtains"
+        ],
+        "elapsedMs": 75202,
+        "attempts": 1
+      },
+      {
+        "fixture": "1776176976030",
+        "recall": 76.9,
+        "itemCount": 39,
+        "expectedMin": 8,
+        "expectedMax": 14,
+        "countWithinRange": false,
+        "matchedCount": 10,
+        "missed": [
+          "two-tone ceramic planter",
+          "sheer white curtains",
+          "framed painting"
+        ],
+        "elapsedMs": 64427,
+        "attempts": 1
+      },
+      {
+        "fixture": "bedroom_01",
+        "recall": 78.6,
+        "itemCount": 56,
+        "expectedMin": 9,
+        "expectedMax": 18,
+        "countWithinRange": false,
+        "matchedCount": 11,
+        "missed": [
+          "pink ceramic vases",
+          "grey curtains",
+          "built-in oven"
+        ],
+        "elapsedMs": 139485,
+        "attempts": 1
+      },
+      {
+        "fixture": "dining_room_01",
+        "recall": 100,
+        "itemCount": 34,
+        "expectedMin": 5,
+        "expectedMax": 10,
+        "countWithinRange": false,
+        "matchedCount": 8,
+        "missed": [],
+        "elapsedMs": 76394,
+        "attempts": 1
+      },
+      {
+        "fixture": "living_room_02",
+        "recall": 88.9,
+        "itemCount": 89,
+        "expectedMin": 12,
+        "expectedMax": 24,
+        "countWithinRange": false,
+        "matchedCount": 16,
+        "missed": [
+          "dark grey daybed / futon",
+          "books on shelves"
+        ],
+        "elapsedMs": 258491,
+        "attempts": 1
+      }
+    ],
+    "aggregate": {
+      "avgRecall": 82.9,
+      "avgItems": 49,
+      "avgLatencyMs": 106020,
+      "failures": 0,
+      "n": 7
+    }
+  }
+}

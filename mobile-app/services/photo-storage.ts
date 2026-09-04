@@ -32,7 +32,19 @@ export class PhotoStorage {
   }
 
   async savePhoto(sourceUri: string, name: string): Promise<string> {
-    const dir = `${this.fs.documentDirectory}inventory/`;
+    return this.saveInto('inventory/', sourceUri, name);
+  }
+
+  /**
+   * Persists a generated per-item thumbnail (manipulator output lives in the
+   * volatile cache directory) under documentDirectory/thumbnails/.
+   */
+  async saveThumbnail(sourceUri: string, name: string): Promise<string> {
+    return this.saveInto('thumbnails/', sourceUri, name);
+  }
+
+  private async saveInto(subdir: string, sourceUri: string, name: string): Promise<string> {
+    const dir = `${this.fs.documentDirectory}${subdir}`;
     await this.fs.ensureDir(dir);
     const ext = (sourceUri.split('.').pop() ?? 'jpg').split('?')[0]?.toLowerCase() ?? 'jpg';
     const safe = SAFE_EXT.has(ext) ? ext : 'jpg';

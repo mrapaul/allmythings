@@ -1,0 +1,27 @@
+{
+  "api:mockup-acceptance": {
+    "perFixture": [
+      {
+        "fixture": "mockup_living_01",
+        "recall": 90.9,
+        "itemCount": 31,
+        "expectedMin": 8,
+        "expectedMax": 14,
+        "countWithinRange": false,
+        "matchedCount": 10,
+        "missed": [
+          "marble decorative cube"
+        ],
+        "elapsedMs": 67199,
+        "attempts": 1
+      }
+    ],
+    "aggregate": {
+      "avgRecall": 90.9,
+      "avgItems": 31,
+      "avgLatencyMs": 67199,
+      "failures": 0,
+      "n": 1
+    }
+  }
+}

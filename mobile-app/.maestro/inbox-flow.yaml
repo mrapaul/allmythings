@@ -1,0 +1,68 @@
+appId: com.codesparktech.homeinventory
+tags:
+  - e2e
+  - inbox
+---
+# Review-inbox E2E: home → inbox (badge or deep link) → assert contents or
+# empty state → back home.
+#
+# STATE ASSUMPTION: none. launchApp uses clearState: false so it can run
+# after other flows. The home inbox badge (id inbox-badge) only exists while
+# jobs await review, so entry is conditional: tap the badge when present,
+# otherwise open the route via the app scheme (app.json: "homeinventory").
+# Inbox contents are inherently state-dependent, so BOTH outcomes are valid:
+# either the "All caught up" empty state or at least one inbox card. Neither
+# is hard-asserted alone; whichever is absent implies the other must render.
+
+- launchApp:
+    clearState: false
+
+- extendedWaitUntil:
+    visible:
+      id: "top-bar-settings"
+    timeout: 30000
+
+- runFlow:
+    when:
+      visible:
+        id: "inbox-badge"
+    commands:
+      - tapOn:
+          id: "inbox-badge"
+- runFlow:
+    when:
+      notVisible:
+        id: "inbox-badge"
+    commands:
+      - openLink: "homeinventory:///inbox"
+      # iOS confirms custom-scheme links with a system dialog; leaving it up
+      # blanks the app for every later step (it did — the whole tidy flow ran
+      # against an empty screen). Dismiss it when it appears.
+      - runFlow:
+          when:
+            visible: "Open"
+          commands:
+            - tapOn: "Open"
+
+- extendedWaitUntil:
+    visible: "Review inbox"
+    timeout: 15000
+
+# Empty state OR entries — both paths conditional, one must hold.
+- extendedWaitUntil:
+    visible: "All caught up"
+    timeout: 5000
+    optional: true
+- runFlow:
+    when:
+      notVisible: "All caught up"
+    commands:
+      - assertVisible:
+          id: "inbox-card-0"
+
+# Back home (inbox back button carries accessibilityLabel "Back").
+- tapOn: "Back"
+- extendedWaitUntil:
+    visible:
+      id: "top-bar-settings"
+    timeout: 15000

@@ -1,3 +1,4 @@
+import { isRunNotFoundError } from '@/lib/jobs';
 import { getDetectStatus } from './detect-status';
 import type { DetectStreamEvent } from './types';
 
@@ -26,6 +27,7 @@ export async function* pollDetectionEvents(
   const intervalMs = opts.intervalMs ?? DEFAULT_INTERVAL_MS;
   let metaEmitted = false;
   let sceneEmitted = false;
+  let suggestionsEmitted = false;
   let itemsSent = 0;
   let failures = 0;
 
@@ -36,6 +38,12 @@ export async function* pollDetectionEvents(
       failures = 0;
     } catch (err) {
       failures += 1;
+      // A run the server no longer knows is dead NOW — waiting out the
+      // retry budget would just be an endless spinner on a lost run.
+      if (isRunNotFoundError(err)) {
+        yield { type: 'error', code: 'run_not_found', runId };
+        return;
+      }
       const terminal =
         (err as { data?: { status?: string } }).data?.status === 'failed' ||
         failures >= MAX_CONSECUTIVE_FAILURES;
@@ -65,6 +73,11 @@ export async function* pollDetectionEvents(
     if (!sceneEmitted && status.scene) {
       sceneEmitted = true;
       yield { type: 'scene', scene: status.scene };
+    }
+    // Duplicate hints, when this server build sends them.
+    if (!suggestionsEmitted && status.mergeSuggestions !== undefined) {
+      suggestionsEmitted = true;
+      yield { type: 'merge-suggestions', suggestions: status.mergeSuggestions };
     }
     const items = status.result?.items ?? [];
     while (itemsSent < items.length) {

@@ -81,6 +81,22 @@ describe('pollDetectionEvents', () => {
     expect(events.map((e) => e.type)).toEqual(['meta', 'item', 'done']);
   });
 
+  it('terminates IMMEDIATELY with run_not_found on a 404 — no retry budget', async () => {
+    // Incident regression: server restarts wipe in-memory runs; polling a
+    // persisted runId then 404s forever. One request must settle it.
+    vi.mocked(getDetectStatus).mockClear();
+    vi.mocked(getDetectStatus).mockRejectedValue(
+      Object.assign(new Error('404'), {
+        status: 404,
+        data: { error: 'run_not_found', workflowId: 'r-dead' },
+      }),
+    );
+    const events = [];
+    for await (const ev of pollDetectionEvents('r-dead', { intervalMs: 1 })) events.push(ev);
+    expect(events).toEqual([{ type: 'error', code: 'run_not_found', runId: 'r-dead' }]);
+    expect(vi.mocked(getDetectStatus).mock.calls.length).toBe(1);
+  });
+
   it('stops silently when aborted', async () => {
     const ctrl = new AbortController();
     vi.mocked(getDetectStatus).mockImplementation(async () => {

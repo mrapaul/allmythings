@@ -6,27 +6,41 @@ import { BoundingBoxOverlay } from '@/components/BoundingBoxOverlay';
 import { DetectionRow } from '@/components/DetectionRow';
 import { DrawBoxOverlay, type NormBox } from '@/components/DrawBoxOverlay';
 import { GlowBackdrop } from '@/components/GlowBackdrop';
+import { Snackbar } from '@/components/Snackbar';
 import { useHomes } from '@/contexts/HomesContext';
 import { useInventory } from '@/contexts/InventoryContext';
 import { useColors } from '@/hooks/useColors';
 import { useResponsive } from '@/hooks/useResponsive';
+import { extractAttributes } from '@/lib/attributes';
 import { CorrectionsQueue, buildCorrectionEvents } from '@/lib/corrections';
-import { assessJpeg } from '@/lib/photo-quality';
+import { stageSubline, stageTitle } from '@/lib/detect-stages';
+import { isPossibleDuplicate } from '@/lib/duplicates';
+import { RUN_LOST_ERROR_CODE } from '@/lib/jobs';
+import { buildLabels, labelsForDisplay } from '@/lib/labels';
+import { startsExcluded, visibilityNote, visibilityVerdict } from '@/lib/partial-visibility';
+import { removePendingCapture, upsertPendingCapture } from '@/lib/pending-captures';
+import { nextRetryDelayMs } from '@/lib/retry-backoff';
+import { thumbCropRect, thumbResizeWidth } from '@/lib/thumb-crop';
 import { withSpan } from '@/observability/otel';
+import { inspectCaptureQuality } from '@/services/image-quality';
+import { dispatchShot } from '@/services/walk-capture';
 import {
   type DetectionRow as DetectionStoreRow,
   getDetectionStore,
   useDetectionStore,
 } from '@/stores/detection-screen.store';
-import { Prefs } from '@/stores/prefs';
+import { getJobsStore, markJobReviewed, patchJob, removeJob } from '@/stores/jobs.store';
+import { Prefs, type ReviewState } from '@/stores/prefs';
+import { addServerSuggestions } from '@/stores/suggestions.store';
 import { Feather } from '@expo/vector-icons';
-import { File } from 'expo-file-system';
 import { Image } from 'expo-image';
 import * as ImageManipulator from 'expo-image-manipulator';
+import * as ImagePicker from 'expo-image-picker';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
+  AppState,
   Platform,
   Pressable,
   ScrollView,
@@ -36,21 +50,27 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+/** How long the post-save Undo snackbar stays before the loop continues. */
+const UNDO_WINDOW_MS = 5_000;
+
 export default function DetectionScreen() {
-  const params = useLocalSearchParams<{ imageUri?: string }>();
+  const params = useLocalSearchParams<{ imageUri?: string; runId?: string }>();
   const imageUri = typeof params.imageUri === 'string' ? params.imageUri : undefined;
+  // Walk-mode/inbox resume: the run already exists server-side — skip
+  // precheck/upload and follow it directly.
+  const resumeRunId = typeof params.runId === 'string' && params.runId ? params.runId : undefined;
   const router = useRouter();
   const colors = useColors();
   const insets = useSafeAreaInsets();
   const { gutter, contentMaxWidth, isCompact, width: screenW } = useResponsive();
-  const { addItems } = useInventory();
+  const { items, addItems, deleteItems } = useInventory();
   const { activeHomeId } = useHomes();
 
   const phase = useDetectionStore((s) => s.phase);
+  const runId = useDetectionStore((s) => s.runId);
   const rows = useDetectionStore((s) => s.rows);
   const scene = useDetectionStore((s) => s.scene);
   const errorCode = useDetectionStore((s) => s.errorCode);
-  const errorMessage = useDetectionStore((s) => s.errorMessage);
 
   const prefs = useMemo(() => {
     try {
@@ -67,9 +87,27 @@ export default function DetectionScreen() {
   const [autoFocusByRow, setAutoFocusByRow] = useState<Record<string, boolean>>({});
   const [tagsByRow, setTagsByRow] = useState<Record<string, string[]>>({});
   const [qaSuspect, setQaSuspect] = useState(false);
+  /** Which fault the pre-upload gate found, in the user's words. */
+  const [qaAdvice, setQaAdvice] = useState<string | null>(null);
   const [verdictDismissed, setVerdictDismissed] = useState(false);
+  // Post-save undo window (2b/4): count + created item ids + review row ids.
+  const [saveToast, setSaveToast] = useState<{
+    count: number;
+    itemIds: string[];
+    rowIds: string[];
+  } | null>(null);
+  // Bumping the nonce relaunches detection (manual Retry / auto-retry).
+  const [retryNonce, setRetryNonce] = useState(0);
+  // Honest staged wait display (elapsed-keyed copy, no fake percentages).
+  const [elapsedMs, setElapsedMs] = useState(0);
+  const startedAtRef = useRef(Date.now());
   const proceedRef = useRef<(() => void) | null>(null);
-  const launchedRef = useRef(false);
+  const launchedRef = useRef<string | null>(null);
+  const undoTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const retryAttemptRef = useRef(0);
+  const restoredRunRef = useRef<string | null>(null);
+  const restoredRowIdsRef = useRef<Set<string>>(new Set());
+  const reviewSnapshotRef = useRef<ReviewState | null>(null);
   const correctionsSentRef = useRef(false);
   const correctionsQueue = useMemo(() => new CorrectionsQueue(prefs), [prefs]);
 
@@ -98,9 +136,23 @@ export default function DetectionScreen() {
 
   // ----- effects: reset + crash-resume + run detection ---------------------
   useEffect(() => {
-    if (launchedRef.current) return;
     if (!imageUri) return;
-    launchedRef.current = true;
+    const runKey = `${imageUri}:${resumeRunId ?? ''}:${retryNonce}`;
+    if (launchedRef.current === runKey) return;
+    launchedRef.current = runKey;
+
+    // Fresh capture or retry: clear per-photo local state so a relaunched
+    // detection (camera-first loop, auto-retry) starts from a clean slate.
+    setProcessedUri(undefined);
+    setTagsByRow({});
+    setAutoFocusByRow({});
+    setQaSuspect(false);
+    setQaAdvice(null);
+    setVerdictDismissed(false);
+    setSaveToast(null);
+    correctionsSentRef.current = false;
+    startedAtRef.current = Date.now();
+    setElapsedMs(0);
 
     const store = getDetectionStore();
     store.getState().reset();
@@ -112,12 +164,37 @@ export default function DetectionScreen() {
       prefs.setLastDetectionRunId(runId);
       for await (const ev of pollDetectionEvents(runId, { signal: controller.signal })) {
         if (controller.signal.aborted) break;
+        // Server duplicate hints go to the quiet tidy-up queue, never to a
+        // blocking prompt in the middle of review.
+        if (ev.type === 'merge-suggestions') {
+          addServerSuggestions(ev.suggestions);
+          continue;
+        }
         if (ev.type === 'done' || ev.type === 'error') prefs.setLastDetectionRunId(null);
         store.getState().handleEvent(ev);
       }
     };
 
     void (async () => {
+      // Inbox/walk-mode resume: display the original capture and replay the
+      // existing run's events — no upload, no QA gate.
+      if (resumeRunId) {
+        setProcessedUri(imageUri);
+        try {
+          const src = await Image.loadAsync(imageUri);
+          if (src.width > 0 && src.height > 0) setImgWH({ w: src.width, h: src.height });
+          src.release();
+        } catch {
+          // screen-size default keeps boxes roughly placed
+        }
+        try {
+          await followRun(resumeRunId);
+        } catch {
+          store.getState().handleEvent({ type: 'error', code: 'detect_run_failed' });
+        }
+        return;
+      }
+
       // crash-resume: a prior run (completed OR still running server-side)
       // resumes by polling the same runId — no re-upload, no lost work.
       const lastId = prefs.getLastDetectionRunId();
@@ -135,19 +212,36 @@ export default function DetectionScreen() {
       }
 
       // compress image (mirror design behavior, ~1280px wide JPEG).
+      //
+      // Decode through expo-image's loader and hand the native ref to the
+      // manipulator instead of calling the legacy `manipulateAsync(uri)`.
+      // The legacy path decodes via the RN bridge image loader, which drops
+      // the EXIF orientation of camera-roll JPEGs: the manipulator's
+      // fix-orientation pass then no-ops and the saved output is baked 90°
+      // rotated with no orientation metadata. expo-image's decoder applies
+      // EXIF (it's what renders photos upright on screen), so rendering from
+      // its ref bakes upright pixels into the processed JPEG.
       let uploadUri = imageUri;
       let w = screenW;
       let h = screenW;
       try {
-        const manipulated = await ImageManipulator.manipulateAsync(
-          imageUri,
-          [{ resize: { width: 1280 } }],
-          { compress: 0.7, format: ImageManipulator.SaveFormat.JPEG },
-        );
-        uploadUri = manipulated.uri;
-        if (manipulated.width && manipulated.height) {
-          w = manipulated.width;
-          h = manipulated.height;
+        const source = await Image.loadAsync(imageUri);
+        try {
+          const rendered = await ImageManipulator.ImageManipulator.manipulate(source)
+            .resize({ width: 1280 })
+            .renderAsync();
+          const saved = await rendered.saveAsync({
+            compress: 0.7,
+            format: ImageManipulator.SaveFormat.JPEG,
+          });
+          rendered.release();
+          uploadUri = saved.uri;
+          if (saved.width && saved.height) {
+            w = saved.width;
+            h = saved.height;
+          }
+        } finally {
+          source.release();
         }
       } catch {
         // fall back to original uri
@@ -163,10 +257,16 @@ export default function DetectionScreen() {
               fileName: 'frame.jpg',
               mimeType: 'image/jpeg',
             });
+            // The capture reached the server — it is no longer at risk.
+            prefs.setPendingCaptures(removePendingCapture(prefs.getPendingCaptures(), imageUri));
+            retryAttemptRef.current = 0;
             await followRun(handle.runId);
           });
         } catch (err) {
           if (!controller.signal.aborted) {
+            // Never lose a capture: queue the photo and surface the calm
+            // "saved for later" state instead of a raw error.
+            prefs.setPendingCaptures(upsertPendingCapture(prefs.getPendingCaptures(), imageUri));
             store.getState().handleEvent({
               type: 'error',
               code: 'detect_start_failed',
@@ -177,19 +277,18 @@ export default function DetectionScreen() {
         }
       };
 
-      // Pre-upload heuristic: an implausibly small JPEG means a blurry/dark
-      // frame. Advisory only — the server's model verdict is authoritative.
-      let assessment: ReturnType<typeof assessJpeg> = 'ok';
-      try {
-        assessment = assessJpeg(new File(uploadUri).size ?? 0, w, h);
-      } catch {
-        // Missing file info never blocks the flow.
-      }
-      if (assessment === 'suspect') {
+      // Pre-upload quality gate. This is the SAME on-device pixel analysis
+      // the live viewfinder coaches with (mean luma + Laplacian focus), so
+      // the two can never disagree about a frame, and the copy is identical.
+      // Fails open: a null report means "no opinion", never a block.
+      // Advisory only — the server's model verdict remains authoritative.
+      const quality = await inspectCaptureQuality(uploadUri);
+      if (quality?.advice) {
         proceedRef.current = () => {
           setQaSuspect(false);
           void stream();
         };
+        setQaAdvice(quality.advice);
         setQaSuspect(true);
         return;
       }
@@ -201,7 +300,153 @@ export default function DetectionScreen() {
       // best-effort: clear pending pref so a new mount runs fresh
       prefs.setLastDetectionRunId(null);
     };
-  }, [imageUri, prefs, screenW]);
+  }, [imageUri, prefs, screenW, retryNonce, resumeRunId]);
+
+  // Possible-duplicate flags (suggest-never-auto): once per run, compare each
+  // row's type+color labels against the existing inventory; flagged rows
+  // start EXCLUDED from save-all and carry a subtle marker.
+  const [dupRowIds, setDupRowIds] = useState<Set<string>>(() => new Set());
+  const dupCheckedRef = useRef<string | null>(null);
+  useEffect(() => {
+    if (phase !== 'review' || rows.length === 0) return;
+    const key = runId ?? resumeRunId ?? imageUri ?? 'run';
+    if (dupCheckedRef.current === key) return;
+    dupCheckedRef.current = key;
+    const inventorySets = items.map((it) => labelsForDisplay(it));
+    const flagged = new Set<string>();
+    const st = getDetectionStore().getState();
+    for (const r of st.rows) {
+      const rowLabels = buildLabels({
+        label: r.item.label,
+        description: r.item.description ?? '',
+        category: r.item.category ?? 'Other',
+        tags: r.item.tags,
+      });
+      const isDupe = isPossibleDuplicate(rowLabels, inventorySets);
+      if (isDupe) flagged.add(r.id);
+      // A sliver is a truncation artifact rather than a possession you can
+      // inventory, so it starts unchecked — same one-tap flip as duplicates.
+      // 'clipped' rows stay checked: they are real things, just not fully
+      // pictured.
+      const excludeForVisibility = startsExcluded(visibilityVerdict(r.item.box));
+      if ((isDupe || excludeForVisibility) && r.included) st.toggleInclude(r.id);
+    }
+    setDupRowIds(flagged);
+  }, [phase, rows.length, runId, resumeRunId, imageUri, items]);
+
+  // Calm failure state: detection could not start (network error / 5xx).
+  const startFailed =
+    phase === 'review' && errorCode === 'detect_start_failed' && rows.length === 0;
+
+  // The resumed run no longer exists server-side (restart / result TTL):
+  // terminal, and re-runnable from the photo we still hold locally.
+  const runLost = phase === 'review' && errorCode === 'run_not_found' && rows.length === 0;
+
+  // Reflect the loss on the job itself, so the inbox card shows the same
+  // state even if the user backs out without re-running.
+  const lostMarkedRef = useRef<string | null>(null);
+  useEffect(() => {
+    const deadRunId = resumeRunId ?? runId;
+    if (!runLost || !deadRunId || lostMarkedRef.current === deadRunId) return;
+    lostMarkedRef.current = deadRunId;
+    patchJob(deadRunId, { status: 'failed', errorCode: RUN_LOST_ERROR_CODE });
+  }, [runLost, resumeRunId, runId]);
+
+  // One tap re-runs the lost job: fresh runId, same photo, same session.
+  const rerunLostJob = () => {
+    const deadRunId = resumeRunId ?? runId;
+    const job = deadRunId
+      ? getJobsStore()
+          .getState()
+          .jobs.find((j) => j.runId === deadRunId)
+      : undefined;
+    if (deadRunId) removeJob(deadRunId);
+    const photoUri = job?.photoUri ?? imageUri;
+    if (photoUri) {
+      void dispatchShot(prefs, photoUri, job ? { roomSessionId: job.roomSessionId } : {});
+    }
+    router.replace('/');
+  };
+
+  const retryNow = () => {
+    retryAttemptRef.current += 1;
+    setRetryNonce((n) => n + 1);
+  };
+
+  // Auto-retry with backoff while the calm state is showing, plus an
+  // immediate attempt when the app returns to the foreground.
+  useEffect(() => {
+    if (!startFailed) return;
+    const timer = setTimeout(() => {
+      retryAttemptRef.current += 1;
+      setRetryNonce((n) => n + 1);
+    }, nextRetryDelayMs(retryAttemptRef.current));
+    const sub = AppState.addEventListener('change', (state) => {
+      if (state === 'active') {
+        retryAttemptRef.current += 1;
+        setRetryNonce((n) => n + 1);
+      }
+    });
+    return () => {
+      clearTimeout(timer);
+      sub.remove();
+    };
+  }, [startFailed]);
+
+  // The undo window must not fire callbacks after the screen unmounts.
+  useEffect(
+    () => () => {
+      if (undoTimerRef.current) clearTimeout(undoTimerRef.current);
+    },
+    [],
+  );
+
+  // Tick the staged-wait display once a second while detection runs.
+  useEffect(() => {
+    const waiting = (phase === 'loading' && !qaSuspect) || phase === 'streaming';
+    if (!waiting) return;
+    const timer = setInterval(() => setElapsedMs(Date.now() - startedAtRef.current), 1_000);
+    return () => clearInterval(timer);
+  }, [phase, qaSuspect]);
+
+  // ----- review autosave: leaving mid-review and returning restores exactly.
+  // The snapshot is captured ONCE per resumed run (before the persist effect
+  // starts overwriting the slot) and applied to each row exactly once as it
+  // streams back in — so later user changes are never fought.
+  useEffect(() => {
+    if (!runId || rows.length === 0) return;
+    if (restoredRunRef.current !== runId) {
+      restoredRunRef.current = runId;
+      restoredRowIdsRef.current = new Set();
+      const stored = prefs.getReviewState();
+      reviewSnapshotRef.current = stored && stored.runId === runId ? stored : null;
+      if (reviewSnapshotRef.current) {
+        const savedTags = reviewSnapshotRef.current.tagsByRow;
+        setTagsByRow((prev) => ({ ...prev, ...savedTags }));
+      }
+    }
+    const snapshot = reviewSnapshotRef.current;
+    if (!snapshot) return;
+    const st = getDetectionStore().getState();
+    for (const r of st.rows) {
+      if (restoredRowIdsRef.current.has(r.id)) continue;
+      restoredRowIdsRef.current.add(r.id);
+      if (snapshot.excludedRowIds.includes(r.id) && r.included) st.toggleInclude(r.id);
+      if (snapshot.savedRowIds.includes(r.id) && !r.saved) st.patchRow(r.id, { saved: true });
+    }
+  }, [runId, rows.length, prefs]);
+
+  // Persist the working state on every meaningful change (single MMKV slot,
+  // overwritten by the next run).
+  useEffect(() => {
+    if (!runId || rows.length === 0) return;
+    prefs.setReviewState({
+      runId,
+      tagsByRow,
+      excludedRowIds: rows.filter((r) => !r.included).map((r) => r.id),
+      savedRowIds: rows.filter((r) => r.saved).map((r) => r.id),
+    });
+  }, [runId, rows, tagsByRow, prefs]);
 
   // ----- per-row tag editing local state ----------------------------------
   // The store keeps the canonical detection (item + box). Tag-string edits
@@ -245,6 +490,37 @@ export default function DetectionScreen() {
     getDetectionStore().getState().toggleInclude(rowId);
   };
 
+  // Pre-rendered tile thumbnail: crop the ORIGINAL full-res capture around
+  // the detection box (+15% context, ~600px JPEG). The processed upload is
+  // only ~1280px wide, so small bbox regions go blurry under the runtime
+  // bbox-zoom transform — a real crop from the source keeps tiles sharp.
+  // Returns null (→ runtime-transform fallback) for full-frame boxes or any
+  // manipulator failure.
+  const makeThumbnail = async (box: DetectionStoreRow['item']['box']): Promise<string | null> => {
+    if (!imageUri) return null;
+    try {
+      const source = await Image.loadAsync(imageUri);
+      try {
+        const rect = thumbCropRect(box, source.width, source.height);
+        if (!rect) return null;
+        const rendered = await ImageManipulator.ImageManipulator.manipulate(source)
+          .crop(rect)
+          .resize({ width: thumbResizeWidth(rect.width) })
+          .renderAsync();
+        const saved = await rendered.saveAsync({
+          compress: 0.8,
+          format: ImageManipulator.SaveFormat.JPEG,
+        });
+        rendered.release();
+        return saved.uri;
+      } finally {
+        source.release();
+      }
+    } catch {
+      return null;
+    }
+  };
+
   const onToggleSave = async (row: DetectionStoreRow) => {
     if (!activeHomeId || !processedUri) return;
     if (savingIds.has(row.id) || isBulkSaving) return;
@@ -262,6 +538,14 @@ export default function DetectionScreen() {
           category: row.item.category ?? 'Other',
           tags,
           primaryPhotoUri: processedUri,
+          thumbnailUri: await makeThumbnail(row.item.box),
+          attributes: extractAttributes(row.item.tags),
+          labels: buildLabels({
+            label,
+            description: row.item.description ?? '',
+            category: row.item.category ?? 'Other',
+            tags: row.item.tags,
+          }),
           additionalPhotoUris: [],
           notes: '',
           box: row.item.box,
@@ -290,28 +574,94 @@ export default function DetectionScreen() {
     try {
       const ids = pending.map((p) => p.id);
       getDetectionStore().getState().beginSave(ids);
-      const payloads = pending.map((row) => {
+      // Sequential (not Promise.all): each thumbnail render holds decoded
+      // bitmap memory; large scenes can carry dozens of rows.
+      const payloads = [];
+      for (const row of pending) {
         const tags = (tagsByRow[row.id] ?? [row.item.label, ...row.item.tags]).filter((t) =>
           t.trim(),
         );
         const label = tags[0] ?? row.item.label;
-        return {
+        payloads.push({
           label,
           description: row.item.description ?? '',
           category: row.item.category ?? 'Other',
           tags,
           primaryPhotoUri: processedUri,
+          thumbnailUri: await makeThumbnail(row.item.box),
+          attributes: extractAttributes(row.item.tags),
+          labels: buildLabels({
+            label,
+            description: row.item.description ?? '',
+            category: row.item.category ?? 'Other',
+            tags: row.item.tags,
+          }),
           additionalPhotoUris: [],
           notes: '',
           box: row.item.box,
-        };
-      });
-      await addItems(payloads);
+        });
+      }
+      const itemIds = await addItems(payloads);
       getDetectionStore().getState().endSave(ids);
       submitCorrections();
-      router.replace('/');
+      // Walk mode: reviewing + saving clears this job from the inbox.
+      const reviewedRunId = runId ?? resumeRunId;
+      if (reviewedRunId) markJobReviewed(reviewedRunId);
+      // Non-blocking undo window instead of navigating away; when it
+      // expires, chain straight into the next capture (camera-first loop).
+      setSaveToast({ count: payloads.length, itemIds, rowIds: ids });
+      if (undoTimerRef.current) clearTimeout(undoTimerRef.current);
+      undoTimerRef.current = setTimeout(() => {
+        setSaveToast(null);
+        void continueCapture();
+      }, UNDO_WINDOW_MS);
     } finally {
       setIsBulkSaving(false);
+    }
+  };
+
+  // ----- post-save loop: undo · view collection · shoot next ---------------
+  const dismissToast = () => {
+    if (undoTimerRef.current) clearTimeout(undoTimerRef.current);
+    undoTimerRef.current = null;
+    setSaveToast(null);
+  };
+
+  const undoLastSave = async () => {
+    const toast = saveToast;
+    if (!toast) return;
+    dismissToast();
+    await deleteItems(toast.itemIds);
+    const store = getDetectionStore().getState();
+    for (const rowId of toast.rowIds) {
+      store.patchRow(rowId, { saved: false });
+    }
+  };
+
+  const goToCollection = () => {
+    dismissToast();
+    router.replace('/');
+  };
+
+  // Camera-first loop: chain shoot → review → save → shoot. Falls back to
+  // the collection when the camera is unavailable (simulator) or denied.
+  const continueCapture = async () => {
+    try {
+      const perm = await ImagePicker.getCameraPermissionsAsync();
+      if (!perm.granted) {
+        router.replace('/');
+        return;
+      }
+      const result = await ImagePicker.launchCameraAsync({ mediaTypes: 'images', quality: 0.8 });
+      const uri = result.canceled ? undefined : result.assets?.[0]?.uri;
+      if (uri) {
+        // Walk mode: dispatch in the background and land home — the shot
+        // shows up as a processing pill, then in the review inbox.
+        void dispatchShot(prefs, uri);
+      }
+      router.replace('/');
+    } catch {
+      router.replace('/');
     }
   };
 
@@ -441,17 +791,21 @@ export default function DetectionScreen() {
               {isLoading ? 'scanning' : isStreaming ? 'discovering' : 'review'}
             </Text>
             <Text style={[styles.title, { color: colors.foreground }]}>
-              {isLoading
-                ? 'Reading the room'
-                : isStreaming
-                  ? rows.length === 0
-                    ? 'Scanning…'
-                    : `${rows.length} found…`
-                  : rows.length === 0
-                    ? errorCode
-                      ? 'Something went wrong'
-                      : 'Nothing detected'
-                    : `${rows.length} item${rows.length === 1 ? '' : 's'}`}
+              {isLoading || isStreaming
+                ? stageTitle({
+                    elapsedMs,
+                    itemCount: rows.length,
+                    expectedTotal: scene?.estimatedTotalItems ?? null,
+                  })
+                : rows.length === 0
+                  ? runLost
+                    ? 'Still yours to run'
+                    : startFailed
+                      ? 'Photo saved'
+                      : errorCode
+                        ? 'We hit a snag'
+                        : 'Nothing detected'
+                  : `${rows.length} item${rows.length === 1 ? '' : 's'}`}
             </Text>
           </View>
 
@@ -523,7 +877,10 @@ export default function DetectionScreen() {
           {qaSuspect && (
             <QualityCard
               icon="camera-off"
-              title="This photo looks too dark or blurry"
+              // Names the actual fault using the same wording the live
+              // viewfinder used; falls back to the original copy if the
+              // report arrived without advice.
+              title={qaAdvice ?? 'This photo looks too dark or blurry'}
               body="Detection works best on a sharp, well-lit frame. Retake it, or send this one anyway."
               primaryLabel="Retake"
               onPrimary={closeOut}
@@ -550,17 +907,43 @@ export default function DetectionScreen() {
             {qaSuspect || serverRejected ? null : isLoading ? (
               <View style={styles.helperWrap}>
                 <Text style={[styles.helper, { color: colors.mutedForeground }]}>
-                  Identifying every piece in this frame…
+                  {stageSubline(elapsedMs)}
                 </Text>
               </View>
             ) : !isStreaming && rows.length === 0 ? (
-              <View style={styles.helperWrap}>
-                <Text style={[styles.helper, { color: colors.mutedForeground }]}>
-                  {errorCode
-                    ? (errorMessage ?? 'Detection failed. Try again.')
-                    : 'No objects detected. Try another angle or lighting.'}
-                </Text>
-              </View>
+              runLost ? (
+                <QualityCard
+                  icon="rotate-ccw"
+                  iconColor={colors.mutedForeground}
+                  title="The server lost track of this one"
+                  body="Nothing is gone — your photo is still right here. Run it again and the results land back in your inbox."
+                  primaryLabel="Run it again"
+                  onPrimary={rerunLostJob}
+                  secondaryLabel="View collection"
+                  onSecondary={closeOut}
+                  colors={colors}
+                />
+              ) : startFailed ? (
+                <QualityCard
+                  icon="wifi-off"
+                  iconColor={colors.mutedForeground}
+                  title="Saved — will catalog when the server is reachable"
+                  body="Your photo is kept safe and will be retried automatically. You can also retry now."
+                  primaryLabel="Retry now"
+                  onPrimary={retryNow}
+                  secondaryLabel="View collection"
+                  onSecondary={closeOut}
+                  colors={colors}
+                />
+              ) : (
+                <View style={styles.helperWrap}>
+                  <Text style={[styles.helper, { color: colors.mutedForeground }]}>
+                    {errorCode
+                      ? "We couldn't finish reading this photo — mind trying again in a moment?"
+                      : "We couldn't make out any items here. A little more light or a closer angle usually does it."}
+                  </Text>
+                </View>
+              )
             ) : (
               <>
                 <View style={styles.legendRow}>
@@ -572,32 +955,51 @@ export default function DetectionScreen() {
                 </View>
 
                 {rows.map((row, idx) => (
-                  <DetectionRow
-                    key={row.id}
-                    photoUri={processedUri ?? imageUri}
-                    imageWidth={imgWH.w}
-                    imageHeight={imgWH.h}
-                    box={row.item.box}
-                    tags={tagsByRow[row.id] ?? [row.item.label, ...row.item.tags]}
-                    status={row.saved ? 'saved' : 'pending'}
-                    isSaving={savingIds.has(row.id) || (isBulkSaving && !row.saved && row.included)}
-                    index={idx}
-                    autoFocusFirst={autoFocusByRow[row.id] ?? false}
-                    onChangeTag={(i, v) => onChangeTag(row.id, i, v)}
-                    onAddTag={() => onAddTag(row.id)}
-                    onRemoveTag={(i) => onRemoveTag(row.id, i)}
-                    onToggleSave={() => {
-                      void onToggleSave(row);
-                    }}
-                    onDiscard={() => onDiscard(row.id)}
-                  />
+                  <View key={row.id}>
+                    {dupRowIds.has(row.id) && (
+                      <View style={styles.dupFlag} testID="dup-flag">
+                        <Feather name="copy" size={11} color={colors.mutedForeground} />
+                        <Text style={[styles.dupFlagText, { color: colors.mutedForeground }]}>
+                          Similar item already in your collection — tap to include anyway
+                        </Text>
+                      </View>
+                    )}
+                    {visibilityNote(visibilityVerdict(row.item.box)) && (
+                      <View style={styles.dupFlag} testID="partial-flag">
+                        <Feather name="maximize" size={11} color={colors.mutedForeground} />
+                        <Text style={[styles.dupFlagText, { color: colors.mutedForeground }]}>
+                          {visibilityNote(visibilityVerdict(row.item.box))}
+                        </Text>
+                      </View>
+                    )}
+                    <DetectionRow
+                      photoUri={processedUri ?? imageUri}
+                      imageWidth={imgWH.w}
+                      imageHeight={imgWH.h}
+                      box={row.item.box}
+                      tags={tagsByRow[row.id] ?? [row.item.label, ...row.item.tags]}
+                      status={row.saved ? 'saved' : 'pending'}
+                      isSaving={
+                        savingIds.has(row.id) || (isBulkSaving && !row.saved && row.included)
+                      }
+                      index={idx}
+                      autoFocusFirst={autoFocusByRow[row.id] ?? false}
+                      onChangeTag={(i, v) => onChangeTag(row.id, i, v)}
+                      onAddTag={() => onAddTag(row.id)}
+                      onRemoveTag={(i) => onRemoveTag(row.id, i)}
+                      onToggleSave={() => {
+                        void onToggleSave(row);
+                      }}
+                      onDiscard={() => onDiscard(row.id)}
+                    />
+                  </View>
                 ))}
 
                 {isStreaming && (
                   <View style={styles.streamingHint}>
                     <ActivityIndicator size="small" color={colors.primary} />
                     <Text style={[styles.streamingHintText, { color: colors.mutedForeground }]}>
-                      Still scanning…
+                      {stageSubline(elapsedMs)}
                     </Text>
                   </View>
                 )}
@@ -653,23 +1055,39 @@ export default function DetectionScreen() {
                 {isBulkSaving ? (
                   <ActivityIndicator size="small" color={colors.primaryForeground} />
                 ) : (
-                  <Feather
-                    name={pendingValid > 0 ? 'check-circle' : 'check'}
-                    size={22}
-                    color={colors.primaryForeground}
-                  />
-                )}
-                {pendingValid > 0 && !isBulkSaving && (
-                  <View style={[styles.saveCountBadge, { backgroundColor: colors.card }]}>
-                    <Text style={[styles.saveCountText, { color: colors.primary }]}>
-                      {pendingValid}
+                  <>
+                    <Feather
+                      name={pendingValid > 0 ? 'check-circle' : 'check'}
+                      size={18}
+                      color={colors.primaryForeground}
+                    />
+                    <Text style={[styles.saveBtnLabel, { color: colors.primaryForeground }]}>
+                      {pendingValid > 0
+                        ? `Save ${pendingValid} item${pendingValid === 1 ? '' : 's'}`
+                        : 'Done'}
                     </Text>
-                  </View>
+                  </>
                 )}
               </Pressable>
             </View>
           </View>
         )}
+
+        <Snackbar
+          visible={saveToast !== null}
+          testID="save-undo-snackbar"
+          message={
+            saveToast
+              ? `${saveToast.count} item${saveToast.count === 1 ? '' : 's'} saved · ${items.length} in your home`
+              : ''
+          }
+          actionLabel="Undo"
+          onAction={() => {
+            void undoLastSave();
+          }}
+          secondaryLabel="View collection"
+          onSecondary={goToCollection}
+        />
       </View>
     </View>
   );
@@ -696,6 +1114,8 @@ const VERDICT_COPY: Record<string, { title: string; body: string }> = {
 
 interface QualityCardProps {
   icon: keyof typeof Feather.glyphMap;
+  /** Defaults to the destructive tone; calmer states pass a muted color. */
+  iconColor?: string;
   title: string;
   body: string;
   primaryLabel: string;
@@ -707,6 +1127,7 @@ interface QualityCardProps {
 
 function QualityCard({
   icon,
+  iconColor,
   title,
   body,
   primaryLabel,
@@ -719,7 +1140,7 @@ function QualityCard({
     <View
       style={[styles.qualityCard, { backgroundColor: colors.card, borderColor: colors.border }]}
     >
-      <Feather name={icon} size={28} color={colors.destructive} />
+      <Feather name={icon} size={28} color={iconColor ?? colors.destructive} />
       <Text style={[styles.qualityTitle, { color: colors.foreground }]}>{title}</Text>
       <Text style={[styles.qualityBody, { color: colors.mutedForeground }]}>{body}</Text>
       <View style={styles.qualityActions}>
@@ -950,17 +1371,24 @@ const styles = StyleSheet.create({
     fontSize: 12,
     letterSpacing: 0.2,
   },
-  saveCountBadge: {
-    minWidth: 22,
-    height: 22,
-    borderRadius: 11,
-    paddingHorizontal: 5,
-    alignItems: 'center',
-    justifyContent: 'center',
+  saveBtnLabel: {
+    fontFamily: 'Inter_600SemiBold',
+    fontSize: 14,
+    letterSpacing: 0.2,
   },
-  saveCountText: {
-    fontFamily: 'Inter_700Bold',
-    fontSize: 12,
+  dupFlag: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: 4,
+    paddingTop: 10,
+    paddingBottom: 2,
+  },
+  dupFlagText: {
+    fontFamily: 'Inter_500Medium',
+    fontSize: 11,
+    letterSpacing: 0.1,
+    flex: 1,
   },
   primaryBtn: {
     marginTop: 24,

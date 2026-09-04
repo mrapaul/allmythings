@@ -5,6 +5,8 @@ import type { VlmClient } from '../clients/vlm-client';
 import { logger } from '../utils/logger';
 import { VlmDetector, type Detector, type VlmDetectorOptions } from './vlm-detector';
 import { FallbackDetector } from './vlm-detector.fallback';
+import { EmbeddingsService } from './embeddings.service';
+import { PossessionJudge } from './possession-judge.service';
 
 /**
  * Build the detector chain from environment configuration.
@@ -29,7 +31,35 @@ export function createLabelClient(): VlmClient {
   });
 }
 
-export function createVlmDetector(): Detector {
+/**
+ * Shared embedding client for the whole process: one LRU cache means labels
+ * embedded during a detection are free for the next detection and for
+ * /v1/vocab/match.
+ */
+export function createEmbeddingsService(): EmbeddingsService {
+  return new EmbeddingsService({
+    baseUrl: envConfig.ollamaBaseUrl,
+    model: envConfig.embeddingModel,
+    timeoutMs: envConfig.embeddingTimeoutMs,
+    cacheSize: envConfig.embeddingCacheSize,
+    enabled: envConfig.embeddingsEnabled,
+  });
+}
+
+/**
+ * Fallback inventory-ness judge, on the same Ollama model as detection (text
+ * only). Reached only for items the detector model left unflagged.
+ */
+export function createPossessionJudge(): PossessionJudge {
+  return new PossessionJudge({
+    baseUrl: envConfig.ollamaBaseUrl,
+    model: envConfig.ollamaModel,
+    timeoutMs: envConfig.possessionJudgeTimeoutMs,
+    enabled: envConfig.possessionJudgeEnabled,
+  });
+}
+
+export function createVlmDetector(possessionJudge: PossessionJudge | null = null): Detector {
   const opts: VlmDetectorOptions = {
     twoPass: envConfig.vlmTwoPass,
     maxImageSize: envConfig.vlmMaxImageSize,
@@ -43,6 +73,7 @@ export function createVlmDetector(): Detector {
       timeoutMs: envConfig.vlmTimeoutMs,
     }),
     opts,
+    possessionJudge,
   );
 
   if (!envConfig.geminiApiKey) {
@@ -57,6 +88,7 @@ export function createVlmDetector(): Detector {
       timeoutMs: envConfig.vlmTimeoutMs,
     }),
     opts,
+    possessionJudge,
   );
 
   const geminiFirst = envConfig.detectorPrimary === 'gemini';

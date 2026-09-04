@@ -1,0 +1,279 @@
+{
+  "generated_at": "2026-07-30T11:11:41.127516+00:00",
+  "generator": "training/dataset/derive_taxonomy.py",
+  "parameters": {
+    "embedding_model": "nomic-embed-text:v1.5",
+    "linkage": "average",
+    "metric": "cosine",
+    "threshold": 0.15,
+    "min_count": 1,
+    "sources": {
+      "flywheel": null,
+      "bootstrap": [
+        "training/data/bootstrap/coco-household",
+        "training/data/bootstrap/furniture-hf"
+      ]
+    }
+  },
+  "degraded": false,
+  "classes": [
+    {
+      "id": 1,
+      "name": "chair",
+      "count": 1582,
+      "members": [
+        "chair"
+      ]
+    },
+    {
+      "id": 2,
+      "name": "book",
+      "count": 788,
+      "members": [
+        "book"
+      ]
+    },
+    {
+      "id": 3,
+      "name": "cup",
+      "count": 705,
+      "members": [
+        "cup"
+      ]
+    },
+    {
+      "id": 4,
+      "name": "dining table",
+      "count": 673,
+      "members": [
+        "dining table",
+        "table"
+      ]
+    },
+    {
+      "id": 5,
+      "name": "bowl",
+      "count": 527,
+      "members": [
+        "bowl"
+      ]
+    },
+    {
+      "id": 6,
+      "name": "umbrella",
+      "count": 431,
+      "members": [
+        "umbrella"
+      ]
+    },
+    {
+      "id": 7,
+      "name": "handbag",
+      "count": 428,
+      "members": [
+        "handbag"
+      ]
+    },
+    {
+      "id": 8,
+      "name": "sofa",
+      "count": 410,
+      "members": [
+        "couch",
+        "sofa"
+      ]
+    },
+    {
+      "id": 9,
+      "name": "wine glass",
+      "count": 281,
+      "members": [
+        "wine glass"
+      ]
+    },
+    {
+      "id": 10,
+      "name": "potted plant",
+      "count": 280,
+      "members": [
+        "potted plant"
+      ]
+    },
+    {
+      "id": 11,
+      "name": "knife",
+      "count": 273,
+      "members": [
+        "knife"
+      ]
+    },
+    {
+      "id": 12,
+      "name": "backpack",
+      "count": 271,
+      "members": [
+        "backpack"
+      ]
+    },
+    {
+      "id": 13,
+      "name": "bicycle",
+      "count": 262,
+      "members": [
+        "bicycle"
+      ]
+    },
+    {
+      "id": 14,
+      "name": "bench",
+      "count": 257,
+      "members": [
+        "bench"
+      ]
+    },
+    {
+      "id": 15,
+      "name": "suitcase",
+      "count": 227,
+      "members": [
+        "suitcase"
+      ]
+    },
+    {
+      "id": 16,
+      "name": "spoon",
+      "count": 226,
+      "members": [
+        "spoon"
+      ]
+    },
+    {
+      "id": 17,
+      "name": "laptop",
+      "count": 204,
+      "members": [
+        "laptop"
+      ]
+    },
+    {
+      "id": 18,
+      "name": "remote",
+      "count": 204,
+      "members": [
+        "remote"
+      ]
+    },
+    {
+      "id": 19,
+      "name": "fork",
+      "count": 194,
+      "members": [
+        "fork"
+      ]
+    },
+    {
+      "id": 20,
+      "name": "vase",
+      "count": 193,
+      "members": [
+        "vase"
+      ]
+    },
+    {
+      "id": 21,
+      "name": "cell phone",
+      "count": 186,
+      "members": [
+        "cell phone"
+      ]
+    },
+    {
+      "id": 22,
+      "name": "tv",
+      "count": 168,
+      "members": [
+        "tv"
+      ]
+    },
+    {
+      "id": 23,
+      "name": "clock",
+      "count": 138,
+      "members": [
+        "clock"
+      ]
+    },
+    {
+      "id": 24,
+      "name": "skateboard",
+      "count": 135,
+      "members": [
+        "skateboard"
+      ]
+    },
+    {
+      "id": 25,
+      "name": "oven",
+      "count": 105,
+      "members": [
+        "oven"
+      ]
+    },
+    {
+      "id": 26,
+      "name": "teddy bear",
+      "count": 102,
+      "members": [
+        "teddy bear"
+      ]
+    },
+    {
+      "id": 27,
+      "name": "keyboard",
+      "count": 101,
+      "members": [
+        "keyboard"
+      ]
+    },
+    {
+      "id": 28,
+      "name": "bed",
+      "count": 92,
+      "members": [
+        "bed"
+      ]
+    },
+    {
+      "id": 29,
+      "name": "mouse",
+      "count": 83,
+      "members": [
+        "mouse"
+      ]
+    },
+    {
+      "id": 30,
+      "name": "refrigerator",
+      "count": 66,
+      "members": [
+        "refrigerator"
+      ]
+    },
+    {
+      "id": 31,
+      "name": "microwave",
+      "count": 41,
+      "members": [
+        "microwave"
+      ]
+    },
+    {
+      "id": 32,
+      "name": "toaster",
+      "count": 5,
+      "members": [
+        "toaster"
+      ]
+    }
+  ]
+}

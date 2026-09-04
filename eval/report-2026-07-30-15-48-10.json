@@ -1,0 +1,121 @@
+{
+  "api:embed-classify2": {
+    "perFixture": [
+      {
+        "fixture": "1776173015803",
+        "recall": 100,
+        "itemCount": 26,
+        "expectedMin": 8,
+        "expectedMax": 15,
+        "countWithinRange": false,
+        "matchedCount": 12,
+        "missed": [],
+        "elapsedMs": 101139,
+        "attempts": 1
+      },
+      {
+        "fixture": "1776174188547",
+        "recall": 90.9,
+        "itemCount": 20,
+        "expectedMin": 7,
+        "expectedMax": 13,
+        "countWithinRange": false,
+        "matchedCount": 10,
+        "missed": [
+          "two-tone ceramic planter"
+        ],
+        "elapsedMs": 176549,
+        "attempts": 1
+      },
+      {
+        "fixture": "1776175427607",
+        "recall": 85.7,
+        "itemCount": 27,
+        "expectedMin": 10,
+        "expectedMax": 16,
+        "countWithinRange": false,
+        "matchedCount": 12,
+        "missed": [
+          "wooden stool",
+          "wooden side table"
+        ],
+        "elapsedMs": 146727,
+        "attempts": 1
+      },
+      {
+        "fixture": "1776176976030",
+        "recall": 92.3,
+        "itemCount": 27,
+        "expectedMin": 8,
+        "expectedMax": 14,
+        "countWithinRange": false,
+        "matchedCount": 12,
+        "missed": [
+          "wooden sideboard / cabinet"
+        ],
+        "elapsedMs": 160841,
+        "attempts": 1
+      },
+      {
+        "fixture": "bedroom_01",
+        "recall": 100,
+        "itemCount": 48,
+        "expectedMin": 9,
+        "expectedMax": 18,
+        "countWithinRange": false,
+        "matchedCount": 14,
+        "missed": [],
+        "elapsedMs": 542437,
+        "attempts": 1
+      },
+      {
+        "fixture": "dining_room_01",
+        "recall": 100,
+        "itemCount": 22,
+        "expectedMin": 5,
+        "expectedMax": 10,
+        "countWithinRange": false,
+        "matchedCount": 8,
+        "missed": [],
+        "elapsedMs": 110159,
+        "attempts": 1
+      },
+      {
+        "fixture": "living_room_02",
+        "recall": 94.4,
+        "itemCount": 58,
+        "expectedMin": 12,
+        "expectedMax": 24,
+        "countWithinRange": false,
+        "matchedCount": 17,
+        "missed": [
+          "dark grey daybed / futon"
+        ],
+        "elapsedMs": 715102,
+        "attempts": 1
+      },
+      {
+        "fixture": "mockup_living_01",
+        "recall": 81.8,
+        "itemCount": 19,
+        "expectedMin": 8,
+        "expectedMax": 14,
+        "countWithinRange": false,
+        "matchedCount": 9,
+        "missed": [
+          "marble decorative cube",
+          "books on console"
+        ],
+        "elapsedMs": 111142,
+        "attempts": 1
+      }
+    ],
+    "aggregate": {
+      "avgRecall": 93.1,
+      "avgItems": 30.9,
+      "avgLatencyMs": 258012,
+      "failures": 0,
+      "n": 8
+    }
+  }
+}

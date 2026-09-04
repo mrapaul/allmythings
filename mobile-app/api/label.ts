@@ -22,5 +22,8 @@ export async function labelCrop(fileUri: string): Promise<LabelSuggestion> {
     method: 'POST',
     body: form,
     headers: { traceparent: makeTraceparent() },
+    // A single VLM call can exceed the client-wide 30s bound on the free
+    // tier; draw-to-teach degrades gracefully on failure, so wait longer.
+    timeout: 90_000,
   });
 }

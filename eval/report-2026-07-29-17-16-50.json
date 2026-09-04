@@ -1,0 +1,144 @@
+{
+  "api:production-qwen30b": {
+    "perFixture": [
+      {
+        "fixture": "1776173015803",
+        "recall": 75,
+        "itemCount": 25,
+        "expectedMin": 8,
+        "expectedMax": 15,
+        "countWithinRange": false,
+        "matchedCount": 9,
+        "missed": [
+          "dark navy couch / sofa",
+          "framed painting / artwork",
+          "decorative wall plate"
+        ],
+        "elapsedMs": 124883,
+        "attempts": 1
+      },
+      {
+        "fixture": "1776174188547",
+        "recall": 36.4,
+        "itemCount": 16,
+        "expectedMin": 7,
+        "expectedMax": 13,
+        "countWithinRange": false,
+        "matchedCount": 4,
+        "missed": [
+          "small snake plant",
+          "two-tone ceramic planter",
+          "gold wire plant stand",
+          "wooden stool (plant support)",
+          "sheer white linen curtains",
+          "dark navy couch / sofa",
+          "framed painting / artwork"
+        ],
+        "elapsedMs": 151261,
+        "attempts": 1
+      },
+      {
+        "fixture": "1776175427607",
+        "recall": 14.3,
+        "itemCount": 2,
+        "expectedMin": 10,
+        "expectedMax": 16,
+        "countWithinRange": false,
+        "matchedCount": 2,
+        "missed": [
+          "black throw blanket",
+          "snake plant small",
+          "two-tone ceramic planter",
+          "gold wire plant stand",
+          "wooden stool",
+          "gold candle holder",
+          "wooden side table",
+          "sheer white linen curtains",
+          "white venetian window blinds",
+          "dark navy couch / sofa",
+          "framed painting of figures",
+          "decorative wall plate"
+        ],
+        "elapsedMs": 192889,
+        "attempts": 1
+      },
+      {
+        "fixture": "1776176976030",
+        "recall": 69.2,
+        "itemCount": 38,
+        "expectedMin": 8,
+        "expectedMax": 14,
+        "countWithinRange": false,
+        "matchedCount": 9,
+        "missed": [
+          "two-tone ceramic planter",
+          "gold candle holder",
+          "wooden sideboard / cabinet",
+          "framed painting"
+        ],
+        "elapsedMs": 294354,
+        "attempts": 1
+      },
+      {
+        "fixture": "bedroom_01",
+        "recall": 50,
+        "itemCount": 18,
+        "expectedMin": 9,
+        "expectedMax": 18,
+        "countWithinRange": true,
+        "matchedCount": 7,
+        "missed": [
+          "transparent acrylic chairs",
+          "gold serving tray",
+          "pink ceramic vases",
+          "blue flower in small vase",
+          "grey curtains",
+          "red throw pillows",
+          "built-in oven"
+        ],
+        "elapsedMs": 191767,
+        "attempts": 1
+      },
+      {
+        "fixture": "dining_room_01",
+        "recall": 87.5,
+        "itemCount": 18,
+        "expectedMin": 5,
+        "expectedMax": 10,
+        "countWithinRange": false,
+        "matchedCount": 7,
+        "missed": [
+          "white mug"
+        ],
+        "elapsedMs": 144699,
+        "attempts": 1
+      },
+      {
+        "fixture": "living_room_02",
+        "recall": 66.7,
+        "itemCount": 34,
+        "expectedMin": 12,
+        "expectedMax": 24,
+        "countWithinRange": false,
+        "matchedCount": 12,
+        "missed": [
+          "dark grey daybed / futon",
+          "laptop computer",
+          "books on shelves",
+          "white area rug",
+          "window blinds",
+          "computer mouse"
+        ],
+        "elapsedMs": 224135,
+        "attempts": 1
+      }
+    ],
+    "aggregate": {
+      "avgRecall": 57,
+      "avgItems": 21.6,
+      "avgLatencyMs": 189141,
+      "failures": 0,
+      "n": 7
+    }
+  }
+}

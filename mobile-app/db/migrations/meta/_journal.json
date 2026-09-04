@@ -8,6 +8,27 @@
       "when": 1778094198943,
       "tag": "0000_graceful_supernaut",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "6",
+      "when": 1785344836882,
+      "tag": "0001_funny_silver_sable",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "6",
+      "when": 1785363777188,
+      "tag": "0002_early_doomsday",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "6",
+      "when": 1785365897107,
+      "tag": "0003_fresh_reaper",
+      "breakpoints": true
     }
   ]
 }

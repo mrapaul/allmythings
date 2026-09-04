@@ -108,6 +108,33 @@
                           "nullable": true
                         }
                       }
+                    },
+                    "mergeSuggestions": {
+                      "type": "array",
+                      "description": "Pairs the pipeline suspects are one physical object but did not merge; itemIndexA/itemIndexB index into items. Present the merge to the user rather than applying it.",
+                      "items": {
+                        "type": "object",
+                        "required": [
+                          "itemIndexA",
+                          "itemIndexB",
+                          "reason",
+                          "confidence"
+                        ],
+                        "properties": {
+                          "itemIndexA": {
+                            "type": "integer"
+                          },
+                          "itemIndexB": {
+                            "type": "integer"
+                          },
+                          "reason": {
+                            "type": "string"
+                          },
+                          "confidence": {
+                            "type": "number"
+                          }
+                        }
+                      }
                     }
                   }
                 }
@@ -185,6 +212,242 @@
         }
       }
     },
+    "/v1/vocab/match": {
+      "post": {
+        "summary": "Rank a vocabulary against a query by embedding similarity",
+        "tags": [
+          "semantics"
+        ],
+        "description": "Semantic search helper: returns the vocabulary entries closest in meaning to the query, ranked by cosine similarity. Returns an empty match list (not an error) when the embedding backend is unavailable, so callers can fall back to substring search.",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "query",
+                  "vocabulary"
+                ],
+                "properties": {
+                  "query": {
+                    "type": "string",
+                    "description": "Free-text search term"
+                  },
+                  "vocabulary": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    },
+                    "description": "Candidate values to rank, e.g. the user's item labels"
+                  },
+                  "limit": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 25
+                  },
+                  "minScore": {
+                    "type": "number",
+                    "minimum": -1,
+                    "maximum": 1
+                  }
+                }
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "matches"
+                  ],
+                  "properties": {
+                    "matches": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "required": [
+                          "value",
+                          "score"
+                        ],
+                        "properties": {
+                          "value": {
+                            "type": "string"
+                          },
+                          "score": {
+                            "type": "number"
+                          }
+                        }
+                      }
+                    },
+                    "degraded": {
+                      "type": "boolean",
+                      "description": "True when embeddings were unavailable and no ranking was possible"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/precheck": {
+      "post": {
+        "summary": "Fast capture precheck on a small preview frame",
+        "tags": [
+          "vision"
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "scene",
+                    "quality",
+                    "objectDensity",
+                    "visibleObjectCount",
+                    "peoplePresent",
+                    "processable",
+                    "advice"
+                  ],
+                  "properties": {
+                    "scene": {
+                      "type": "string",
+                      "enum": [
+                        "interior",
+                        "exterior",
+                        "person_focus",
+                        "document",
+                        "other"
+                      ]
+                    },
+                    "quality": {
+                      "type": "string",
+                      "enum": [
+                        "ok",
+                        "too_dark",
+                        "too_blurry",
+                        "too_far"
+                      ]
+                    },
+                    "objectDensity": {
+                      "type": "string",
+                      "enum": [
+                        "none",
+                        "few",
+                        "moderate",
+                        "many",
+                        "too_many"
+                      ]
+                    },
+                    "visibleObjectCount": {
+                      "type": "integer",
+                      "nullable": true,
+                      "description": "Raw model count behind objectDensity; null when the model gave no usable number"
+                    },
+                    "peoplePresent": {
+                      "type": "boolean"
+                    },
+                    "processable": {
+                      "type": "boolean"
+                    },
+                    "advice": {
+                      "type": "string",
+                      "nullable": true
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/enrich": {
+      "post": {
+        "summary": "Enrich a single saved item crop with resale-grade attributes",
+        "tags": [
+          "vision"
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "label",
+                    "attributes",
+                    "confidence",
+                    "description"
+                  ],
+                  "properties": {
+                    "label": {
+                      "type": "string"
+                    },
+                    "attributes": {
+                      "type": "object",
+                      "properties": {
+                        "color": {
+                          "type": "string"
+                        },
+                        "material": {
+                          "type": "string"
+                        },
+                        "style": {
+                          "type": "string"
+                        },
+                        "era": {
+                          "type": "string"
+                        },
+                        "brand": {
+                          "type": "string"
+                        },
+                        "model": {
+                          "type": "string"
+                        }
+                      }
+                    },
+                    "confidence": {
+                      "type": "number",
+                      "nullable": true
+                    },
+                    "description": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/v1/corrections": {
       "post": {
         "summary": "Record user corrections as training-data flywheel samples",
@@ -204,6 +467,7 @@
         "tags": [
           "vision"
         ],
+        "description": "SSE event types: `meta` (runId/traceId), `scene` (pass-1 assessment), `item` (one DetectedItem), `merge-suggestion` ({itemIndexA, itemIndexB, reason, confidence} indexing the emitted item sequence — a pair the pipeline suspects is one object but did not merge), `error`, `done`.",
         "responses": {
           "200": {
             "description": "SSE stream",

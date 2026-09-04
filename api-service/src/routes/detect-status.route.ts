@@ -37,7 +37,7 @@ export async function detectStatusRoute(app: FastifyInstance): Promise<void> {
         workflowId,
         photoSha256: run.photoSha256,
         scene: run.scene,
-        result: { items: run.items },
+        result: { items: run.items, mergeSuggestions: run.mergeSuggestions },
       };
       return reply.code(run.status === 'completed' ? 200 : 202).send(payload);
     }

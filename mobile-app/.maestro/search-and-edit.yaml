@@ -1,0 +1,106 @@
+appId: com.codesparktech.homeinventory
+tags:
+  - e2e
+  - search
+---
+# Search + label-editing E2E.
+#
+# STATE ASSUMPTION: inventory holds >=1 item — run AFTER detection-flow.yaml
+# in the same maestro invocation. launchApp here uses clearState: false so the
+# saved collection survives.
+#
+# Detected labels are model-emitted and non-deterministic, so the flow first
+# seeds a known probe label ("maestroprobe") on the first item, then searches
+# for that probe. Free-text chip input lands under the 'tag' key
+# (lib/labels.ts parseLabelInput), which fixes the chip testIDs. The probe
+# chip is removed at the end, leaving the inventory exactly as found.
+# FTS indexes the labels column with update triggers (db/triggers.ts), so the
+# added label is searchable immediately.
+
+- launchApp:
+    clearState: false
+
+- extendedWaitUntil:
+    visible: "Collection"
+    timeout: 30000
+
+# ── Seed a deterministic label on the first item ─────────────────────────
+- tapOn:
+    id: "collection-tile-0"
+- extendedWaitUntil:
+    visible:
+      id: "item-modal-done"
+    timeout: 10000
+- tapOn:
+    id: "label-editor-open"
+- extendedWaitUntil:
+    visible:
+      id: "label-editor-input"
+    timeout: 10000
+- inputText: "maestroprobe"
+- pressKey: Enter
+- extendedWaitUntil:
+    visible:
+      id: "label-chip-tag-maestroprobe"
+    timeout: 10000
+- tapOn:
+    id: "item-modal-done"
+- extendedWaitUntil:
+    visible: "Collection"
+    timeout: 10000
+
+# ── Search finds the probe ───────────────────────────────────────────────
+- tapOn:
+    id: "search-input"
+- inputText: "maestroprobe"
+# The probe is unique to one item, so the header settles on exactly one hit.
+- extendedWaitUntil:
+    visible: "Results · 1"
+    timeout: 15000
+- assertVisible:
+    id: "collection-tile-0"
+
+# Clear the query by erasing in the focused field. NOT via the "Clear
+# search" button: that button disappears the moment the query empties, and a
+# tap against a 15-20s-stale hierarchy dump can land on whatever takes its
+# place (it did — a collection tile, silently opening an item modal that
+# stranded every later step).
+- tapOn:
+    id: "search-input"
+- eraseText: 20
+- extendedWaitUntil:
+    visible: "Collection"
+    timeout: 10000
+- hideKeyboard
+
+# ── Remove the probe chip again (leave state as found) ───────────────────
+# Defensive: if a raced tap left ANY item modal open, close it first so the
+# tile tap below hits the grid, not a sheet.
+- runFlow:
+    when:
+      visible:
+        id: "item-modal-done"
+    commands:
+      - tapOn:
+          id: "item-modal-done"
+      - extendedWaitUntil:
+          notVisible:
+            id: "item-modal-done"
+          timeout: 10000
+- tapOn:
+    id: "collection-tile-0"
+- extendedWaitUntil:
+    visible:
+      id: "label-chip-tag-maestroprobe"
+    timeout: 10000
+- tapOn:
+    id: "label-chip-remove-tag-maestroprobe"
+- extendedWaitUntil:
+    notVisible:
+      id: "label-chip-tag-maestroprobe"
+    timeout: 10000
+- tapOn:
+    id: "item-modal-done"
+- extendedWaitUntil:
+    visible: "Collection"
+    timeout: 10000

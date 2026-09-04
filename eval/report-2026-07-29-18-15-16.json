@@ -1,0 +1,99 @@
+{
+  "api:candidate-qwen-desc-labels-v2": {
+    "perFixture": [
+      {
+        "fixture": "1776173015803",
+        "recall": 100,
+        "itemCount": 45,
+        "expectedMin": 8,
+        "expectedMax": 15,
+        "countWithinRange": false,
+        "matchedCount": 12,
+        "missed": [],
+        "elapsedMs": 132240,
+        "attempts": 1
+      },
+      {
+        "fixture": "1776174188547",
+        "recall": 100,
+        "itemCount": 41,
+        "expectedMin": 7,
+        "expectedMax": 13,
+        "countWithinRange": false,
+        "matchedCount": 11,
+        "missed": [],
+        "elapsedMs": 89168,
+        "attempts": 1
+      },
+      {
+        "fixture": "1776175427607",
+        "recall": 100,
+        "itemCount": 49,
+        "expectedMin": 10,
+        "expectedMax": 16,
+        "countWithinRange": false,
+        "matchedCount": 14,
+        "missed": [],
+        "elapsedMs": 83859,
+        "attempts": 1
+      },
+      {
+        "fixture": "1776176976030",
+        "recall": 100,
+        "itemCount": 41,
+        "expectedMin": 8,
+        "expectedMax": 14,
+        "countWithinRange": false,
+        "matchedCount": 13,
+        "missed": [],
+        "elapsedMs": 78712,
+        "attempts": 1
+      },
+      {
+        "fixture": "bedroom_01",
+        "recall": 100,
+        "itemCount": 63,
+        "expectedMin": 9,
+        "expectedMax": 18,
+        "countWithinRange": false,
+        "matchedCount": 14,
+        "missed": [],
+        "elapsedMs": 122779,
+        "attempts": 1
+      },
+      {
+        "fixture": "dining_room_01",
+        "recall": 100,
+        "itemCount": 32,
+        "expectedMin": 5,
+        "expectedMax": 10,
+        "countWithinRange": false,
+        "matchedCount": 8,
+        "missed": [],
+        "elapsedMs": 71345,
+        "attempts": 1
+      },
+      {
+        "fixture": "living_room_02",
+        "recall": 94.4,
+        "itemCount": 92,
+        "expectedMin": 12,
+        "expectedMax": 24,
+        "countWithinRange": false,
+        "matchedCount": 17,
+        "missed": [
+          "dark grey daybed / futon"
+        ],
+        "elapsedMs": 300713,
+        "attempts": 1
+      }
+    ],
+    "aggregate": {
+      "avgRecall": 99.2,
+      "avgItems": 51.9,
+      "avgLatencyMs": 125545,
+      "failures": 0,
+      "n": 7
+    }
+  }
+}

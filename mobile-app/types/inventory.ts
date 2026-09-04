@@ -17,6 +17,9 @@ export interface BoundingBox {
   height: number;
 }
 
+import type { ItemAttributes } from '@/lib/attributes';
+import type { ItemLabel } from '@/lib/labels';
+
 export interface InventoryItem {
   id: string;
   homeId: string;
@@ -25,6 +28,12 @@ export interface InventoryItem {
   category: string;
   tags: string[];
   primaryPhotoUri: string;
+  /** Pre-rendered item crop for tiles; null/absent falls back to bbox-zoom. */
+  thumbnailUri?: string | null;
+  /** Detected characteristics; null/absent → render-time derivation. */
+  attributes?: ItemAttributes | null;
+  /** Label-first chips; null/absent → derived from legacy columns. */
+  labels?: ItemLabel[] | null;
   additionalPhotoUris: string[];
   notes: string;
   box: BoundingBox;

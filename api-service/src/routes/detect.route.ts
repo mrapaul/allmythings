@@ -50,6 +50,21 @@ export async function detectRoute(app: FastifyInstance): Promise<void> {
                   verdictReason: { type: 'string', nullable: true },
                 },
               },
+              mergeSuggestions: {
+                type: 'array',
+                description:
+                  'Pairs the pipeline suspects are one physical object but did not merge; itemIndexA/itemIndexB index into items. Present the merge to the user rather than applying it.',
+                items: {
+                  type: 'object',
+                  required: ['itemIndexA', 'itemIndexB', 'reason', 'confidence'],
+                  properties: {
+                    itemIndexA: { type: 'integer' },
+                    itemIndexB: { type: 'integer' },
+                    reason: { type: 'string' },
+                    confidence: { type: 'number' },
+                  },
+                },
+              },
             },
           },
           202: {
@@ -180,8 +195,8 @@ async function runVlmPath(args: VlmPathArgs) {
   try {
     // Persist so /photos/<sha> resolves, matching the pipeline path.
     await persistFrame(frame);
-    const { scene, items } = await vlmDetector.detect(frame.buffer);
-    return reply.code(200).send({ scene, items });
+    const { scene, items, mergeSuggestions } = await vlmDetector.detect(frame.buffer);
+    return reply.code(200).send({ scene, items, mergeSuggestions });
   } catch (err) {
     if (err instanceof DetectorUnavailableError) {
       return reply.code(503).send({ error: 'detector_unavailable', message: err.message });

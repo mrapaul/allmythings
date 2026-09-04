@@ -1,0 +1,32 @@
+{
+  "api:twosignal": {
+    "perFixture": [
+      {
+        "fixture": "living_room_02",
+        "recall": 66.7,
+        "itemCount": 61,
+        "expectedMin": 12,
+        "expectedMax": 24,
+        "countWithinRange": false,
+        "matchedCount": 12,
+        "missed": [
+          "wooden bentwood chair",
+          "dark grey daybed / futon",
+          "laptop computer",
+          "white sideboard cabinet",
+          "hanging macrame planter with pothos",
+          "window blinds"
+        ],
+        "elapsedMs": 466588,
+        "attempts": 1
+      }
+    ],
+    "aggregate": {
+      "avgRecall": 66.7,
+      "avgItems": 61,
+      "avgLatencyMs": 466588,
+      "failures": 0,
+      "n": 1
+    }
+  }
+}

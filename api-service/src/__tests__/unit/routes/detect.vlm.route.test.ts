@@ -22,14 +22,26 @@ const ITEMS: DetectedItem[] = [
   { label: 'lamp', description: 'brass floor lamp', category: 'Lighting', tags: ['brass'], box: { x: 0.7, y: 0.2, width: 0.1, height: 0.4 } },
 ];
 
-function fakeDetector(): VlmDetector {
+const SUGGESTION = {
+  itemIndexA: 0,
+  itemIndexB: 1,
+  reason: 'similar labels (cosine 0.76) on overlapping regions',
+  confidence: 0.7,
+};
+
+function fakeDetector(suggestions: typeof SUGGESTION[] = []): VlmDetector {
   const scene = { ...DEFAULT_SCENE, type: 'room' as const, estimatedTotalItems: 9 };
   return {
-    detect: async (): Promise<DetectionResult> => ({ scene, items: ITEMS }),
+    detect: async (): Promise<DetectionResult> => ({
+      scene,
+      items: ITEMS,
+      mergeSuggestions: suggestions,
+    }),
     // eslint-disable-next-line @typescript-eslint/require-await
     detectStream: async function* () {
       yield { kind: 'scene' as const, scene };
       for (const i of ITEMS) yield { kind: 'item' as const, item: i };
+      for (const s of suggestions) yield { kind: 'merge-suggestion' as const, suggestion: s };
     },
   } as unknown as VlmDetector;
 }
@@ -102,6 +114,55 @@ describe('detect routes — VLM path', () => {
     expect(events[2]).toMatch(/^event: item\ndata: \{.*sofa/);
     expect(events[3]).toMatch(/^event: item\ndata: \{.*lamp/);
     expect(events[4]).toMatch(/^event: done\ndata: \{.*"totalItems":2/);
+  });
+
+  it('POST /v1/detect carries mergeSuggestions in the payload', async () => {
+    await app.close();
+    app = Fastify({ logger: false });
+    app.addSchema(detectedItemSchema);
+    await app.register(multipart, { limits: { fileSize: 10 * 1024 * 1024, files: 3 } });
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    (app as any).vlmDetector = fakeDetector([SUGGESTION]);
+    await app.register(detectRoute);
+
+    const form = new FormData();
+    form.append('photo', TINY_JPEG, { filename: 'frame.jpg', contentType: 'image/jpeg' });
+    const res = await app.inject({
+      method: 'POST',
+      url: '/v1/detect',
+      payload: form.getBuffer(),
+      headers: { ...form.getHeaders(), 'x-api-key': 'test-key' },
+    });
+    expect(res.statusCode).toBe(200);
+    expect(res.json().mergeSuggestions).toEqual([SUGGESTION]);
+  });
+
+  it('POST /v1/detect/stream emits merge-suggestion as its own event type', async () => {
+    await app.close();
+    app = Fastify({ logger: false });
+    await app.register(multipart, { limits: { fileSize: 10 * 1024 * 1024, files: 3 } });
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    (app as any).vlmDetector = fakeDetector([SUGGESTION]);
+    await app.register(detectStreamRoute);
+
+    const boundary = '----formdata-vlm-002';
+    const body = Buffer.concat([
+      Buffer.from(`--${boundary}\r\n`),
+      Buffer.from('Content-Disposition: form-data; name="frame"; filename="a.jpg"\r\n'),
+      Buffer.from('Content-Type: image/jpeg\r\n\r\n'),
+      TINY_JPEG,
+      Buffer.from(`\r\n--${boundary}--\r\n`),
+    ]);
+    const res = await app.inject({
+      method: 'POST',
+      url: '/v1/detect/stream',
+      headers: { 'content-type': `multipart/form-data; boundary=${boundary}` },
+      payload: body,
+    });
+    const events = res.body.split('\n\n').filter(Boolean);
+    expect(events[4]).toMatch(/^event: merge-suggestion\ndata: \{.*"itemIndexA":0/);
+    // A suggestion is not an item: the item total is unchanged.
+    expect(events[5]).toMatch(/^event: done\ndata: \{.*"totalItems":2/);
   });
 
   it('GET /v1/detect/status returns 404 in VLM mode for unknown runs', async () => {

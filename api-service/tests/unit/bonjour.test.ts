@@ -34,4 +34,21 @@ describe('Bonjour advertisement', () => {
     stop();
     expect(instance.destroy).toHaveBeenCalled();
   });
+
+  it('passes an error callback to the Bonjour constructor so socket errors do not crash the process', async () => {
+    const { advertiseService } = await import('../../src/utils/bonjour-advertiser');
+    const module = await vi.importMock('bonjour-service');
+
+    const stop = advertiseService(14000);
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const BonjourClass = (module as any).default;
+    const calls = BonjourClass.mock.calls;
+    const [, errorCallback] = calls[calls.length - 1];
+
+    expect(typeof errorCallback).toBe('function');
+    expect(() => errorCallback(new Error('send ENETUNREACH 224.0.0.251:5353'))).not.toThrow();
+
+    stop();
+  });
 });

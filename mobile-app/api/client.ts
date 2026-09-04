@@ -6,6 +6,12 @@ export const apiFetch = ofetch.create({
   baseURL: resolveApiBaseUrl(),
   retry: 1,
   retryDelay: 250,
+  // INCIDENT GUARD: an unreachable-but-not-refusing host (stale LAN IP,
+  // flaky cell link) otherwise hangs a request on TCP connect for the OS
+  // default (~75s). Every call in this app must fail fast enough for its
+  // caller's failure path to be visible; slow-model endpoints (label) set
+  // their own longer per-call timeout.
+  timeout: 30_000,
   onRequest({ options }) {
     // Re-resolve per request so a Settings change applies without a restart.
     options.baseURL = resolveApiBaseUrl();

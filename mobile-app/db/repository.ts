@@ -1,3 +1,7 @@
+import type { ItemAttributes } from '@/lib/attributes';
+import type { ItemLabel } from '@/lib/labels';
+import { resolveMerge } from '@/lib/merge';
+import { buildFtsMatchQuery } from '@/lib/search-query';
 import type { Home, InventoryItem } from '@/types/inventory';
 import { and, desc, eq, sql } from 'drizzle-orm';
 import { homes, inventoryItems, itemTags } from './schema';
@@ -12,6 +16,12 @@ export interface AddItemInput {
   category: string;
   tags: string[];
   primaryPhotoUri: string;
+  /** Optional pre-rendered crop; persisted verbatim (already in app storage). */
+  thumbnailUri?: string | null;
+  /** Detected characteristics ({color, material, …}); null when unknown. */
+  attributes?: ItemAttributes | null;
+  /** Label-first chips; null → render-time derivation. */
+  labels?: ItemLabel[] | null;
   additionalPhotoUris: string[];
   notes: string;
   box: { x: number; y: number; width: number; height: number };
@@ -47,6 +57,9 @@ interface RawItemRow {
   description: string;
   category: string;
   primaryPhotoUri: string;
+  thumbnailUri: string | null;
+  attributes: ItemAttributes | null;
+  labels: ItemLabel[] | null;
   additionalPhotoUris: string[];
   notes: string;
   boxX: number;
@@ -97,6 +110,9 @@ export class Repo {
         description: it.description,
         category: it.category,
         primaryPhotoUri: it.primaryPhotoUri,
+        thumbnailUri: it.thumbnailUri ?? null,
+        attributes: it.attributes ?? null,
+        labels: it.labels ?? null,
         additionalPhotoUris: it.additionalPhotoUris,
         notes: it.notes,
         boxX: it.box.x,
@@ -139,6 +155,9 @@ export class Repo {
       'description',
       'category',
       'primaryPhotoUri',
+      'thumbnailUri',
+      'attributes',
+      'labels',
       'additionalPhotoUris',
       'notes',
     ] as const) {
@@ -163,6 +182,42 @@ export class Repo {
     await this.db.delete(inventoryItems).where(eq(inventoryItems.id, id));
   }
 
+  /**
+   * Folds `mergeIds` into `keepId`: union of labels, concatenated distinct
+   * descriptions, best photo/thumbnail, then the merged rows are deleted.
+   *
+   * Ordering is deliberate: the kept row is updated FIRST (one statement →
+   * one FTS re-index via the update trigger), then the duplicates are
+   * removed. A cross-driver transaction isn't available here (see the
+   * DrizzleLike note above), so this order means a mid-way failure leaves
+   * the enriched kept item plus an un-deleted duplicate — visible and
+   * re-mergeable, never lost data. Unknown ids are ignored, making the
+   * operation idempotent.
+   */
+  async mergeItems(keepId: string, mergeIds: string[]): Promise<void> {
+    const kept = await this.getItem(keepId);
+    if (!kept) return;
+    const targets = mergeIds.filter((id) => id !== keepId);
+    const merged: InventoryItem[] = [];
+    for (const id of targets) {
+      const item = await this.getItem(id);
+      if (item && item.homeId === kept.homeId) merged.push(item);
+    }
+    if (merged.length === 0) return;
+
+    const resolution = resolveMerge(kept, merged);
+    await this.updateItem(keepId, {
+      labels: resolution.labels,
+      description: resolution.description,
+      primaryPhotoUri: resolution.primaryPhotoUri,
+      thumbnailUri: resolution.thumbnailUri,
+      box: resolution.box,
+    });
+    for (const item of merged) {
+      await this.deleteItem(item.id);
+    }
+  }
+
   async deleteAllInHome(homeId: string): Promise<void> {
     await this.db.delete(inventoryItems).where(eq(inventoryItems.homeId, homeId));
   }
@@ -177,11 +232,20 @@ export class Repo {
     return out;
   }
 
-  async searchItems(homeId: string, query: string): Promise<InventoryItem[]> {
-    const q = query.trim();
-    if (!q) return this.getItemsByHome(homeId);
+  /**
+   * FTS search. `expansions` are optional semantically-related values drawn
+   * from this inventory's own vocabulary (services/vocab-match.ts); they only
+   * ever widen the match. Presentation-order ranking is applied by useSearch.
+   */
+  async searchItems(
+    homeId: string,
+    query: string,
+    expansions: string[] = [],
+  ): Promise<InventoryItem[]> {
+    const match = buildFtsMatchQuery(query, expansions);
+    if (!match) return this.getItemsByHome(homeId);
     const ftsRows = (await this.db.all(
-      sql`SELECT item_id FROM inventory_fts WHERE inventory_fts MATCH ${`${q}*`} LIMIT 200`,
+      sql`SELECT item_id FROM inventory_fts WHERE inventory_fts MATCH ${match} LIMIT 200`,
     )) as { item_id: string }[];
     const ids = ftsRows.map((r) => r.item_id);
     if (ids.length === 0) return [];
@@ -207,6 +271,9 @@ export class Repo {
       description: row.description,
       category: row.category,
       primaryPhotoUri: row.primaryPhotoUri,
+      thumbnailUri: row.thumbnailUri,
+      attributes: row.attributes,
+      labels: row.labels,
       additionalPhotoUris: row.additionalPhotoUris,
       notes: row.notes,
       tags,

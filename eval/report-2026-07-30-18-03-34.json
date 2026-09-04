@@ -1,0 +1,29 @@
+{
+  "api:overrule-proof-2": {
+    "perFixture": [
+      {
+        "fixture": "living_room_02",
+        "recall": 83.3,
+        "itemCount": 78,
+        "expectedMin": 12,
+        "expectedMax": 24,
+        "countWithinRange": false,
+        "matchedCount": 15,
+        "missed": [
+          "dark grey daybed / futon",
+          "laptop computer",
+          "hanging macrame planter with pothos"
+        ],
+        "elapsedMs": 454324,
+        "attempts": 1
+      }
+    ],
+    "aggregate": {
+      "avgRecall": 83.3,
+      "avgItems": 78,
+      "avgLatencyMs": 454324,
+      "failures": 0,
+      "n": 1
+    }
+  }
+}

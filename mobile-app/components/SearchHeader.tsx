@@ -7,6 +7,11 @@ type Props = {
   value: string;
   onChange: (v: string) => void;
   placeholder?: string;
+  /** Focus/blur hooks let the caller reveal recent searches while typing. */
+  onFocus?: () => void;
+  onBlur?: () => void;
+  /** Fired on the keyboard's search action — commits the query. */
+  onSubmit?: () => void;
 };
 
 /**
@@ -14,7 +19,7 @@ type Props = {
  * Magnifier inside the field, clear-X appears when there's text.
  */
 export const SearchHeader = forwardRef<TextInput, Props>(function SearchHeader(
-  { value, onChange, placeholder = 'Search items, rooms, categories…' },
+  { value, onChange, placeholder = 'Search items, rooms, categories…', onFocus, onBlur, onSubmit },
   ref,
 ) {
   const colors = useColors();
@@ -30,6 +35,9 @@ export const SearchHeader = forwardRef<TextInput, Props>(function SearchHeader(
         placeholder={placeholder}
         placeholderTextColor={colors.mutedForeground}
         returnKeyType="search"
+        onFocus={onFocus}
+        onBlur={onBlur}
+        onSubmitEditing={onSubmit}
         style={[styles.input, { color: colors.foreground }]}
       />
       {value.length > 0 && (
@@ -47,9 +55,10 @@ const styles = StyleSheet.create({
   wrap: {
     flexDirection: 'row',
     alignItems: 'center',
-    height: 48,
-    borderRadius: 24,
-    borderWidth: 1,
+    height: 44,
+    borderRadius: 22,
+    // Hairline, not a full border: the field should recede until needed.
+    borderWidth: StyleSheet.hairlineWidth,
     paddingHorizontal: 16,
     gap: 10,
   },

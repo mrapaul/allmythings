@@ -1,0 +1,471 @@
+{
+  "generatedAt": "2026-07-30T11:07:42.938Z",
+  "fixtures": 8,
+  "results": [
+    {
+      "name": "qwen3-vl:30b-a3b-instruct",
+      "license": "Apache-2.0",
+      "deployment": "local Ollama (19.6GB)",
+      "referenceOnly": false,
+      "perFixture": [
+        {
+          "fixture": "1776173015803",
+          "recall": 58.3,
+          "itemCount": 8,
+          "expectedMin": 8,
+          "expectedMax": 15,
+          "countWithinRange": true,
+          "countError": 0,
+          "duplicateRate": 0,
+          "matchedCount": 7,
+          "missed": [
+            "two-tone ceramic planter",
+            "wooden stool (plant support)",
+            "dark navy couch / sofa",
+            "framed painting / artwork",
+            "white area rug"
+          ],
+          "elapsedMs": 19295
+        },
+        {
+          "fixture": "1776174188547",
+          "recall": 81.8,
+          "itemCount": 10,
+          "expectedMin": 7,
+          "expectedMax": 13,
+          "countWithinRange": true,
+          "countError": 0,
+          "duplicateRate": 0,
+          "matchedCount": 9,
+          "missed": [
+            "wooden stool (plant support)",
+            "white area rug"
+          ],
+          "elapsedMs": 9826
+        },
+        {
+          "fixture": "1776175427607",
+          "recall": 64.3,
+          "itemCount": 12,
+          "expectedMin": 10,
+          "expectedMax": 16,
+          "countWithinRange": true,
+          "countError": 0,
+          "duplicateRate": 0,
+          "matchedCount": 9,
+          "missed": [
+            "two-tone ceramic planter",
+            "wooden stool",
+            "wooden side table",
+            "framed painting of figures",
+            "decorative wall plate"
+          ],
+          "elapsedMs": 11239
+        },
+        {
+          "fixture": "1776176976030",
+          "recall": 46.2,
+          "itemCount": 9,
+          "expectedMin": 8,
+          "expectedMax": 14,
+          "countWithinRange": true,
+          "countError": 0,
+          "duplicateRate": 0,
+          "matchedCount": 6,
+          "missed": [
+            "two-tone ceramic planter",
+            "gold wire plant stand",
+            "wooden stool",
+            "gold candle holder",
+            "wooden sideboard / cabinet",
+            "dark navy couch / sofa",
+            "framed painting"
+          ],
+          "elapsedMs": 9470
+        },
+        {
+          "fixture": "bedroom_01",
+          "recall": 92.9,
+          "itemCount": 16,
+          "expectedMin": 9,
+          "expectedMax": 18,
+          "countWithinRange": true,
+          "countError": 0,
+          "duplicateRate": 0,
+          "matchedCount": 13,
+          "missed": [
+            "pink ceramic vases"
+          ],
+          "elapsedMs": 14397
+        },
+        {
+          "fixture": "dining_room_01",
+          "recall": 87.5,
+          "itemCount": 7,
+          "expectedMin": 5,
+          "expectedMax": 10,
+          "countWithinRange": true,
+          "countError": 0,
+          "duplicateRate": 0,
+          "matchedCount": 7,
+          "missed": [
+            "slippers"
+          ],
+          "elapsedMs": 8285
+        },
+        {
+          "fixture": "living_room_02",
+          "recall": 77.8,
+          "itemCount": 14,
+          "expectedMin": 12,
+          "expectedMax": 24,
+          "countWithinRange": true,
+          "countError": 0,
+          "duplicateRate": 0,
+          "matchedCount": 14,
+          "missed": [
+            "dark grey daybed / futon",
+            "white area rug",
+            "window blinds",
+            "computer mouse"
+          ],
+          "elapsedMs": 13770
+        },
+        {
+          "fixture": "mockup_living_01",
+          "recall": 90.9,
+          "itemCount": 11,
+          "expectedMin": 8,
+          "expectedMax": 14,
+          "countWithinRange": true,
+          "countError": 0,
+          "duplicateRate": 0,
+          "matchedCount": 10,
+          "missed": [
+            "books on console"
+          ],
+          "elapsedMs": 12696
+        }
+      ],
+      "aggregate": {
+        "avgRecall": 75,
+        "avgItems": 10.9,
+        "countAccuracy": 100,
+        "avgCountError": 0,
+        "avgDuplicateRate": 0,
+        "avgLatencyMs": 12372,
+        "failures": 0,
+        "n": 8
+      }
+    },
+    {
+      "name": "qwen3-vl:8b-instruct",
+      "license": "Apache-2.0",
+      "deployment": "local Ollama (6.1GB)",
+      "referenceOnly": false,
+      "perFixture": [
+        {
+          "fixture": "1776173015803",
+          "recall": 41.7,
+          "itemCount": 7,
+          "expectedMin": 8,
+          "expectedMax": 15,
+          "countWithinRange": false,
+          "countError": 1,
+          "duplicateRate": 0,
+          "matchedCount": 5,
+          "missed": [
+            "snake plant (sansevieria) small",
+            "two-tone ceramic planter",
+            "wooden stool (plant support)",
+            "dark navy couch / sofa",
+            "framed painting / artwork",
+            "decorative wall plate",
+            "white area rug"
+          ],
+          "elapsedMs": 14890
+        },
+        {
+          "fixture": "1776174188547",
+          "recall": 54.5,
+          "itemCount": 7,
+          "expectedMin": 7,
+          "expectedMax": 13,
+          "countWithinRange": true,
+          "countError": 0,
+          "duplicateRate": 0,
+          "matchedCount": 6,
+          "missed": [
+            "small snake plant",
+            "two-tone ceramic planter",
+            "dark navy couch / sofa",
+            "framed painting / artwork",
+            "white area rug"
+          ],
+          "elapsedMs": 15214
+        },
+        {
+          "fixture": "1776175427607",
+          "recall": 64.3,
+          "itemCount": 9,
+          "expectedMin": 10,
+          "expectedMax": 16,
+          "countWithinRange": false,
+          "countError": 1,
+          "duplicateRate": 0,
+          "matchedCount": 9,
+          "missed": [
+            "gold candle holder",
+            "wooden side table",
+            "white venetian window blinds",
+            "framed painting of figures",
+            "decorative wall plate"
+          ],
+          "elapsedMs": 31069
+        },
+        {
+          "fixture": "1776176976030",
+          "recall": 61.5,
+          "itemCount": 8,
+          "expectedMin": 8,
+          "expectedMax": 14,
+          "countWithinRange": true,
+          "countError": 0,
+          "duplicateRate": 0,
+          "matchedCount": 8,
+          "missed": [
+            "snake plant small",
+            "wooden sideboard / cabinet",
+            "white venetian window blinds",
+            "dark navy couch / sofa",
+            "framed painting"
+          ],
+          "elapsedMs": 35167
+        },
+        {
+          "fixture": "bedroom_01",
+          "recall": 85.7,
+          "itemCount": 13,
+          "expectedMin": 9,
+          "expectedMax": 18,
+          "countWithinRange": true,
+          "countError": 0,
+          "duplicateRate": 0,
+          "matchedCount": 12,
+          "missed": [
+            "pink ceramic vases",
+            "red throw pillows"
+          ],
+          "elapsedMs": 28997
+        },
+        {
+          "fixture": "dining_room_01",
+          "recall": 75,
+          "itemCount": 6,
+          "expectedMin": 5,
+          "expectedMax": 10,
+          "countWithinRange": true,
+          "countError": 0,
+          "duplicateRate": 0,
+          "matchedCount": 6,
+          "missed": [
+            "white mug",
+            "slippers"
+          ],
+          "elapsedMs": 20332
+        },
+        {
+          "fixture": "living_room_02",
+          "recall": 72.2,
+          "itemCount": 15,
+          "expectedMin": 12,
+          "expectedMax": 24,
+          "countWithinRange": true,
+          "countError": 0,
+          "duplicateRate": 0,
+          "matchedCount": 13,
+          "missed": [
+            "black mesh office chair",
+            "dark grey daybed / futon",
+            "books on shelves",
+            "terracotta plant pots",
+            "computer mouse"
+          ],
+          "elapsedMs": 33737
+        },
+        {
+          "fixture": "mockup_living_01",
+          "recall": 72.7,
+          "itemCount": 9,
+          "expectedMin": 8,
+          "expectedMax": 14,
+          "countWithinRange": true,
+          "countError": 0,
+          "duplicateRate": 0,
+          "matchedCount": 8,
+          "missed": [
+            "marble decorative cube",
+            "white TV console",
+            "dark wardrobe cabinet"
+          ],
+          "elapsedMs": 26854
+        }
+      ],
+      "aggregate": {
+        "avgRecall": 66,
+        "avgItems": 9.3,
+        "countAccuracy": 75,
+        "avgCountError": 0.3,
+        "avgDuplicateRate": 0,
+        "avgLatencyMs": 25783,
+        "failures": 0,
+        "n": 8
+      }
+    },
+    {
+      "name": "gemma4:31b-cloud",
+      "license": "Gemma Terms of Use",
+      "deployment": "Ollama cloud (free tier)",
+      "referenceOnly": false,
+      "perFixture": [
+        {
+          "fixture": "1776173015803",
+          "error": "HTTP 500",
+          "elapsedMs": 1057
+        },
+        {
+          "fixture": "1776174188547",
+          "recall": 72.7,
+          "itemCount": 10,
+          "expectedMin": 7,
+          "expectedMax": 13,
+          "countWithinRange": true,
+          "countError": 0,
+          "duplicateRate": 0,
+          "matchedCount": 8,
+          "missed": [
+            "wooden stool (plant support)",
+            "dark navy couch / sofa",
+            "white area rug"
+          ],
+          "elapsedMs": 36358
+        },
+        {
+          "fixture": "1776175427607",
+          "recall": 71.4,
+          "itemCount": 10,
+          "expectedMin": 10,
+          "expectedMax": 16,
+          "countWithinRange": true,
+          "countError": 0,
+          "duplicateRate": 0,
+          "matchedCount": 10,
+          "missed": [
+            "gold wire plant stand",
+            "gold candle holder",
+            "wooden side table",
+            "decorative wall plate"
+          ],
+          "elapsedMs": 79132
+        },
+        {
+          "fixture": "1776176976030",
+          "recall": 76.9,
+          "itemCount": 11,
+          "expectedMin": 8,
+          "expectedMax": 14,
+          "countWithinRange": true,
+          "countError": 0,
+          "duplicateRate": 0,
+          "matchedCount": 10,
+          "missed": [
+            "gold wire plant stand",
+            "gold candle holder",
+            "wooden sideboard / cabinet"
+          ],
+          "elapsedMs": 169056
+        },
+        {
+          "fixture": "bedroom_01",
+          "recall": 78.6,
+          "itemCount": 12,
+          "expectedMin": 9,
+          "expectedMax": 18,
+          "countWithinRange": true,
+          "countError": 0,
+          "duplicateRate": 0,
+          "matchedCount": 11,
+          "missed": [
+            "pink ceramic vases",
+            "blue flower in small vase",
+            "red throw pillows"
+          ],
+          "elapsedMs": 59020
+        },
+        {
+          "fixture": "dining_room_01",
+          "recall": 87.5,
+          "itemCount": 8,
+          "expectedMin": 5,
+          "expectedMax": 10,
+          "countWithinRange": true,
+          "countError": 0,
+          "duplicateRate": 0,
+          "matchedCount": 7,
+          "missed": [
+            "slippers"
+          ],
+          "elapsedMs": 25494
+        },
+        {
+          "fixture": "living_room_02",
+          "recall": 61.1,
+          "itemCount": 12,
+          "expectedMin": 12,
+          "expectedMax": 24,
+          "countWithinRange": true,
+          "countError": 0,
+          "duplicateRate": 0,
+          "matchedCount": 11,
+          "missed": [
+            "dark grey daybed / futon",
+            "laptop computer",
+            "fern potted plant",
+            "small potted plant on coffee table",
+            "terracotta plant pots",
+            "window blinds",
+            "computer mouse"
+          ],
+          "elapsedMs": 54519
+        },
+        {
+          "fixture": "mockup_living_01",
+          "recall": 81.8,
+          "itemCount": 9,
+          "expectedMin": 8,
+          "expectedMax": 14,
+          "countWithinRange": true,
+          "countError": 0,
+          "duplicateRate": 0,
+          "matchedCount": 9,
+          "missed": [
+            "marble decorative cube",
+            "dark wardrobe cabinet"
+          ],
+          "elapsedMs": 62825
+        }
+      ],
+      "aggregate": {
+        "avgRecall": 75.7,
+        "avgItems": 10.3,
+        "countAccuracy": 100,
+        "avgCountError": 0,
+        "avgDuplicateRate": 0,
+        "avgLatencyMs": 69486,
+        "failures": 1,
+        "n": 8
+      }
+    }
+  ],
+  "skipped": []
+}

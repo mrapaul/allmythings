@@ -1,0 +1,47 @@
+appId: com.codesparktech.homeinventory
+tags:
+  - e2e
+  - settings
+---
+# Settings E2E: home → settings → assert server + export controls → home.
+#
+# STATE ASSUMPTION: none (works with an empty or seeded inventory).
+# launchApp uses clearState: false so it can run after other flows.
+#
+# MUST NOT permanently change settings — and it doesn't: the screen has no
+# switches, and nothing here is edited. Render assertions cover the server
+# and export sections; the URL field is asserted by its dedicated testID.
+
+- launchApp:
+    clearState: false
+
+- extendedWaitUntil:
+    visible:
+      id: "top-bar-settings"
+    timeout: 30000
+- tapOn:
+    id: "top-bar-settings"
+- extendedWaitUntil:
+    visible: "Settings"
+    timeout: 10000
+
+# Server section renders with its URL field row.
+- assertVisible: "SERVER"
+- assertVisible:
+    id: "settings-server-url"
+
+# Export controls render (scroll — they sit below the homes list).
+- scrollUntilVisible:
+    element:
+      id: "export-json"
+    direction: DOWN
+- assertVisible:
+    id: "export-csv"
+
+# Return home via the header back button (fixed header — always on screen).
+- tapOn:
+    id: "settings-back"
+- extendedWaitUntil:
+    visible:
+      id: "top-bar-settings"
+    timeout: 15000

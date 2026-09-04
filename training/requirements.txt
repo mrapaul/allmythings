@@ -1,0 +1,16 @@
+# Local (dataset builders are stdlib-only; these cover tests + train drivers)
+pyyaml==6.0.3
+pytest==9.1.1
+roboflow==1.4.0
+datasets==5.0.1
+pillow==12.3.0
+
+# Apple Silicon local dry-run only (train_mlx.py)
+mlx-vlm==0.6.8; sys_platform == "darwin"
+
+# GPU box only (installed by training/lambda/launch.sh; not needed on the Mac)
+ms-swift==4.4.2
+rfdetr==1.9.0
+vllm==0.26.0
+wandb==0.28.1
+huggingface-hub==1.25.1

@@ -61,12 +61,27 @@ describe('runMigrationsSync', () => {
   it('skips migrations already applied by the old async migrator (hash rows)', () => {
     const raw = new Database(':memory:');
     const bundle = loadRealBundle();
-    // Simulate an existing install: schema present, drizzle-style sha rows.
-    runMigrationsSync(expoLike(raw), bundle);
+    // Simulate an existing install: only the FIRST migration's schema is
+    // present, and the old async migrator recorded it as a sha256 hash row
+    // (not a tag). The count-based runner must skip m0000 and still apply
+    // every later migration.
+    const firstEntry = bundle.journal.entries[0];
+    if (!firstEntry) throw new Error('bundle has no migrations');
+    const firstOnly: MigrationsBundle = {
+      journal: { entries: [firstEntry] },
+      migrations: { m0000: bundle.migrations.m0000 as string },
+    };
+    runMigrationsSync(expoLike(raw), firstOnly);
     raw.exec('DELETE FROM "__drizzle_migrations"');
     raw
       .prepare('INSERT INTO "__drizzle_migrations" (hash, created_at) VALUES (?, ?)')
       .run('sha256-of-something', Date.now());
     expect(() => runMigrationsSync(expoLike(raw), bundle)).not.toThrow();
+    // The pending migration (thumbnail_uri column) landed exactly once.
+    const cols = raw
+      .prepare("SELECT name FROM pragma_table_info('inventory_items')")
+      .all()
+      .map((r) => (r as { name: string }).name);
+    expect(cols).toContain('thumbnail_uri');
   });
 });

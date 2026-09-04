@@ -74,6 +74,29 @@ const PanResponder = {
   create: (config: Record<string, unknown>) => ({ panHandlers: config }),
 };
 
+// Detection auto-retry listens for foreground transitions.
+const AppState = {
+  currentState: 'active' as const,
+  addEventListener: (_type: string, _cb: (state: string) => void) => ({
+    remove: () => undefined,
+  }),
+};
+
+// Arrange mode reads the reduce-motion setting before animating tiles.
+// Default false so tests exercise the animated path; individual tests can
+// override this mock when they need the reduced-motion branch.
+const AccessibilityInfo = {
+  isReduceMotionEnabled: () => Promise.resolve(false),
+  addEventListener: (_type: string, _cb: (value: boolean) => void) => ({
+    remove: () => undefined,
+  }),
+};
+
+// Arrange mode exits on the Android system back gesture.
+const BackHandler = {
+  addEventListener: (_type: string, _cb: () => boolean) => ({ remove: () => undefined }),
+};
+
 const useColorScheme = () => 'light';
 const useWindowDimensions = () => ({ width: 375, height: 812, scale: 2, fontScale: 1 });
 
@@ -87,8 +110,11 @@ export {
   TouchableOpacity,
   Modal,
   ActivityIndicator,
+  AccessibilityInfo,
   Alert,
   Animated,
+  AppState,
+  BackHandler,
   PanResponder,
   StyleSheet,
   Platform,

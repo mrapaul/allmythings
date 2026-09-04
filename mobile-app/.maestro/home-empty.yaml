@@ -13,15 +13,28 @@ tags:
 - assertVisible: "A blank canvas"
 
 # The "Tap the camera below" line confirms the empty-state CTA is rendered.
+# Maestro full-matches the regex against the element text, so the prefix
+# alone never matched — anchor it with a wildcard tail.
 - assertVisible:
-    text: "Tap the camera below"
+    text: "Tap the camera below.*"
 
 # The action capsule's primary button has a stable testID added in
 # components/ActionCapsule.tsx for E2E targeting.
 - tapOn:
     id: "action-capsule-camera"
 
-# `expo-image-picker` opens a native sheet asking for camera permission. We
-# can't dismiss that here without device-specific settings, so the flow
-# stops at the capsule tap. CI runs this on a simulator with permissions
-# pre-granted via Maestro's `permissions:` on launch — see runbook.
+# The camera button now opens our OWN viewfinder (app/capture.tsx) rather
+# than the system camera sheet, so the app stays in-process and we can
+# assert on it. `capture-close` is present in both states the screen can be
+# in — the live viewfinder and the "Allow camera" prompt shown when the
+# permission has not been granted — which keeps this robust on a simulator
+# with no camera and no pre-granted permission.
+- extendedWaitUntil:
+    visible:
+      id: "capture-close"
+    timeout: 15000
+- tapOn:
+    id: "capture-close"
+
+# Dismissing the viewfinder returns to the empty collection.
+- assertVisible: "A blank canvas"

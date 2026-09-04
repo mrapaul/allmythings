@@ -9,8 +9,13 @@ import {
   ATTR_SERVICE_VERSION,
   ATTR_SERVICE_NAMESPACE,
 } from '@opentelemetry/semantic-conventions';
+import { SafeMetricExporter, SafeSpanExporter } from './safe-exporter';
+import { logger } from '../utils/logger';
 
 let sdk: NodeSDK | null = null;
+
+/** Hard cap on the final flush: telemetry must never stall process exit. */
+const SHUTDOWN_TIMEOUT_MS = 3_000;
 
 /**
  * Bootstraps the OpenTelemetry Node SDK with OTLP gRPC exporters for traces
@@ -33,11 +38,14 @@ export function initOtel(): void {
     [ATTR_SERVICE_NAMESPACE]: 'allmythings',
   });
 
+  // Both exporters are wrapped in circuit breakers (see safe-exporter.ts):
+  // a collector that is down or never started must be completely harmless —
+  // no unhandled rejections, no per-export noise, quiet background probes.
   sdk = new NodeSDK({
     resource,
-    traceExporter: new OTLPTraceExporter({ url: endpoint }),
+    traceExporter: new SafeSpanExporter(new OTLPTraceExporter({ url: endpoint })),
     metricReader: new PeriodicExportingMetricReader({
-      exporter: new OTLPMetricExporter({ url: endpoint }),
+      exporter: new SafeMetricExporter(new OTLPMetricExporter({ url: endpoint })),
       exportIntervalMillis: 15_000,
     }),
     instrumentations: [
@@ -55,10 +63,34 @@ export function initOtel(): void {
  * Flushes pending telemetry and shuts down the Node SDK. Called from the
  * server's SIGTERM/SIGINT handler so in-flight spans and metrics are exported
  * before the process exits.
+ *
+ * NEVER throws and NEVER hangs: with the collector down, `sdk.shutdown()`'s
+ * final flush used to reject with `connect ECONNREFUSED 127.0.0.1:4317`,
+ * killing the shutdown promise chain before `process.exit(0)` ran (log
+ * evidence: "Unhandled Rejection" right after "Shutting down"). A failed
+ * telemetry flush is logged and forgotten.
  */
 export async function shutdownOtel(): Promise<void> {
-  if (sdk) {
-    await sdk.shutdown();
-    sdk = null;
+  if (!sdk) return;
+  const closing = sdk;
+  sdk = null;
+  let timer: NodeJS.Timeout | undefined;
+  try {
+    await Promise.race([
+      closing.shutdown(),
+      new Promise<never>((_, reject) => {
+        timer = setTimeout(
+          () => reject(new Error(`otel shutdown exceeded ${SHUTDOWN_TIMEOUT_MS}ms`)),
+          SHUTDOWN_TIMEOUT_MS,
+        );
+      }),
+    ]);
+  } catch (err: unknown) {
+    logger.warn(
+      { err: err instanceof Error ? err.message : String(err) },
+      'otel_shutdown_failed_ignored',
+    );
+  } finally {
+    clearTimeout(timer);
   }
 }

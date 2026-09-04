@@ -53,11 +53,16 @@ cmd_start() {
   cmd_stop
 
   # ── Stage 1: Observability + Temporal stack ──────────────────────────────
-  log_info "Stage 1: Observability + Temporal stack (docker compose up -d)..."
-  docker compose -f "$COMPOSE" up -d
-  wait_http http://localhost:3000/api/health   30 "Grafana"       || exit 1
-  wait_http http://localhost:3100/ready        30 "Loki"          || exit 1
-  wait_http http://localhost:3200/ready        30 "Tempo"         || exit 1
+  # Dashboards are optional; detection must come up even when Docker is off.
+  if docker info >/dev/null 2>&1; then
+    log_info "Stage 1: Observability + Temporal stack (docker compose up -d)..."
+    docker compose -f "$COMPOSE" up -d
+    wait_http http://localhost:3000/api/health   30 "Grafana"       || exit 1
+    wait_http http://localhost:3100/ready        30 "Loki"          || exit 1
+    wait_http http://localhost:3200/ready        30 "Tempo"         || exit 1
+  else
+    log_info "Stage 1: skipped (Docker not running) — core stack continues"
+  fi
   wait_http http://localhost:9191/-/ready      30 "Prometheus"    || exit 1
   wait_http http://localhost:9093/-/ready      30 "Alertmanager"  || exit 1
   wait_http http://localhost:8233              30 "Temporal UI"   || exit 1

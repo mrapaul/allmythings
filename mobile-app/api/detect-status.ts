@@ -8,6 +8,12 @@ export interface DetectStatus {
   photoSha256?: string | undefined;
   scene?: SceneInfo | null | undefined;
   result?: { items: DetectedItem[] } | undefined;
+  /**
+   * Optional duplicate hints. Typed as `unknown` on purpose: the server
+   * contract is still landing, so the client parses it defensively rather
+   * than depending on a shape (lib/suggestions.ts).
+   */
+  mergeSuggestions?: unknown;
   errorCode?: string | undefined;
   errorMessage?: string | undefined;
 }

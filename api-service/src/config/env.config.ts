@@ -23,6 +23,15 @@ export interface EnvConfig {
   vlmMaxImageSize: number;
   vlmTimeoutMs: number;
   vlmCoordMode: 'auto' | 'norm' | 'thousand' | 'pixel';
+  // Text embeddings (Ollama /api/embed) — power the vocabulary-free semantic
+  // layer: same-kind label matching during dedupe, and /v1/vocab/match.
+  embeddingsEnabled: boolean;
+  embeddingModel: string;
+  embeddingTimeoutMs: number;
+  embeddingCacheSize: number;
+  // Fallback LLM judge for items the detector model left without is_possession.
+  possessionJudgeEnabled: boolean;
+  possessionJudgeTimeoutMs: number;
   owlv2Url: string;
   hybridEnabled: boolean;
   googleProjectId: string;
@@ -53,6 +62,23 @@ export interface EnvConfig {
   pipelineUrl: string;
   pipelineLongPollTimeoutS: number;
   pipelineMaxRps: number;
+
+  // Capture precheck (POST /v1/precheck — fast preview-frame verdict).
+  // Its own small model: precheck is real-time capture guidance, so it must
+  // never queue behind (or force a load of) the big detection model.
+  precheckModel: string;
+  precheckMaxObjects: number;
+  precheckTimeoutMs: number;
+  precheckMaxDimension: number;
+  precheckKeepAlive: string;
+
+  // Item enrichment (POST /v1/enrich — close-look second pass on a saved
+  // item's crop). Deliberately the DETECTION model: a single-item crop is
+  // where the big model's brand/era/material reading pays off, and this is
+  // async background work where 10-20s per item is acceptable.
+  enrichModel: string;
+  enrichTimeoutMs: number;
+  enrichMaxDimension: number;
 }
 
 export const envConfig: EnvConfig = {
@@ -82,6 +108,12 @@ export const envConfig: EnvConfig = {
   )
     ? (process.env.VLM_COORD_MODE as 'auto' | 'norm' | 'thousand' | 'pixel')
     : 'auto',
+  embeddingsEnabled: process.env.EMBEDDINGS_ENABLED !== 'false',
+  embeddingModel: process.env.EMBEDDING_MODEL || 'nomic-embed-text:v1.5',
+  embeddingTimeoutMs: parseInt(process.env.EMBEDDING_TIMEOUT_MS || '10000', 10),
+  embeddingCacheSize: parseInt(process.env.EMBEDDING_CACHE_SIZE || '4000', 10),
+  possessionJudgeEnabled: process.env.POSSESSION_JUDGE_ENABLED !== 'false',
+  possessionJudgeTimeoutMs: parseInt(process.env.POSSESSION_JUDGE_TIMEOUT_MS || '20000', 10),
   owlv2Url: process.env.OWLV2_URL || 'http://localhost:14001',
   hybridEnabled: process.env.HYBRID_ENABLED === 'true',
   googleProjectId: process.env.GOOGLE_CLOUD_PROJECT_ID || '',
@@ -104,4 +136,29 @@ export const envConfig: EnvConfig = {
   pipelineUrl: process.env.PIPELINE_URL || 'http://127.0.0.1:14101',
   pipelineLongPollTimeoutS: parseInt(process.env.PIPELINE_LONGPOLL_TIMEOUT_S || '25', 10),
   pipelineMaxRps: parseInt(process.env.PIPELINE_MAX_RPS || '5', 10),
+  // Apache-2.0 (Qwen3-VL 2B/4B/8B are Apache-2.0; the qwen2.5vl:* tags carry the
+  // Qwen Research License and must NOT be used in this commercial product).
+  // Measured on a new frame with the model resident, 384px input:
+  // 4b-instruct 3.00s and correct on all three probes; 2b-instruct 1.84s but it
+  // echoes the enum ("interior|room"), so 4B is the default and 2B is the
+  // faster opt-in. The old shared 30B detector measured 15.1-15.7s.
+  precheckModel: process.env.PRECHECK_MODEL || 'qwen3-vl:4b-instruct',
+  precheckMaxObjects: parseInt(process.env.PRECHECK_MAX_OBJECTS || '35', 10),
+  // 6s leaves ~2x headroom over the measured 3.0s before failing open.
+  precheckTimeoutMs: parseInt(process.env.PRECHECK_TIMEOUT_MS || '6000', 10),
+  precheckMaxDimension: parseInt(process.env.PRECHECK_MAX_DIMENSION || '384', 10),
+  // Pin the small precheck model resident so the first shot of a session is not
+  // a cold load (measured cold load: 3.1s for 4B, on top of the inference).
+  // Memory note: 4B holds ~3.3GB next to the detector's ~20GB of 48GB, so
+  // keeping it warm cannot evict the detection model mid-pipeline.
+  precheckKeepAlive: process.env.PRECHECK_KEEP_ALIVE || '30m',
+  // Defaults to the detection model (same resolution chain as OLLAMA_MODEL
+  // above) so enrichment never forces a second big model into memory.
+  enrichModel: process.env.ENRICH_MODEL || process.env.OLLAMA_MODEL || 'qwen2.5vl:7b',
+  // Generous: enrichment is queued background work, and the big model on the
+  // free cloud tier measures well past a minute under congestion.
+  enrichTimeoutMs: parseInt(process.env.ENRICH_TIMEOUT_MS || '120000', 10),
+  // Item crops carry brand marks and texture detail, so give the model more
+  // pixels than the 384px precheck preview.
+  enrichMaxDimension: parseInt(process.env.ENRICH_MAX_DIMENSION || '512', 10),
 };
