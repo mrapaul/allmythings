@@ -2,6 +2,7 @@ import { analyzeQuality } from '@/lib/image-quality';
 import {
   type CoachHint,
   type CoachHintKind,
+  type ReadinessSignals,
   currentHint,
   initialCoachState,
   isFrameReady,
@@ -9,6 +10,7 @@ import {
   motionVerdict,
   pushObservation,
   pushServerAdvice,
+  signalStates,
   tiltFromGravity,
 } from '@/lib/live-coaching';
 import { prepareJpegBase64 } from '@/services/image-prep';
@@ -69,6 +71,8 @@ interface UseLiveQualityOptions {
 export interface LiveQuality {
   hint: CoachHint | null;
   ready: boolean;
+  /** Always-on steady / sharp / light read for the viewfinder strip. */
+  signals: ReadinessSignals;
   /** Call immediately before a user capture, and again after it resolves. */
   suspendForCapture: () => void;
   resumeAfterCapture: () => void;
@@ -100,6 +104,7 @@ export function useLiveQuality({
 }: UseLiveQualityOptions): LiveQuality {
   const [hint, setHint] = useState<CoachHint | null>(null);
   const [ready, setReady] = useState(false);
+  const [signals, setSignals] = useState<ReadinessSignals>(() => signalStates(initialCoachState()));
 
   const stateRef = useRef(initialCoachState());
   const busyRef = useRef(false);
@@ -156,6 +161,7 @@ export function useLiveQuality({
       stateRef.current = pushObservation(stateRef.current, observation);
       setHint(currentHint(stateRef.current));
       setReady(isFrameReady(stateRef.current));
+      setSignals(signalStates(stateRef.current));
     };
 
     const nextDelay = (): number => {
@@ -257,10 +263,11 @@ export function useLiveQuality({
         stateRef.current = initialCoachState();
         setHint(null);
         setReady(false);
+        setSignals(signalStates(stateRef.current));
       }
     });
     return () => sub.remove();
   }, []);
 
-  return { hint, ready, suspendForCapture, resumeAfterCapture, injectServerAdvice };
+  return { hint, ready, signals, suspendForCapture, resumeAfterCapture, injectServerAdvice };
 }

@@ -257,6 +257,10 @@ export function parseVisibleCount(payload: unknown): number | null {
 
 /** Density guidance copy when the server flags a crowded frame. */
 export const DENSITY_ADVICE = 'Lots here — move closer and shoot in sections.';
+/** The model can see things but cannot name them: distance is the fix. */
+export const TOO_FAR_ADVICE = 'Move closer — items are too small to identify.';
+/** A wall, a floor, the ceiling: nothing to inventory in this frame. */
+export const EMPTY_FRAME_ADVICE = 'Point at a shelf, a drawer, or a corner with things in it.';
 
 /**
  * The single piece of server guidance worth borrowing the hint slot for, or
@@ -264,8 +268,46 @@ export const DENSITY_ADVICE = 'Lots here — move closer and shoot in sections.'
  */
 export function serverGuidance(payload: unknown): string | null {
   if (!payload || typeof payload !== 'object') return null;
-  const p = payload as { advice?: unknown; objectDensity?: unknown };
+  const p = payload as { advice?: unknown; objectDensity?: unknown; quality?: unknown };
   if (typeof p.advice === 'string' && p.advice.trim()) return p.advice.trim();
   if (p.objectDensity === 'too_many') return DENSITY_ADVICE;
+  if (p.quality === 'too_far') return TOO_FAR_ADVICE;
+  if (p.objectDensity === 'none') return EMPTY_FRAME_ADVICE;
   return null;
+}
+
+// ---------------------------------------------------------------------------
+// Always-on readiness: three plain signals the viewfinder shows at all times,
+// so guidance is visible even when nothing is wrong. Hints stay rare and
+// corroborated; these are the honest instantaneous read behind them.
+// ---------------------------------------------------------------------------
+
+export type SignalState = 'ok' | 'warn' | 'unknown';
+
+export interface ReadinessSignals {
+  /** Phone held still and level. */
+  steady: SignalState;
+  /** Focus and detail. */
+  sharp: SignalState;
+  /** Exposure. */
+  light: SignalState;
+}
+
+const STEADY_FAULTS: CoachHintKind[] = ['unsteady', 'tilted'];
+const SHARP_FAULTS: CoachHintKind[] = ['too_blurry', 'low_detail'];
+const LIGHT_FAULTS: CoachHintKind[] = ['too_dark', 'too_bright'];
+
+/**
+ * Each signal warns when the LATEST sample shows its fault or when a
+ * corroborated hint of that kind is still active (so the strip agrees with
+ * the hint pill and never flickers green under a standing warning).
+ */
+export function signalStates(state: CoachState): ReadinessSignals {
+  const latest = state.window[state.window.length - 1];
+  if (latest === undefined) return { steady: 'unknown', sharp: 'unknown', light: 'unknown' };
+  const warn = (faults: CoachHintKind[]): SignalState =>
+    faults.includes(latest) || (state.active !== null && faults.includes(state.active))
+      ? 'warn'
+      : 'ok';
+  return { steady: warn(STEADY_FAULTS), sharp: warn(SHARP_FAULTS), light: warn(LIGHT_FAULTS) };
 }

@@ -1,6 +1,7 @@
 import { CaptureReel } from '@/components/Viewfinder/CaptureReel';
 import { CoachOverlay } from '@/components/Viewfinder/CoachOverlay';
 import { FlyToTray } from '@/components/Viewfinder/FlyToTray';
+import { ReadinessStrip } from '@/components/Viewfinder/ReadinessStrip';
 import { useColors } from '@/hooks/useColors';
 import { useLiveCount } from '@/hooks/useLiveCount';
 import { useLiveQuality } from '@/hooks/useLiveQuality';
@@ -105,12 +106,11 @@ export default function CaptureScreen() {
   };
 
   // ----- live coaching ------------------------------------------------------
-  const { hint, ready, suspendForCapture, resumeAfterCapture, injectServerAdvice } = useLiveQuality(
-    {
+  const { hint, ready, signals, suspendForCapture, resumeAfterCapture, injectServerAdvice } =
+    useLiveQuality({
       camera: cameraRef,
       enabled: cameraReady && !isCapturing,
-    },
-  );
+    });
 
   const { count, uncertain, available } = useLiveCount({
     camera: cameraRef,
@@ -268,6 +268,11 @@ export default function CaptureScreen() {
 
       <View style={[styles.coachSlot, { bottom: insets.bottom + 132 }]} pointerEvents="none">
         <CoachOverlay hint={hint} />
+        {cameraReady && (
+          <View style={styles.readinessSlot}>
+            <ReadinessStrip signals={signals} ready={ready} />
+          </View>
+        )}
       </View>
 
       {/* The reel: a floating film strip where every shot visibly lands and
@@ -306,6 +311,8 @@ export default function CaptureScreen() {
               // Softened, never disabled, while the frame is unsettled — the
               // user always keeps the final say on when to shoot.
               opacity: isCapturing ? 0.5 : hint ? 0.72 : 1,
+              // The ring turns green with the strip's verdict: one glance says shoot.
+              borderColor: ready ? '#4ade80' : 'rgba(255,255,255,0.9)',
               transform: [{ scale: pressed ? 0.94 : 1 }],
             },
           ]}
@@ -462,6 +469,7 @@ const styles = StyleSheet.create({
     letterSpacing: 0.3,
     color: '#ffffff',
   },
+  readinessSlot: { marginTop: 8 },
   shutterBar: {
     position: 'absolute',
     left: 0,

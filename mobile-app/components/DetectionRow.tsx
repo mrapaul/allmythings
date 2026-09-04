@@ -180,7 +180,7 @@ export function DetectionRow({
               <ActivityIndicator size="small" color={colors.primaryForeground} />
             ) : (
               <Feather
-                name={isSaved ? 'check' : 'bookmark'}
+                name={isSaved ? 'check-circle' : 'check'}
                 size={16}
                 color={colors.primaryForeground}
               />

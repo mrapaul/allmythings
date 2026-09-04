@@ -118,6 +118,16 @@ export class PrecheckService {
     this.maxDimension = opts?.maxDimension ?? envConfig.precheckMaxDimension;
   }
 
+  /**
+   * Pin the precheck model at boot. Without this the first framing hint and
+   * item count of a session wait on a cold load, and a fail-open precheck
+   * shows nothing at all — which reads as "the feature does not exist".
+   */
+  warm(): void {
+    const c = this.client as VlmClient & { warm?: () => Promise<void> };
+    if (typeof c.warm === 'function') void c.warm();
+  }
+
   async precheck(image: Buffer): Promise<PrecheckResult> {
     const startedAt = Date.now();
     try {

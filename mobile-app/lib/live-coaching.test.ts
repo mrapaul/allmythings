@@ -6,8 +6,10 @@ import {
   type CoachState,
   DENSITY_ADVICE,
   DISAPPEAR_AFTER,
+  EMPTY_FRAME_ADVICE,
   SERVER_ADVICE_TTL,
   TILT_DEGREES,
+  TOO_FAR_ADVICE,
   UNSTEADY_G,
   currentHint,
   initialCoachState,
@@ -21,6 +23,7 @@ import {
   pushObservation,
   pushServerAdvice,
   serverGuidance,
+  signalStates,
   tiltFromGravity,
 } from './live-coaching';
 
@@ -233,5 +236,53 @@ describe('motion thresholds', () => {
   it('computes accelerometer magnitude', () => {
     expect(magnitudeOf(0, -1, 0)).toBeCloseTo(1, 5);
     expect(magnitudeOf(0.6, 0.8, 0)).toBeCloseTo(1, 5);
+  });
+});
+
+describe('readiness signals', () => {
+  it('reports unknown before any sample', () => {
+    expect(signalStates(initialCoachState())).toEqual({
+      steady: 'unknown',
+      sharp: 'unknown',
+      light: 'unknown',
+    });
+  });
+
+  it('flags the one signal behind the latest observation', () => {
+    expect(signalStates(feed(['ok', 'too_dark']))).toEqual({
+      steady: 'ok',
+      sharp: 'ok',
+      light: 'warn',
+    });
+    expect(signalStates(feed(['ok', 'unsteady'])).steady).toBe('warn');
+    expect(signalStates(feed(['ok', 'tilted'])).steady).toBe('warn');
+    expect(signalStates(feed(['ok', 'too_blurry'])).sharp).toBe('warn');
+    expect(signalStates(feed(['ok', 'low_detail'])).sharp).toBe('warn');
+    expect(signalStates(feed(['ok', 'too_bright'])).light).toBe('warn');
+  });
+
+  it('keeps a corroborated hint warning until it clears, even on a single ok sample', () => {
+    const state = feed([...repeat('too_dark', APPEAR_AFTER), 'ok']);
+    expect(signalStates(state).light).toBe('warn');
+    expect(
+      signalStates(feed([...repeat('too_dark', APPEAR_AFTER), ...repeat('ok', DISAPPEAR_AFTER)]))
+        .light,
+    ).toBe('ok');
+  });
+});
+
+describe('framing guidance from the precheck', () => {
+  it('asks the user to move closer when the server says too far', () => {
+    expect(serverGuidance({ quality: 'too_far' })).toBe(TOO_FAR_ADVICE);
+  });
+
+  it('asks for a real scene when nothing is in frame', () => {
+    expect(serverGuidance({ objectDensity: 'none' })).toBe(EMPTY_FRAME_ADVICE);
+  });
+
+  it('still prefers explicit server advice', () => {
+    expect(serverGuidance({ quality: 'too_far', advice: 'Step back a little' })).toBe(
+      'Step back a little',
+    );
   });
 });

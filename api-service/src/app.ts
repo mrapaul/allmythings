@@ -36,7 +36,7 @@ import {
   warmDetectorModel,
 } from './services/vlm-detector.factory';
 import { vocabRoute } from './routes/vocab.route';
-import { createPrecheckService } from './services/precheck.service';
+import { type PrecheckService, createPrecheckService } from './services/precheck.service';
 import { VlmRunStore } from './services/vlm-run-store';
 import { detectedItemSchema } from './schemas/detected-item.schema';
 
@@ -186,6 +186,8 @@ async function start(): Promise<void> {
     const address = await app.listen({ port: envConfig.port, host: '0.0.0.0' });
     logger.info({ address, port: envConfig.port, nodeEnv: envConfig.nodeEnv }, 'Server started');
     if (envConfig.detector === 'vlm' && envConfig.ollamaEnabled) warmDetectorModel();
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    if (envConfig.ollamaEnabled) ((app as any).precheckService as PrecheckService).warm();
 
     const stopBonjour = advertiseService(envConfig.port);
     logger.info({ name: 'allmythings-server', port: envConfig.port }, 'Bonjour advertisement started');
