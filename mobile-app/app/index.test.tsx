@@ -101,7 +101,7 @@ describe('HomeScreen capture → walk-mode dispatch contract', () => {
     expect(libraryBtn).toBeTruthy();
 
     await act(async () => {
-      (libraryBtn!.props.onPress as () => void)();
+      (libraryBtn?.props.onPress as () => void)();
       await new Promise((r) => setTimeout(r, 0));
     });
 
@@ -120,7 +120,7 @@ describe('HomeScreen capture → walk-mode dispatch contract', () => {
     const view = renderHome();
     const libraryBtn = findByTestId(view.toJSON(), 'action-capsule-library');
     await act(async () => {
-      (libraryBtn!.props.onPress as () => void)();
+      (libraryBtn?.props.onPress as () => void)();
       await new Promise((r) => setTimeout(r, 0));
     });
 
