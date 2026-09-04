@@ -1,0 +1,132 @@
+{
+  "api:gemma4-26b-mlx-nothink": {
+    "perFixture": [
+      {
+        "fixture": "1776173015803",
+        "recall": 91.7,
+        "itemCount": 41,
+        "expectedMin": 8,
+        "expectedMax": 15,
+        "countWithinRange": false,
+        "matchedCount": 11,
+        "missed": [
+          "wooden stool (plant support)"
+        ],
+        "elapsedMs": 253955,
+        "attempts": 1
+      },
+      {
+        "fixture": "1776174188547",
+        "recall": 72.7,
+        "itemCount": 35,
+        "expectedMin": 7,
+        "expectedMax": 13,
+        "countWithinRange": false,
+        "matchedCount": 8,
+        "missed": [
+          "small snake plant",
+          "wooden stool (plant support)",
+          "dark navy couch / sofa"
+        ],
+        "elapsedMs": 91098,
+        "attempts": 1
+      },
+      {
+        "fixture": "1776175427607",
+        "recall": 64.3,
+        "itemCount": 43,
+        "expectedMin": 10,
+        "expectedMax": 16,
+        "countWithinRange": false,
+        "matchedCount": 9,
+        "missed": [
+          "black throw blanket",
+          "snake plant small",
+          "wooden stool",
+          "gold candle holder",
+          "wooden side table"
+        ],
+        "elapsedMs": 117783,
+        "attempts": 1
+      },
+      {
+        "fixture": "1776176976030",
+        "recall": 76.9,
+        "itemCount": 35,
+        "expectedMin": 8,
+        "expectedMax": 14,
+        "countWithinRange": false,
+        "matchedCount": 10,
+        "missed": [
+          "wooden stool",
+          "gold candle holder",
+          "wooden sideboard / cabinet"
+        ],
+        "elapsedMs": 109256,
+        "attempts": 1
+      },
+      {
+        "fixture": "bedroom_01",
+        "recall": 92.9,
+        "itemCount": 72,
+        "expectedMin": 9,
+        "expectedMax": 18,
+        "countWithinRange": false,
+        "matchedCount": 13,
+        "missed": [
+          "built-in oven"
+        ],
+        "elapsedMs": 175082,
+        "attempts": 1
+      },
+      {
+        "fixture": "dining_room_01",
+        "recall": 100,
+        "itemCount": 33,
+        "expectedMin": 5,
+        "expectedMax": 10,
+        "countWithinRange": false,
+        "matchedCount": 8,
+        "missed": [],
+        "elapsedMs": 331186,
+        "attempts": 1
+      },
+      {
+        "fixture": "living_room_02",
+        "recall": 88.9,
+        "itemCount": 94,
+        "expectedMin": 12,
+        "expectedMax": 24,
+        "countWithinRange": false,
+        "matchedCount": 16,
+        "missed": [
+          "dark grey daybed / futon",
+          "laptop computer"
+        ],
+        "elapsedMs": 382920,
+        "attempts": 1
+      },
+      {
+        "fixture": "mockup_living_01",
+        "recall": 90.9,
+        "itemCount": 33,
+        "expectedMin": 8,
+        "expectedMax": 14,
+        "countWithinRange": false,
+        "matchedCount": 10,
+        "missed": [
+          "marble decorative cube"
+        ],
+        "elapsedMs": 81415,
+        "attempts": 1
+      }
+    ],
+    "aggregate": {
+      "avgRecall": 84.8,
+      "avgItems": 48.3,
+      "avgLatencyMs": 192837,
+      "failures": 0,
+      "n": 8
+    }
+  }
+}

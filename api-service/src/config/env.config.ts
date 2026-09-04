@@ -18,6 +18,15 @@ export interface EnvConfig {
   ollamaBaseUrl: string;
   ollamaModel: string;
   ollamaEnabled: boolean;
+  /**
+   * Local VLM engine behind the detector: 'ollama' (default) or 'openai' —
+   * any OpenAI-compatible server (MLX-VLM, llama-server, vLLM) at
+   * OPENAI_BASE_URL serving OPENAI_MODEL. The phone never sees this choice.
+   */
+  vlmBackend: 'ollama' | 'openai';
+  openaiBaseUrl: string;
+  openaiModel: string;
+  openaiApiKey: string;
   // Two-pass VLM detector knobs (DETECTOR=vlm path).
   vlmTwoPass: boolean;
   vlmMaxImageSize: number;
@@ -95,6 +104,10 @@ export const envConfig: EnvConfig = {
   ollamaBaseUrl: process.env.OLLAMA_BASE_URL || 'http://localhost:11434',
   ollamaModel: process.env.OLLAMA_MODEL || 'qwen2.5vl:7b',
   ollamaEnabled: process.env.OLLAMA_ENABLED !== 'false',
+  vlmBackend: process.env.VLM_BACKEND === 'openai' ? 'openai' : 'ollama',
+  openaiBaseUrl: process.env.OPENAI_BASE_URL || 'http://127.0.0.1:8080/v1',
+  openaiModel: process.env.OPENAI_MODEL || '',
+  openaiApiKey: process.env.OPENAI_API_KEY || '',
   vlmTwoPass: process.env.VLM_TWO_PASS !== 'false',
   vlmMaxImageSize: parseInt(process.env.VLM_MAX_IMAGE_SIZE || '1024', 10),
   // Per model call. gemma4:31b-cloud (free tier) measures 28-138s per pass on

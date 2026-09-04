@@ -1,0 +1,138 @@
+{
+  "api:qwen36-35b-a3b-nothink": {
+    "perFixture": [
+      {
+        "fixture": "1776173015803",
+        "recall": 91.7,
+        "itemCount": 23,
+        "expectedMin": 8,
+        "expectedMax": 15,
+        "countWithinRange": false,
+        "matchedCount": 11,
+        "missed": [
+          "wooden stool (plant support)"
+        ],
+        "elapsedMs": 128408,
+        "attempts": 1
+      },
+      {
+        "fixture": "1776174188547",
+        "recall": 72.7,
+        "itemCount": 26,
+        "expectedMin": 7,
+        "expectedMax": 13,
+        "countWithinRange": false,
+        "matchedCount": 8,
+        "missed": [
+          "small snake plant",
+          "wooden stool (plant support)",
+          "dark navy couch / sofa"
+        ],
+        "elapsedMs": 155940,
+        "attempts": 1
+      },
+      {
+        "fixture": "1776175427607",
+        "recall": 78.6,
+        "itemCount": 82,
+        "expectedMin": 10,
+        "expectedMax": 16,
+        "countWithinRange": false,
+        "matchedCount": 11,
+        "missed": [
+          "black throw blanket",
+          "wooden stool",
+          "white venetian window blinds"
+        ],
+        "elapsedMs": 343546,
+        "attempts": 1
+      },
+      {
+        "fixture": "1776176976030",
+        "recall": 84.6,
+        "itemCount": 26,
+        "expectedMin": 8,
+        "expectedMax": 14,
+        "countWithinRange": false,
+        "matchedCount": 11,
+        "missed": [
+          "wooden stool",
+          "wooden sideboard / cabinet"
+        ],
+        "elapsedMs": 273427,
+        "attempts": 1
+      },
+      {
+        "fixture": "bedroom_01",
+        "recall": 85.7,
+        "itemCount": 48,
+        "expectedMin": 9,
+        "expectedMax": 18,
+        "countWithinRange": false,
+        "matchedCount": 12,
+        "missed": [
+          "blue flower in small vase",
+          "framed artwork"
+        ],
+        "elapsedMs": 346612,
+        "attempts": 1
+      },
+      {
+        "fixture": "dining_room_01",
+        "recall": 75,
+        "itemCount": 8,
+        "expectedMin": 5,
+        "expectedMax": 10,
+        "countWithinRange": true,
+        "matchedCount": 6,
+        "missed": [
+          "slippers",
+          "open book on sofa"
+        ],
+        "elapsedMs": 462433,
+        "attempts": 1
+      },
+      {
+        "fixture": "living_room_02",
+        "recall": 66.7,
+        "itemCount": 75,
+        "expectedMin": 12,
+        "expectedMax": 24,
+        "countWithinRange": false,
+        "matchedCount": 12,
+        "missed": [
+          "wooden bentwood chair",
+          "dark grey daybed / futon",
+          "wooden desk",
+          "laptop computer",
+          "hanging macrame planter with pothos",
+          "window blinds"
+        ],
+        "elapsedMs": 1046854,
+        "attempts": 1
+      },
+      {
+        "fixture": "mockup_living_01",
+        "recall": 81.8,
+        "itemCount": 37,
+        "expectedMin": 8,
+        "expectedMax": 14,
+        "countWithinRange": false,
+        "matchedCount": 9,
+        "missed": [
+          "marble decorative cube",
+          "white TV console"
+        ],
+        "elapsedMs": 278127,
+        "attempts": 1
+      }
+    ],
+    "aggregate": {
+      "avgRecall": 79.6,
+      "avgItems": 40.6,
+      "avgLatencyMs": 379418,
+      "failures": 0,
+      "n": 8
+    }
+  }
+}

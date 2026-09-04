@@ -1,5 +1,6 @@
 import { envConfig } from '../config/env.config';
 import { OllamaVlmClient } from '../clients/ollama-vlm.client';
+import { OpenAiVlmClient } from '../clients/openai-vlm.client';
 import { GeminiVlmClient } from '../clients/gemini-vlm.client';
 import type { VlmClient } from '../clients/vlm-client';
 import { logger } from '../utils/logger';
@@ -15,12 +16,17 @@ import { PossessionJudge } from './possession-judge.service';
  * with the Ollama-backed detector as automatic fallback; DETECTOR_PRIMARY=
  * ollama flips the order. Without a Gemini key the Ollama path runs alone.
  */
-/** Single-call VLM client for crop labeling — same backend priority as the chain. */
-export function createLabelClient(): VlmClient {
-  if (envConfig.geminiApiKey && envConfig.detectorPrimary === 'gemini') {
-    return new GeminiVlmClient({
-      apiKey: envConfig.geminiApiKey,
-      model: envConfig.geminiModel,
+/**
+ * The local engine: Ollama by default, or any OpenAI-compatible server when
+ * VLM_BACKEND=openai. Everything local (detector, label client) goes through
+ * here so switching engines is a .env change, never a code change.
+ */
+function createLocalVlmClient(): VlmClient {
+  if (envConfig.vlmBackend === 'openai') {
+    return new OpenAiVlmClient({
+      baseUrl: envConfig.openaiBaseUrl,
+      model: envConfig.openaiModel,
+      apiKey: envConfig.openaiApiKey,
       timeoutMs: envConfig.vlmTimeoutMs,
     });
   }
@@ -31,6 +37,18 @@ export function createLabelClient(): VlmClient {
     keepAlive: envConfig.vlmKeepAlive,
     think: envConfig.vlmThink,
   });
+}
+
+/** Single-call VLM client for crop labeling — same backend priority as the chain. */
+export function createLabelClient(): VlmClient {
+  if (envConfig.geminiApiKey && envConfig.detectorPrimary === 'gemini') {
+    return new GeminiVlmClient({
+      apiKey: envConfig.geminiApiKey,
+      model: envConfig.geminiModel,
+      timeoutMs: envConfig.vlmTimeoutMs,
+    });
+  }
+  return createLocalVlmClient();
 }
 
 /**
@@ -69,20 +87,14 @@ export function createVlmDetector(possessionJudge: PossessionJudge | null = null
     coordMode: envConfig.vlmCoordMode,
   };
 
-  const ollama = new VlmDetector(
-    new OllamaVlmClient({
-      baseUrl: envConfig.ollamaBaseUrl,
-      model: envConfig.ollamaModel,
-      timeoutMs: envConfig.vlmTimeoutMs,
-      keepAlive: envConfig.vlmKeepAlive,
-      think: envConfig.vlmThink,
-    }),
-    opts,
-    possessionJudge,
-  );
+  const local = createLocalVlmClient();
+  const ollama = new VlmDetector(local, opts, possessionJudge);
 
   if (!envConfig.geminiApiKey) {
-    logger.info({ chain: [envConfig.ollamaModel] }, 'detector_chain_ollama_only');
+    logger.info(
+      { chain: [local.modelName], backend: envConfig.vlmBackend },
+      'detector_chain_local_only',
+    );
     return new FallbackDetector(ollama, null);
   }
 
@@ -114,6 +126,7 @@ export function createVlmDetector(possessionJudge: PossessionJudge | null = null
  * VLM_KEEP_ALIVE still reloads; add a periodic re-warm if that ever bites.
  */
 export function warmDetectorModel(): void {
+  if (envConfig.vlmBackend !== 'ollama') return; // other engines pin their own model
   void new OllamaVlmClient({
     baseUrl: envConfig.ollamaBaseUrl,
     model: envConfig.ollamaModel,
