@@ -33,6 +33,7 @@ import {
   createLabelClient,
   createPossessionJudge,
   createVlmDetector,
+  warmDetectorModel,
 } from './services/vlm-detector.factory';
 import { vocabRoute } from './routes/vocab.route';
 import { enrichRoute } from './routes/enrich.route';
@@ -193,6 +194,7 @@ async function start(): Promise<void> {
     const app = await buildApp();
     const address = await app.listen({ port: envConfig.port, host: '0.0.0.0' });
     logger.info({ address, port: envConfig.port, nodeEnv: envConfig.nodeEnv }, 'Server started');
+    if (envConfig.detector === 'vlm' && envConfig.ollamaEnabled) warmDetectorModel();
 
     const stopBonjour = advertiseService(envConfig.port);
     logger.info({ name: 'allmythings-server', port: envConfig.port }, 'Bonjour advertisement started');

@@ -28,6 +28,7 @@ export function createLabelClient(): VlmClient {
     baseUrl: envConfig.ollamaBaseUrl,
     model: envConfig.ollamaModel,
     timeoutMs: envConfig.vlmTimeoutMs,
+    keepAlive: envConfig.vlmKeepAlive,
   });
 }
 
@@ -71,6 +72,7 @@ export function createVlmDetector(possessionJudge: PossessionJudge | null = null
       baseUrl: envConfig.ollamaBaseUrl,
       model: envConfig.ollamaModel,
       timeoutMs: envConfig.vlmTimeoutMs,
+      keepAlive: envConfig.vlmKeepAlive,
     }),
     opts,
     possessionJudge,
@@ -99,4 +101,20 @@ export function createVlmDetector(possessionJudge: PossessionJudge | null = null
   return geminiFirst
     ? new FallbackDetector(gemini, ollama)
     : new FallbackDetector(ollama, gemini);
+}
+
+/**
+ * Pin the detection model resident at boot (fire-and-forget). Without this the
+ * first photo of every session — and every photo after a pause longer than
+ * Ollama's default 5 min keep_alive — paid a measured ~128 s reload.
+ * ponytail: keep_alive resets per request, so an idle gap longer than
+ * VLM_KEEP_ALIVE still reloads; add a periodic re-warm if that ever bites.
+ */
+export function warmDetectorModel(): void {
+  void new OllamaVlmClient({
+    baseUrl: envConfig.ollamaBaseUrl,
+    model: envConfig.ollamaModel,
+    timeoutMs: envConfig.vlmTimeoutMs,
+    keepAlive: envConfig.vlmKeepAlive,
+  }).warm();
 }

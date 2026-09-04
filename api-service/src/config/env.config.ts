@@ -22,6 +22,8 @@ export interface EnvConfig {
   vlmTwoPass: boolean;
   vlmMaxImageSize: number;
   vlmTimeoutMs: number;
+  /** Ollama keep_alive for the detection model; a cold load costs ~2 min. */
+  vlmKeepAlive: string;
   vlmCoordMode: 'auto' | 'norm' | 'thousand' | 'pixel';
   // Text embeddings (Ollama /api/embed) — power the vocabulary-free semantic
   // layer: same-kind label matching during dedupe, and /v1/vocab/match.
@@ -103,6 +105,7 @@ export const envConfig: EnvConfig = {
   // Per model call. gemma4:31b-cloud (free tier) measures 28-138s per pass on
   // the eval fixtures, so the old 120s ceiling produced spurious timeouts.
   vlmTimeoutMs: parseInt(process.env.VLM_TIMEOUT_MS || '300000', 10),
+  vlmKeepAlive: process.env.VLM_KEEP_ALIVE || '1h',
   vlmCoordMode: (['auto', 'norm', 'thousand', 'pixel'] as const).includes(
     process.env.VLM_COORD_MODE as 'auto' | 'norm' | 'thousand' | 'pixel',
   )

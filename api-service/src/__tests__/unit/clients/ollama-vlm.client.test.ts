@@ -65,3 +65,46 @@ describe('OllamaVlmClient retry', () => {
     expect(fetchMock).toHaveBeenCalledTimes(2);
   });
 });
+
+describe('OllamaVlmClient residency', () => {
+  beforeEach(() => {
+    vi.stubGlobal('fetch', vi.fn());
+  });
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it('sends the configured keep_alive on every generate call', async () => {
+    const fetchMock = fetch as unknown as ReturnType<typeof vi.fn>;
+    fetchMock.mockResolvedValue(okResponse('{}'));
+    const client = new OllamaVlmClient({
+      baseUrl: 'http://localhost:11434',
+      model: 'm',
+      timeoutMs: 50,
+      keepAlive: '1h',
+    });
+
+    await client.generateJson('p', 'img');
+
+    const body = JSON.parse(fetchMock.mock.calls[0][1].body as string);
+    expect(body.keep_alive).toBe('1h');
+  });
+
+  it('warm() loads the model with an empty prompt and never throws', async () => {
+    const fetchMock = fetch as unknown as ReturnType<typeof vi.fn>;
+    fetchMock.mockResolvedValueOnce(okResponse('')).mockRejectedValueOnce(new Error('down'));
+    const client = new OllamaVlmClient({
+      baseUrl: 'http://localhost:11434',
+      model: 'm',
+      timeoutMs: 50,
+      keepAlive: '1h',
+    });
+
+    await client.warm();
+    await client.warm(); // fetch rejects — must be swallowed
+
+    const body = JSON.parse(fetchMock.mock.calls[0][1].body as string);
+    expect(body).toEqual({ model: 'm', keep_alive: '1h' });
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+  });
+});

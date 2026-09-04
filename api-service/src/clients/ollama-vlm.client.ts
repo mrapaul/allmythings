@@ -58,6 +58,29 @@ export class OllamaVlmClient implements VlmClient {
   }
 
   /**
+   * Load the model into memory (empty prompt = Ollama's documented "just
+   * load" request) and pin it for keepAlive. Fire-and-forget at boot so the
+   * first photo of a session never pays the ~2 min cold load. Never throws:
+   * a failed warm-up only means the first request loads the model itself.
+   */
+  async warm(): Promise<void> {
+    try {
+      const resp = await fetch(`${this.baseUrl}/api/generate`, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ model: this.model, keep_alive: this.keepAlive }),
+        signal: AbortSignal.timeout(this.timeoutMs),
+      });
+      logger.info({ model: this.model, ok: resp.ok, keepAlive: this.keepAlive }, 'ollama_model_warmed');
+    } catch (err: unknown) {
+      logger.warn(
+        { model: this.model, err: err instanceof Error ? err.message : String(err) },
+        'ollama_model_warm_failed',
+      );
+    }
+  }
+
+  /**
    * Send a single prompt + base64 JPEG to the model and return the raw
    * JSON-constrained text response. Transient failures (timeout, 5xx —
    * routine on the free cloud tier under load) are retried exactly once;
