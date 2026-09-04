@@ -88,10 +88,7 @@
   },
   "expo": {
     "install": {
-      "exclude": [
-        "@sentry/react-native",
-        "@shopify/flash-list"
-      ]
+      "exclude": ["@sentry/react-native", "@shopify/flash-list"]
     }
   }
 }

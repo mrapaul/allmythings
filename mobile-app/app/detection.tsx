@@ -6,12 +6,14 @@ import { BoundingBoxOverlay } from '@/components/BoundingBoxOverlay';
 import { DetectionRow } from '@/components/DetectionRow';
 import { DrawBoxOverlay, type NormBox } from '@/components/DrawBoxOverlay';
 import { GlowBackdrop } from '@/components/GlowBackdrop';
+import { QualityCard } from '@/components/QualityCard';
 import { Snackbar } from '@/components/Snackbar';
 import { useHomes } from '@/contexts/HomesContext';
 import { useInventory } from '@/contexts/InventoryContext';
 import { useColors } from '@/hooks/useColors';
 import { useResponsive } from '@/hooks/useResponsive';
-import { extractAttributes } from '@/lib/attributes';
+import { useReviewAutosave } from '@/hooks/useReviewAutosave';
+import { useStartFailedRetry } from '@/hooks/useStartFailedRetry';
 import { CorrectionsQueue, buildCorrectionEvents } from '@/lib/corrections';
 import { stageSubline, stageTitle } from '@/lib/detect-stages';
 import { isPossibleDuplicate } from '@/lib/duplicates';
@@ -19,10 +21,10 @@ import { RUN_LOST_ERROR_CODE } from '@/lib/jobs';
 import { buildLabels, labelsForDisplay } from '@/lib/labels';
 import { startsExcluded, visibilityNote, visibilityVerdict } from '@/lib/partial-visibility';
 import { removePendingCapture, upsertPendingCapture } from '@/lib/pending-captures';
-import { nextRetryDelayMs } from '@/lib/retry-backoff';
-import { thumbCropRect, thumbResizeWidth } from '@/lib/thumb-crop';
+import { buildItemPayload, effectiveTags } from '@/lib/review-payload';
 import { withSpan } from '@/observability/otel';
 import { inspectCaptureQuality } from '@/services/image-quality';
+import { renderThumbnail } from '@/services/thumbnail';
 import { dispatchShot } from '@/services/walk-capture';
 import {
   type DetectionRow as DetectionStoreRow,
@@ -30,7 +32,7 @@ import {
   useDetectionStore,
 } from '@/stores/detection-screen.store';
 import { getJobsStore, markJobReviewed, patchJob, removeJob } from '@/stores/jobs.store';
-import { Prefs, type ReviewState } from '@/stores/prefs';
+import { Prefs } from '@/stores/prefs';
 import { addServerSuggestions } from '@/stores/suggestions.store';
 import { Feather } from '@expo/vector-icons';
 import { Image } from 'expo-image';
@@ -40,7 +42,6 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
-  AppState,
   Platform,
   Pressable,
   ScrollView,
@@ -96,18 +97,20 @@ export default function DetectionScreen() {
     itemIds: string[];
     rowIds: string[];
   } | null>(null);
+  // Calm failure state: detection could not start (network error / 5xx).
+  const startFailed =
+    phase === 'review' && errorCode === 'detect_start_failed' && rows.length === 0;
+  // The resumed run no longer exists server-side (restart / result TTL):
+  // terminal, and re-runnable from the photo we still hold locally.
+  const runLost = phase === 'review' && errorCode === 'run_not_found' && rows.length === 0;
   // Bumping the nonce relaunches detection (manual Retry / auto-retry).
-  const [retryNonce, setRetryNonce] = useState(0);
+  const { retryNonce, retryNow, resetAttempts } = useStartFailedRetry(startFailed);
   // Honest staged wait display (elapsed-keyed copy, no fake percentages).
   const [elapsedMs, setElapsedMs] = useState(0);
   const startedAtRef = useRef(Date.now());
   const proceedRef = useRef<(() => void) | null>(null);
   const launchedRef = useRef<string | null>(null);
   const undoTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const retryAttemptRef = useRef(0);
-  const restoredRunRef = useRef<string | null>(null);
-  const restoredRowIdsRef = useRef<Set<string>>(new Set());
-  const reviewSnapshotRef = useRef<ReviewState | null>(null);
   const correctionsSentRef = useRef(false);
   const correctionsQueue = useMemo(() => new CorrectionsQueue(prefs), [prefs]);
 
@@ -259,7 +262,7 @@ export default function DetectionScreen() {
             });
             // The capture reached the server — it is no longer at risk.
             prefs.setPendingCaptures(removePendingCapture(prefs.getPendingCaptures(), imageUri));
-            retryAttemptRef.current = 0;
+            resetAttempts();
             await followRun(handle.runId);
           });
         } catch (err) {
@@ -300,7 +303,7 @@ export default function DetectionScreen() {
       // best-effort: clear pending pref so a new mount runs fresh
       prefs.setLastDetectionRunId(null);
     };
-  }, [imageUri, prefs, screenW, retryNonce, resumeRunId]);
+  }, [imageUri, prefs, screenW, retryNonce, resumeRunId, resetAttempts]);
 
   // Possible-duplicate flags (suggest-never-auto): once per run, compare each
   // row's type+color labels against the existing inventory; flagged rows
@@ -334,14 +337,6 @@ export default function DetectionScreen() {
     setDupRowIds(flagged);
   }, [phase, rows.length, runId, resumeRunId, imageUri, items]);
 
-  // Calm failure state: detection could not start (network error / 5xx).
-  const startFailed =
-    phase === 'review' && errorCode === 'detect_start_failed' && rows.length === 0;
-
-  // The resumed run no longer exists server-side (restart / result TTL):
-  // terminal, and re-runnable from the photo we still hold locally.
-  const runLost = phase === 'review' && errorCode === 'run_not_found' && rows.length === 0;
-
   // Reflect the loss on the job itself, so the inbox card shows the same
   // state even if the user backs out without re-running.
   const lostMarkedRef = useRef<string | null>(null);
@@ -368,31 +363,6 @@ export default function DetectionScreen() {
     router.replace('/');
   };
 
-  const retryNow = () => {
-    retryAttemptRef.current += 1;
-    setRetryNonce((n) => n + 1);
-  };
-
-  // Auto-retry with backoff while the calm state is showing, plus an
-  // immediate attempt when the app returns to the foreground.
-  useEffect(() => {
-    if (!startFailed) return;
-    const timer = setTimeout(() => {
-      retryAttemptRef.current += 1;
-      setRetryNonce((n) => n + 1);
-    }, nextRetryDelayMs(retryAttemptRef.current));
-    const sub = AppState.addEventListener('change', (state) => {
-      if (state === 'active') {
-        retryAttemptRef.current += 1;
-        setRetryNonce((n) => n + 1);
-      }
-    });
-    return () => {
-      clearTimeout(timer);
-      sub.remove();
-    };
-  }, [startFailed]);
-
   // The undo window must not fire callbacks after the screen unmounts.
   useEffect(
     () => () => {
@@ -409,44 +379,7 @@ export default function DetectionScreen() {
     return () => clearInterval(timer);
   }, [phase, qaSuspect]);
 
-  // ----- review autosave: leaving mid-review and returning restores exactly.
-  // The snapshot is captured ONCE per resumed run (before the persist effect
-  // starts overwriting the slot) and applied to each row exactly once as it
-  // streams back in — so later user changes are never fought.
-  useEffect(() => {
-    if (!runId || rows.length === 0) return;
-    if (restoredRunRef.current !== runId) {
-      restoredRunRef.current = runId;
-      restoredRowIdsRef.current = new Set();
-      const stored = prefs.getReviewState();
-      reviewSnapshotRef.current = stored && stored.runId === runId ? stored : null;
-      if (reviewSnapshotRef.current) {
-        const savedTags = reviewSnapshotRef.current.tagsByRow;
-        setTagsByRow((prev) => ({ ...prev, ...savedTags }));
-      }
-    }
-    const snapshot = reviewSnapshotRef.current;
-    if (!snapshot) return;
-    const st = getDetectionStore().getState();
-    for (const r of st.rows) {
-      if (restoredRowIdsRef.current.has(r.id)) continue;
-      restoredRowIdsRef.current.add(r.id);
-      if (snapshot.excludedRowIds.includes(r.id) && r.included) st.toggleInclude(r.id);
-      if (snapshot.savedRowIds.includes(r.id) && !r.saved) st.patchRow(r.id, { saved: true });
-    }
-  }, [runId, rows.length, prefs]);
-
-  // Persist the working state on every meaningful change (single MMKV slot,
-  // overwritten by the next run).
-  useEffect(() => {
-    if (!runId || rows.length === 0) return;
-    prefs.setReviewState({
-      runId,
-      tagsByRow,
-      excludedRowIds: rows.filter((r) => !r.included).map((r) => r.id),
-      savedRowIds: rows.filter((r) => r.saved).map((r) => r.id),
-    });
-  }, [runId, rows, tagsByRow, prefs]);
+  useReviewAutosave(runId, rows, tagsByRow, setTagsByRow, prefs);
 
   // ----- per-row tag editing local state ----------------------------------
   // The store keeps the canonical detection (item + box). Tag-string edits
@@ -490,66 +423,20 @@ export default function DetectionScreen() {
     getDetectionStore().getState().toggleInclude(rowId);
   };
 
-  // Pre-rendered tile thumbnail: crop the ORIGINAL full-res capture around
-  // the detection box (+15% context, ~600px JPEG). The processed upload is
-  // only ~1280px wide, so small bbox regions go blurry under the runtime
-  // bbox-zoom transform — a real crop from the source keeps tiles sharp.
-  // Returns null (→ runtime-transform fallback) for full-frame boxes or any
-  // manipulator failure.
-  const makeThumbnail = async (box: DetectionStoreRow['item']['box']): Promise<string | null> => {
-    if (!imageUri) return null;
-    try {
-      const source = await Image.loadAsync(imageUri);
-      try {
-        const rect = thumbCropRect(box, source.width, source.height);
-        if (!rect) return null;
-        const rendered = await ImageManipulator.ImageManipulator.manipulate(source)
-          .crop(rect)
-          .resize({ width: thumbResizeWidth(rect.width) })
-          .renderAsync();
-        const saved = await rendered.saveAsync({
-          compress: 0.8,
-          format: ImageManipulator.SaveFormat.JPEG,
-        });
-        rendered.release();
-        return saved.uri;
-      } finally {
-        source.release();
-      }
-    } catch {
-      return null;
-    }
-  };
+  const makeThumbnail = (box: DetectionStoreRow['item']['box']) =>
+    imageUri ? renderThumbnail(imageUri, box) : Promise.resolve(null);
 
   const onToggleSave = async (row: DetectionStoreRow) => {
     if (!activeHomeId || !processedUri) return;
     if (savingIds.has(row.id) || isBulkSaving) return;
     if (row.saved) return; // saved rows are frozen in this minimal port
-    const tags = (tagsByRow[row.id] ?? [row.item.label, ...row.item.tags]).filter((t) => t.trim());
-    const label = tags[0] ?? row.item.label;
-    if (!label) return;
+    const tags = effectiveTags(row, tagsByRow[row.id]);
+    if (!(tags[0] ?? row.item.label)) return;
     setSavingIds((s) => new Set([...s, row.id]));
     try {
       getDetectionStore().getState().beginSave([row.id]);
       const ids = await addItems([
-        {
-          label,
-          description: row.item.description ?? '',
-          category: row.item.category ?? 'Other',
-          tags,
-          primaryPhotoUri: processedUri,
-          thumbnailUri: await makeThumbnail(row.item.box),
-          attributes: extractAttributes(row.item.tags),
-          labels: buildLabels({
-            label,
-            description: row.item.description ?? '',
-            category: row.item.category ?? 'Other',
-            tags: row.item.tags,
-          }),
-          additionalPhotoUris: [],
-          notes: '',
-          box: row.item.box,
-        },
+        buildItemPayload(row, tags, processedUri, await makeThumbnail(row.item.box)),
       ]);
       if (ids[0]) {
         getDetectionStore().getState().endSave([row.id]);
@@ -578,28 +465,8 @@ export default function DetectionScreen() {
       // bitmap memory; large scenes can carry dozens of rows.
       const payloads = [];
       for (const row of pending) {
-        const tags = (tagsByRow[row.id] ?? [row.item.label, ...row.item.tags]).filter((t) =>
-          t.trim(),
-        );
-        const label = tags[0] ?? row.item.label;
-        payloads.push({
-          label,
-          description: row.item.description ?? '',
-          category: row.item.category ?? 'Other',
-          tags,
-          primaryPhotoUri: processedUri,
-          thumbnailUri: await makeThumbnail(row.item.box),
-          attributes: extractAttributes(row.item.tags),
-          labels: buildLabels({
-            label,
-            description: row.item.description ?? '',
-            category: row.item.category ?? 'Other',
-            tags: row.item.tags,
-          }),
-          additionalPhotoUris: [],
-          notes: '',
-          box: row.item.box,
-        });
+        const tags = effectiveTags(row, tagsByRow[row.id]);
+        payloads.push(buildItemPayload(row, tags, processedUri, await makeThumbnail(row.item.box)));
       }
       const itemIds = await addItems(payloads);
       getDetectionStore().getState().endSave(ids);
@@ -1112,108 +979,7 @@ const VERDICT_COPY: Record<string, { title: string; body: string }> = {
   },
 };
 
-interface QualityCardProps {
-  icon: keyof typeof Feather.glyphMap;
-  /** Defaults to the destructive tone; calmer states pass a muted color. */
-  iconColor?: string;
-  title: string;
-  body: string;
-  primaryLabel: string;
-  onPrimary: () => void;
-  secondaryLabel: string;
-  onSecondary: () => void;
-  colors: ReturnType<typeof useColors>;
-}
-
-function QualityCard({
-  icon,
-  iconColor,
-  title,
-  body,
-  primaryLabel,
-  onPrimary,
-  secondaryLabel,
-  onSecondary,
-  colors,
-}: QualityCardProps) {
-  return (
-    <View
-      style={[styles.qualityCard, { backgroundColor: colors.card, borderColor: colors.border }]}
-    >
-      <Feather name={icon} size={28} color={iconColor ?? colors.destructive} />
-      <Text style={[styles.qualityTitle, { color: colors.foreground }]}>{title}</Text>
-      <Text style={[styles.qualityBody, { color: colors.mutedForeground }]}>{body}</Text>
-      <View style={styles.qualityActions}>
-        <Pressable
-          accessibilityLabel={primaryLabel}
-          onPress={onPrimary}
-          style={({ pressed }) => [
-            styles.qualityPrimaryBtn,
-            { backgroundColor: colors.primary, opacity: pressed ? 0.85 : 1 },
-          ]}
-        >
-          <Text style={[styles.qualityPrimaryLabel, { color: colors.primaryForeground }]}>
-            {primaryLabel}
-          </Text>
-        </Pressable>
-        <Pressable
-          accessibilityLabel={secondaryLabel}
-          onPress={onSecondary}
-          style={({ pressed }) => [styles.qualitySecondaryBtn, { opacity: pressed ? 0.7 : 1 }]}
-        >
-          <Text style={[styles.qualitySecondaryLabel, { color: colors.mutedForeground }]}>
-            {secondaryLabel}
-          </Text>
-        </Pressable>
-      </View>
-    </View>
-  );
-}
-
 const styles = StyleSheet.create({
-  qualityCard: {
-    marginHorizontal: 24,
-    marginTop: 8,
-    padding: 20,
-    borderRadius: 18,
-    borderWidth: 1,
-    alignItems: 'center',
-    gap: 8,
-  },
-  qualityTitle: {
-    fontFamily: 'Fraunces_600SemiBold',
-    fontSize: 16,
-    textAlign: 'center',
-  },
-  qualityBody: {
-    fontFamily: 'Inter_400Regular',
-    fontSize: 13,
-    lineHeight: 19,
-    textAlign: 'center',
-  },
-  qualityActions: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 16,
-    marginTop: 8,
-  },
-  qualityPrimaryBtn: {
-    paddingVertical: 10,
-    paddingHorizontal: 22,
-    borderRadius: 22,
-  },
-  qualityPrimaryLabel: {
-    fontFamily: 'Inter_600SemiBold',
-    fontSize: 14,
-  },
-  qualitySecondaryBtn: {
-    paddingVertical: 10,
-    paddingHorizontal: 8,
-  },
-  qualitySecondaryLabel: {
-    fontFamily: 'Inter_500Medium',
-    fontSize: 13,
-  },
   container: { flex: 1, alignItems: 'center' },
   contentClamp: { flex: 1, width: '100%', alignSelf: 'center' },
   centeredMsg: {
