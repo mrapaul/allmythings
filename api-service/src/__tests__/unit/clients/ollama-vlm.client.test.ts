@@ -139,3 +139,29 @@ describe('OllamaVlmClient think flag', () => {
     expect('think' in body).toBe(false);
   });
 });
+
+describe('OllamaVlmClient context size', () => {
+  beforeEach(() => {
+    vi.stubGlobal('fetch', vi.fn());
+  });
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it('sends num_ctx on generate and on warm so the runner is sized once', async () => {
+    const fetchMock = fetch as unknown as ReturnType<typeof vi.fn>;
+    fetchMock.mockResolvedValue(okResponse('{}'));
+    const client = new OllamaVlmClient({
+      baseUrl: 'http://localhost:11434',
+      model: 'qwen3-vl:4b-instruct',
+      timeoutMs: 50,
+      numCtx: 4096,
+    });
+    await client.generateJson('p', 'img');
+    await client.warm();
+    const gen = JSON.parse(fetchMock.mock.calls[0]?.[1]?.body as string);
+    const warm = JSON.parse(fetchMock.mock.calls[1]?.[1]?.body as string);
+    expect(gen.options.num_ctx).toBe(4096);
+    expect(warm.options.num_ctx).toBe(4096);
+  });
+});

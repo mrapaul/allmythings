@@ -224,6 +224,7 @@ export function createPrecheckService(): PrecheckService {
     model: envConfig.precheckModel,
     timeoutMs: envConfig.precheckTimeoutMs,
     keepAlive: envConfig.precheckKeepAlive,
+    numCtx: envConfig.precheckNumCtx,
     numPredict: PRECHECK_NUM_PREDICT,
     temperature: 0,
     retryDelayMs: 250,

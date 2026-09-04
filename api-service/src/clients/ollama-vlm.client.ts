@@ -34,6 +34,13 @@ export interface OllamaVlmClientOptions {
    * rejects the field on those.
    */
   think?: boolean;
+  /**
+   * Context window to size the runner with. Ollama's default here (32k, times
+   * its parallel slots) made the scheduler predict an overflow and evict the
+   * detector whenever the precheck model loaded. A right-sized window keeps
+   * both resident.
+   */
+  numCtx?: number;
 }
 
 interface OllamaGenerateResponse {
@@ -57,6 +64,7 @@ export class OllamaVlmClient implements VlmClient {
   private readonly temperature: number;
   private readonly retryDelayMs: number;
   private readonly think: boolean | undefined;
+  private readonly numCtx: number | undefined;
 
   constructor(opts: OllamaVlmClientOptions) {
     this.baseUrl = opts.baseUrl.replace(/\/$/, '');
@@ -67,6 +75,7 @@ export class OllamaVlmClient implements VlmClient {
     this.temperature = opts.temperature ?? 0.1;
     this.retryDelayMs = opts.retryDelayMs ?? 5_000;
     this.think = opts.think;
+    this.numCtx = opts.numCtx;
   }
 
   get modelName(): string {
@@ -84,7 +93,11 @@ export class OllamaVlmClient implements VlmClient {
       const resp = await fetch(`${this.baseUrl}/api/generate`, {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ model: this.model, keep_alive: this.keepAlive }),
+        body: JSON.stringify({
+          model: this.model,
+          keep_alive: this.keepAlive,
+          ...(this.numCtx ? { options: { num_ctx: this.numCtx } } : {}),
+        }),
         signal: AbortSignal.timeout(WARM_LOAD_TIMEOUT_MS),
       });
       logger.info({ model: this.model, ok: resp.ok, keepAlive: this.keepAlive }, 'ollama_model_warmed');
@@ -136,6 +149,7 @@ export class OllamaVlmClient implements VlmClient {
       options: {
         temperature: this.temperature,
         num_predict: this.numPredict,
+        ...(this.numCtx ? { num_ctx: this.numCtx } : {}),
       },
     };
 

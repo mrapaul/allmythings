@@ -35,6 +35,8 @@ export interface EnvConfig {
   vlmKeepAlive: string;
   /** VLM_THINK=false|true; unset omits the field (required for non-thinking models). */
   vlmThink: boolean | undefined;
+  /** Runner context for the detector (image + long JSON fits in 16k). */
+  vlmNumCtx: number;
   vlmCoordMode: 'auto' | 'norm' | 'thousand' | 'pixel';
   // Text embeddings (Ollama /api/embed) — power the vocabulary-free semantic
   // layer: same-kind label matching during dedupe, and /v1/vocab/match.
@@ -84,6 +86,8 @@ export interface EnvConfig {
   precheckTimeoutMs: number;
   precheckMaxDimension: number;
   precheckKeepAlive: string;
+  /** Runner context for the precheck (one small frame, a one-line answer). */
+  precheckNumCtx: number;
 
 }
 
@@ -114,6 +118,7 @@ export const envConfig: EnvConfig = {
   // the eval fixtures, so the old 120s ceiling produced spurious timeouts.
   vlmTimeoutMs: parseInt(process.env.VLM_TIMEOUT_MS || '300000', 10),
   vlmKeepAlive: process.env.VLM_KEEP_ALIVE || '1h',
+  vlmNumCtx: parseInt(process.env.VLM_NUM_CTX || '16384', 10),
   vlmThink:
     process.env.VLM_THINK === 'false' ? false : process.env.VLM_THINK === 'true' ? true : undefined,
   vlmCoordMode: (['auto', 'norm', 'thousand', 'pixel'] as const).includes(
@@ -167,4 +172,5 @@ export const envConfig: EnvConfig = {
   // Memory note: 4B holds ~3.3GB next to the detector's ~20GB of 48GB, so
   // keeping it warm cannot evict the detection model mid-pipeline.
   precheckKeepAlive: process.env.PRECHECK_KEEP_ALIVE || '30m',
+  precheckNumCtx: parseInt(process.env.PRECHECK_NUM_CTX || '4096', 10),
 };

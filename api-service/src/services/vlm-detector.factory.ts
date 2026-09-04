@@ -36,6 +36,7 @@ function createLocalVlmClient(): VlmClient {
     timeoutMs: envConfig.vlmTimeoutMs,
     keepAlive: envConfig.vlmKeepAlive,
     think: envConfig.vlmThink,
+    numCtx: envConfig.vlmNumCtx,
   });
 }
 
@@ -133,5 +134,6 @@ export function warmDetectorModel(): void {
     timeoutMs: envConfig.vlmTimeoutMs,
     keepAlive: envConfig.vlmKeepAlive,
     think: envConfig.vlmThink,
+    numCtx: envConfig.vlmNumCtx,
   }).warm();
 }
