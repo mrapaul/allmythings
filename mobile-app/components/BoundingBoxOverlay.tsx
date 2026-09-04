@@ -1,6 +1,6 @@
 import { useColors } from '@/hooks/useColors';
 import { useEffect } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 import Animated, {
   Easing,
   useAnimatedStyle,
@@ -34,6 +34,14 @@ interface BoundingBoxOverlayProps {
   viewHeight: number;
   boxes: DetectedBox[];
   isLoading: boolean;
+  /**
+   * The one item drawn in full (strong box + label). Every other box is a
+   * faint outline so the photo itself stays readable: twenty labels drawn
+   * at once on a phone-sized frame hide the very objects they name.
+   */
+  highlightedId?: string | null;
+  /** Tap a box on the photo to make it the highlighted item. */
+  onPressBox?: (id: string) => void;
 }
 
 export function BoundingBoxOverlay({
@@ -41,6 +49,8 @@ export function BoundingBoxOverlay({
   viewHeight,
   boxes,
   isLoading,
+  highlightedId = null,
+  onPressBox,
 }: BoundingBoxOverlayProps) {
   const colors = useColors();
 
@@ -81,6 +91,7 @@ export function BoundingBoxOverlay({
             const height = box.box.height * viewHeight;
             const saved = !!box.saved;
             const stroke = saved ? colors.success : colors.primary;
+            const highlighted = highlightedId === box.id;
 
             return (
               <AnimatedRect
@@ -91,15 +102,38 @@ export function BoundingBoxOverlay({
                 height={height}
                 index={index}
                 color={stroke}
-                strong={saved}
+                strong={highlighted}
+                dimmed={highlightedId !== null && !highlighted}
               />
             );
           })}
       </Svg>
 
       {!isLoading &&
-        boxes.map((box, index) => {
+        onPressBox &&
+        boxes.map((box) => {
           if (!box.included) return null;
+          return (
+            <Pressable
+              key={`hit-${box.id}`}
+              accessibilityRole="button"
+              accessibilityLabel={`Highlight ${box.label}`}
+              testID={`box-hit-${box.id}`}
+              onPress={() => onPressBox(box.id)}
+              style={{
+                position: 'absolute',
+                left: box.box.x * viewWidth,
+                top: box.box.y * viewHeight,
+                width: box.box.width * viewWidth,
+                height: box.box.height * viewHeight,
+              }}
+            />
+          );
+        })}
+
+      {!isLoading &&
+        boxes.map((box) => {
+          if (!box.included || box.id !== highlightedId) return null;
           const x = box.box.x * viewWidth;
           const y = box.box.y * viewHeight;
           const saved = !!box.saved;
@@ -111,7 +145,7 @@ export function BoundingBoxOverlay({
               x={x}
               y={y}
               label={saved ? `✓ ${box.label}` : box.label}
-              index={index}
+              index={0}
               color={fill}
               textColor={colors.primaryForeground}
             />
@@ -143,14 +177,17 @@ interface AnimatedRectProps {
   index: number;
   color: string;
   strong: boolean;
+  /** Another box is highlighted: recede to a faint outline. */
+  dimmed: boolean;
 }
 
-function AnimatedRect({ x, y, width, height, index, color, strong }: AnimatedRectProps) {
+function AnimatedRect({ x, y, width, height, index, color, strong, dimmed }: AnimatedRectProps) {
   const opacity = useSharedValue(0);
 
   useEffect(() => {
-    opacity.value = withDelay(index * 150, withTiming(1, { duration: 400 }));
-  }, [index, opacity]);
+    const target = dimmed ? 0.35 : strong ? 1 : 0.75;
+    opacity.value = withDelay(index * 60, withTiming(target, { duration: 300 }));
+  }, [index, opacity, dimmed, strong]);
 
   const animatedProps = useAnimatedStyle(() => ({
     opacity: opacity.value,
@@ -163,9 +200,9 @@ function AnimatedRect({ x, y, width, height, index, color, strong }: AnimatedRec
       width={width}
       height={height}
       stroke={color}
-      strokeWidth={strong ? 3.5 : 2}
+      strokeWidth={strong ? 3 : 1.5}
       fill={color}
-      fillOpacity={strong ? 0.22 : 0.1}
+      fillOpacity={strong ? 0.18 : 0}
       rx={8}
       ry={8}
       animatedProps={animatedProps as unknown as Record<string, unknown>}

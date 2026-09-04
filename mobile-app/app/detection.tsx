@@ -69,7 +69,7 @@ export default function DetectionScreen() {
   const router = useRouter();
   const colors = useColors();
   const insets = useSafeAreaInsets();
-  const { gutter, contentMaxWidth, isCompact, width: screenW } = useResponsive();
+  const { gutter, contentMaxWidth, isCompact, width: screenW, height: screenH } = useResponsive();
   const { items, addItems, deleteItems } = useInventory();
   const { activeHomeId } = useHomes();
 
@@ -97,6 +97,8 @@ export default function DetectionScreen() {
   /** Which fault the pre-upload gate found, in the user's words. */
   const [qaAdvice, setQaAdvice] = useState<string | null>(null);
   const [verdictDismissed, setVerdictDismissed] = useState(false);
+  /** The one detection drawn in full on the photo (tap a box or a row thumbnail). */
+  const [highlightedId, setHighlightedId] = useState<string | null>(null);
   // Post-save undo window (2b/4): count + created item ids + review row ids.
   /** A save that threw (database/photo error): shown, never swallowed. */
   const [saveError, setSaveError] = useState<string | null>(null);
@@ -160,6 +162,7 @@ export default function DetectionScreen() {
     setQaSuspect(false);
     setQaAdvice(null);
     setVerdictDismissed(false);
+    setHighlightedId(null);
     setSaveToast(null);
     correctionsSentRef.current = false;
     startedAtRef.current = Date.now();
@@ -638,9 +641,11 @@ export default function DetectionScreen() {
   const rejectionCopy = serverRejected ? VERDICT_COPY[scene.verdict] : null;
 
   // Size the frame to the photo's real aspect ratio (contain, not cover) so
-  // normalized detection boxes map 1:1 onto the rendered pixels.
-  const frameMaxW = Math.min(screenW - gutter * 2, isCompact ? 300 : 380);
-  const frameMaxH = isCompact ? 320 : 420;
+  // normalized detection boxes map 1:1 onto the rendered pixels. The photo
+  // takes the full width and up to ~55% of the screen: on a phone this is the
+  // difference between a thumbnail and a picture you can actually inspect.
+  const frameMaxW = Math.min(screenW - gutter * 2, isCompact ? 420 : 520);
+  const frameMaxH = Math.round(screenH * (isCompact ? 0.55 : 0.6));
   const frameScale = Math.min(frameMaxW / imgWH.w, frameMaxH / imgWH.h);
   const photoMax = Math.max(1, Math.round(imgWH.w * frameScale));
   const photoH = Math.max(1, Math.round(imgWH.h * frameScale));
@@ -738,6 +743,8 @@ export default function DetectionScreen() {
                 viewWidth={photoMax}
                 viewHeight={photoH}
                 isLoading={isLoading || (isStreaming && rows.length === 0)}
+                highlightedId={highlightedId}
+                onPressBox={(id) => setHighlightedId((cur) => (cur === id ? null : id))}
                 boxes={rows.map((r) => ({
                   id: r.id,
                   label: r.item.label,
@@ -872,6 +879,10 @@ export default function DetectionScreen() {
                       }
                       index={idx}
                       autoFocusFirst={autoFocusByRow[row.id] ?? false}
+                      isHighlighted={highlightedId === row.id}
+                      onPressThumb={() =>
+                        setHighlightedId((cur) => (cur === row.id ? null : row.id))
+                      }
                       onChangeTag={(i, v) => onChangeTag(row.id, i, v)}
                       onAddTag={() => onAddTag(row.id)}
                       onRemoveTag={(i) => onRemoveTag(row.id, i)}

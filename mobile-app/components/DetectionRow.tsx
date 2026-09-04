@@ -18,6 +18,10 @@ type Props = {
   isSaving?: boolean;
   index: number;
   autoFocusFirst?: boolean;
+  /** This row's box is the one drawn in full on the photo. */
+  isHighlighted?: boolean;
+  /** Tap the thumbnail to highlight this item on the photo. */
+  onPressThumb?: () => void;
   onChangeTag: (tagIndex: number, value: string) => void;
   onAddTag: () => void;
   onRemoveTag: (tagIndex: number) => void;
@@ -40,6 +44,8 @@ export function DetectionRow({
   isSaving = false,
   index,
   autoFocusFirst,
+  isHighlighted = false,
+  onPressThumb,
   onChangeTag,
   onAddTag,
   onRemoveTag,
@@ -84,15 +90,23 @@ export function DetectionRow({
           },
         ]}
       >
-        <BoxThumbnail
-          uri={photoUri}
-          imageWidth={imageWidth}
-          imageHeight={imageHeight}
-          box={box}
-          size={64}
-          borderColor={isSaved ? colors.success : colors.border}
-          dimmed={isSaved}
-        />
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel={isHighlighted ? 'Clear highlight' : 'Show on photo'}
+          testID={`row-thumb-${index}`}
+          onPress={onPressThumb}
+          disabled={!onPressThumb}
+        >
+          <BoxThumbnail
+            uri={photoUri}
+            imageWidth={imageWidth}
+            imageHeight={imageHeight}
+            box={box}
+            size={64}
+            borderColor={isHighlighted ? colors.primary : isSaved ? colors.success : colors.border}
+            dimmed={isSaved}
+          />
+        </Pressable>
 
         {/* Label chips */}
         <View style={styles.body}>
