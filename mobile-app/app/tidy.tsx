@@ -156,7 +156,7 @@ export default function TidyScreen() {
                 { backgroundColor: colors.primary, opacity: merging ? 0.6 : pressed ? 0.85 : 1 },
               ]}
             >
-              <Feather name="git-merge" size={16} color={colors.primaryForeground} />
+              <Feather name="layers" size={16} color={colors.primaryForeground} />
               <Text style={[styles.primaryBtnText, { color: colors.primaryForeground }]}>
                 Merge
               </Text>

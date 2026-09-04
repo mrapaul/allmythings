@@ -103,7 +103,11 @@ export default function ProfileScreen() {
             { backgroundColor: colors.primary, opacity: pressed ? 0.85 : 1 },
           ]}
         >
-          <Feather name={saved ? 'check' : 'save'} size={16} color={colors.primaryForeground} />
+          <Feather
+            name={saved ? 'check-circle' : 'check'}
+            size={16}
+            color={colors.primaryForeground}
+          />
           <Text style={[styles.saveText, { color: colors.primaryForeground }]}>
             {saved ? 'Saved' : 'Save profile'}
           </Text>

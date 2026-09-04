@@ -516,7 +516,7 @@ export default function HomeScreen() {
                         },
                       ]}
                     >
-                      <Feather name="git-merge" size={15} color={colors.mutedForeground} />
+                      <Feather name="layers" size={15} color={colors.mutedForeground} />
                       <View style={[styles.countDot, { backgroundColor: colors.primary }]}>
                         <Text style={[styles.countDotText, { color: colors.primaryForeground }]}>
                           {tidyCount}
