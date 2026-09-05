@@ -37,6 +37,7 @@ import {
 } from './services/vlm-detector.factory';
 import { vocabRoute } from './routes/vocab.route';
 import { type PrecheckService, createPrecheckService } from './services/precheck.service';
+import { keepModelsWarm } from './utils/keep-warm';
 import { VlmRunStore } from './services/vlm-run-store';
 import { detectedItemSchema } from './schemas/detected-item.schema';
 
@@ -185,9 +186,13 @@ async function start(): Promise<void> {
     const app = await buildApp();
     const address = await app.listen({ port: envConfig.port, host: '0.0.0.0' });
     logger.info({ address, port: envConfig.port, nodeEnv: envConfig.nodeEnv }, 'Server started');
-    if (envConfig.detector === 'vlm' && envConfig.ollamaEnabled) warmDetectorModel();
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    if (envConfig.ollamaEnabled) ((app as any).precheckService as PrecheckService).warm();
+    if (envConfig.ollamaEnabled) {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const precheck = (app as any).precheckService as PrecheckService;
+      const warmers = [() => precheck.warm()];
+      if (envConfig.detector === 'vlm') warmers.push(warmDetectorModel);
+      keepModelsWarm(warmers, envConfig.modelRewarmMs);
+    }
 
     const stopBonjour = advertiseService(envConfig.port);
     logger.info({ name: 'allmythings-server', port: envConfig.port }, 'Bonjour advertisement started');
