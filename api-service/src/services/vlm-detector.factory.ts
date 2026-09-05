@@ -37,6 +37,7 @@ function createLocalVlmClient(): VlmClient {
     keepAlive: envConfig.vlmKeepAlive,
     think: envConfig.vlmThink,
     numCtx: envConfig.vlmNumCtx,
+    numPredict: envConfig.vlmNumPredict,
   });
 }
 
@@ -74,11 +75,11 @@ export function createEmbeddingsService(): EmbeddingsService {
 export function createPossessionJudge(): PossessionJudge {
   return new PossessionJudge({
     baseUrl: envConfig.ollamaBaseUrl,
-    model: envConfig.ollamaModel,
+    model: envConfig.possessionJudgeModel,
     timeoutMs: envConfig.possessionJudgeTimeoutMs,
     enabled: envConfig.possessionJudgeEnabled,
     think: envConfig.vlmThink,
-    numCtx: envConfig.vlmNumCtx,
+    numCtx: envConfig.possessionJudgeNumCtx,
   });
 }
 

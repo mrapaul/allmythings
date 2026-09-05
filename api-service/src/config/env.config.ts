@@ -37,6 +37,8 @@ export interface EnvConfig {
   vlmThink: boolean | undefined;
   /** Runner context for the detector (image + long JSON fits in 16k). */
   vlmNumCtx: number;
+  /** Max tokens per detector pass; a rambling dense-scene pass otherwise runs to the cap for minutes. */
+  vlmNumPredict: number;
   /** Re-warm cadence for resident models; 0 disables. Must beat the shortest keep_alive. */
   modelRewarmMs: number;
   vlmCoordMode: 'auto' | 'norm' | 'thousand' | 'pixel';
@@ -49,6 +51,9 @@ export interface EnvConfig {
   // Fallback LLM judge for items the detector model left without is_possession.
   possessionJudgeEnabled: boolean;
   possessionJudgeTimeoutMs: number;
+  /** Judge model; defaults to the detector. The small precheck model answers in ~1 s and never touches the detector's runner. */
+  possessionJudgeModel: string;
+  possessionJudgeNumCtx: number;
   owlv2Url: string;
   hybridEnabled: boolean;
   googleProjectId: string;
@@ -121,6 +126,7 @@ export const envConfig: EnvConfig = {
   vlmTimeoutMs: parseInt(process.env.VLM_TIMEOUT_MS || '300000', 10),
   vlmKeepAlive: process.env.VLM_KEEP_ALIVE || '1h',
   vlmNumCtx: parseInt(process.env.VLM_NUM_CTX || '16384', 10),
+  vlmNumPredict: parseInt(process.env.VLM_NUM_PREDICT || '8192', 10),
   modelRewarmMs: parseInt(process.env.MODEL_REWARM_MS || String(25 * 60 * 1000), 10),
   vlmThink:
     process.env.VLM_THINK === 'false' ? false : process.env.VLM_THINK === 'true' ? true : undefined,
@@ -135,6 +141,11 @@ export const envConfig: EnvConfig = {
   embeddingCacheSize: parseInt(process.env.EMBEDDING_CACHE_SIZE || '4000', 10),
   possessionJudgeEnabled: process.env.POSSESSION_JUDGE_ENABLED !== 'false',
   possessionJudgeTimeoutMs: parseInt(process.env.POSSESSION_JUDGE_TIMEOUT_MS || '20000', 10),
+  possessionJudgeModel: process.env.POSSESSION_JUDGE_MODEL || process.env.OLLAMA_MODEL || 'qwen2.5vl:7b',
+  possessionJudgeNumCtx: parseInt(
+    process.env.POSSESSION_JUDGE_NUM_CTX || process.env.VLM_NUM_CTX || '16384',
+    10,
+  ),
   owlv2Url: process.env.OWLV2_URL || 'http://localhost:14001',
   hybridEnabled: process.env.HYBRID_ENABLED === 'true',
   googleProjectId: process.env.GOOGLE_CLOUD_PROJECT_ID || '',

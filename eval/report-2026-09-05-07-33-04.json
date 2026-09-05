@@ -1,0 +1,138 @@
+{
+  "api:production-20260905": {
+    "perFixture": [
+      {
+        "fixture": "1776173015803",
+        "recall": 83.3,
+        "itemCount": 25,
+        "expectedMin": 8,
+        "expectedMax": 15,
+        "countWithinRange": false,
+        "matchedCount": 10,
+        "missed": [
+          "wooden stool (plant support)",
+          "dark navy couch / sofa"
+        ],
+        "elapsedMs": 87998,
+        "attempts": 1
+      },
+      {
+        "fixture": "1776174188547",
+        "recall": 63.6,
+        "itemCount": 28,
+        "expectedMin": 7,
+        "expectedMax": 13,
+        "countWithinRange": false,
+        "matchedCount": 7,
+        "missed": [
+          "small snake plant",
+          "gold wire plant stand",
+          "wooden stool (plant support)",
+          "dark navy couch / sofa"
+        ],
+        "elapsedMs": 116704,
+        "attempts": 1
+      },
+      {
+        "fixture": "1776175427607",
+        "recall": 85.7,
+        "itemCount": 37,
+        "expectedMin": 10,
+        "expectedMax": 16,
+        "countWithinRange": false,
+        "matchedCount": 12,
+        "missed": [
+          "black throw blanket",
+          "wooden stool"
+        ],
+        "elapsedMs": 134645,
+        "attempts": 1
+      },
+      {
+        "fixture": "1776176976030",
+        "recall": 84.6,
+        "itemCount": 23,
+        "expectedMin": 8,
+        "expectedMax": 14,
+        "countWithinRange": false,
+        "matchedCount": 11,
+        "missed": [
+          "black throw blanket",
+          "wooden stool"
+        ],
+        "elapsedMs": 1119105,
+        "attempts": 1
+      },
+      {
+        "fixture": "bedroom_01",
+        "recall": 64.3,
+        "itemCount": 38,
+        "expectedMin": 9,
+        "expectedMax": 18,
+        "countWithinRange": false,
+        "matchedCount": 9,
+        "missed": [
+          "pink ceramic vases",
+          "black round tray table",
+          "framed artwork",
+          "grey curtains",
+          "built-in oven"
+        ],
+        "elapsedMs": 217993,
+        "attempts": 1
+      },
+      {
+        "fixture": "dining_room_01",
+        "recall": 87.5,
+        "itemCount": 25,
+        "expectedMin": 5,
+        "expectedMax": 10,
+        "countWithinRange": false,
+        "matchedCount": 7,
+        "missed": [
+          "black fabric sofa"
+        ],
+        "elapsedMs": 121759,
+        "attempts": 1
+      },
+      {
+        "fixture": "living_room_02",
+        "recall": 83.3,
+        "itemCount": 69,
+        "expectedMin": 12,
+        "expectedMax": 24,
+        "countWithinRange": false,
+        "matchedCount": 15,
+        "missed": [
+          "dark grey daybed / futon",
+          "laptop computer",
+          "hanging macrame planter with pothos"
+        ],
+        "elapsedMs": 714062,
+        "attempts": 1
+      },
+      {
+        "fixture": "mockup_living_01",
+        "recall": 81.8,
+        "itemCount": 19,
+        "expectedMin": 8,
+        "expectedMax": 14,
+        "countWithinRange": false,
+        "matchedCount": 9,
+        "missed": [
+          "framed abstract art print",
+          "marble decorative cube"
+        ],
+        "elapsedMs": 102976,
+        "attempts": 1
+      }
+    ],
+    "aggregate": {
+      "avgRecall": 79.3,
+      "avgItems": 33,
+      "avgLatencyMs": 326905,
+      "failures": 0,
+      "n": 8
+    }
+  }
+}
