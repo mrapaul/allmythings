@@ -126,7 +126,7 @@ export const envConfig: EnvConfig = {
   vlmTimeoutMs: parseInt(process.env.VLM_TIMEOUT_MS || '300000', 10),
   vlmKeepAlive: process.env.VLM_KEEP_ALIVE || '1h',
   vlmNumCtx: parseInt(process.env.VLM_NUM_CTX || '16384', 10),
-  vlmNumPredict: parseInt(process.env.VLM_NUM_PREDICT || '8192', 10),
+  vlmNumPredict: parseInt(process.env.VLM_NUM_PREDICT || '4096', 10),
   modelRewarmMs: parseInt(process.env.MODEL_REWARM_MS || String(25 * 60 * 1000), 10),
   vlmThink:
     process.env.VLM_THINK === 'false' ? false : process.env.VLM_THINK === 'true' ? true : undefined,
