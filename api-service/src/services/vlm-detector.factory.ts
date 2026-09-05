@@ -78,6 +78,7 @@ export function createPossessionJudge(): PossessionJudge {
     timeoutMs: envConfig.possessionJudgeTimeoutMs,
     enabled: envConfig.possessionJudgeEnabled,
     think: envConfig.vlmThink,
+    numCtx: envConfig.vlmNumCtx,
   });
 }
 

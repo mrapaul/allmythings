@@ -33,6 +33,13 @@ export interface PossessionJudgeOptions {
   timeoutMs?: number;
   /** Same semantics as OllamaVlmClientOptions.think. */
   think?: boolean;
+  /**
+   * MUST match the detector's num_ctx: Ollama only reuses a loaded runner
+   * when its context size matches, so a judge call with the 32k default
+   * reloaded the 20 GB detector at 32k, evicted the precheck, and the next
+   * tile call reloaded it again at 16k — minutes of thrash per photo.
+   */
+  numCtx?: number;
   /** Max distinct labels memoized. */
   cacheSize?: number;
   /** Max labels asked about in one call. */
@@ -68,6 +75,7 @@ export class PossessionJudge {
   private readonly model: string;
   private readonly timeoutMs: number;
   private readonly think: boolean | undefined;
+  private readonly numCtx: number | undefined;
   private readonly cacheSize: number;
   private readonly batchSize: number;
   private readonly failureThreshold: number;
@@ -88,6 +96,7 @@ export class PossessionJudge {
     this.model = opts.model;
     this.timeoutMs = opts.timeoutMs ?? DEFAULT_TIMEOUT_MS;
     this.think = opts.think;
+    this.numCtx = opts.numCtx;
     this.cacheSize = opts.cacheSize ?? DEFAULT_CACHE_SIZE;
     this.batchSize = opts.batchSize ?? DEFAULT_BATCH_SIZE;
     this.failureThreshold = opts.failureThreshold ?? DEFAULT_FAILURE_THRESHOLD;
@@ -179,7 +188,7 @@ export class PossessionJudge {
           prompt: buildJudgePrompt(batch),
           stream: false,
           format: 'json',
-          options: { temperature: 0 },
+          options: { temperature: 0, ...(this.numCtx ? { num_ctx: this.numCtx } : {}) },
         }),
         signal: controller.signal,
       });

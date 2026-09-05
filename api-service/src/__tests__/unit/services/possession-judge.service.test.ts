@@ -41,7 +41,13 @@ afterEach(() => {
 });
 
 const judge = (
-  overrides: Partial<{ batchSize: number; cacheSize: number; enabled: boolean; failureThreshold: number }> = {},
+  overrides: Partial<{
+    batchSize: number;
+    cacheSize: number;
+    enabled: boolean;
+    failureThreshold: number;
+    numCtx: number;
+  }> = {},
 ) =>
   new PossessionJudge({
     baseUrl: BASE_URL,
@@ -129,6 +135,14 @@ describe('PossessionJudge', () => {
     const out = await judge().judge(['Plaster Wall', 'yellow armchair']);
     expect(out.get('plaster wall')).toBe(false);
     expect(out.get('yellow armchair')).toBe(true);
+  });
+
+  it('sends the detector-sized num_ctx so Ollama reuses the loaded runner', async () => {
+    const fetchMock = okFetch();
+    globalThis.fetch = fetchMock as unknown as typeof globalThis.fetch;
+    await judge({ numCtx: 16384 }).judge(['yellow armchair']);
+    const body = JSON.parse(fetchMock.mock.calls[0]?.[1]?.body as string);
+    expect(body.options.num_ctx).toBe(16384);
   });
 
   it('memoizes verdicts per distinct label string', async () => {
