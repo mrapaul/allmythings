@@ -1,3 +1,9 @@
+import {
+  dHash,
+  initialOverlapState,
+  pushLiveFrame,
+  rememberShot as rememberShotHash,
+} from '@/lib/frame-fingerprint';
 import { analyzeQuality } from '@/lib/image-quality';
 import {
   type CoachHint,
@@ -81,6 +87,8 @@ export interface LiveQuality {
    * borrowed hint slot — arbitration lives in lib/live-coaching.
    */
   injectServerAdvice: (message: string) => void;
+  /** A shot was taken: remember its look so a return to the area is noticed. */
+  rememberShot: (uri: string) => Promise<void>;
 }
 
 /** Deletes a sampled frame; failures are irrelevant to the user. */
@@ -113,6 +121,17 @@ export function useLiveQuality({
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const motionRef = useRef<CoachHintKind | null>(null);
   const focusedRef = useRef(true);
+  const overlapRef = useRef(initialOverlapState());
+
+  const rememberShot = useCallback(async (uri: string) => {
+    try {
+      const prepared = await prepareJpegBase64(uri, ANALYSIS_WIDTH);
+      const sample = prepared?.base64 ? decodeToGrayscale(base64ToBytes(prepared.base64)) : null;
+      if (sample) overlapRef.current = rememberShotHash(overlapRef.current, dHash(sample));
+    } catch {
+      // Overlap memory is advice; a shot we could not fingerprint is simply not remembered.
+    }
+  }, []);
 
   const injectServerAdvice = useCallback((message: string) => {
     stateRef.current = pushServerAdvice(stateRef.current, message);
@@ -227,8 +246,12 @@ export function useLiveQuality({
             )} contrast=${report.contrast.toFixed(0)} -> ${report.verdict}`,
           );
         }
+        // Overlap memory: only worth mentioning on a frame that is otherwise fine.
+        const live = pushLiveFrame(overlapRef.current, dHash(sample));
+        overlapRef.current = live.state;
+        const advice = report.verdict === 'ok' && live.overlap ? 'overlap' : report.verdict;
         // Motion outranks image faults; see PRIORITY in lib/live-coaching.
-        observe(motionRef.current ?? report.verdict);
+        observe(motionRef.current ?? advice);
       } catch {
         // A dropped sample is not a signal about the scene — stay quiet.
       } finally {
@@ -269,5 +292,13 @@ export function useLiveQuality({
     return () => sub.remove();
   }, []);
 
-  return { hint, ready, signals, suspendForCapture, resumeAfterCapture, injectServerAdvice };
+  return {
+    hint,
+    ready,
+    signals,
+    suspendForCapture,
+    resumeAfterCapture,
+    injectServerAdvice,
+    rememberShot,
+  };
 }

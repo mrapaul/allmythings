@@ -286,3 +286,13 @@ describe('framing guidance from the precheck', () => {
     );
   });
 });
+
+describe('overlap memory hint', () => {
+  it('appears once corroborated and yields to a real fault', () => {
+    const state = feed(repeat('overlap', APPEAR_AFTER));
+    expect(currentHint(state)?.message).toBe('You already shot this area');
+    expect(isFrameReady(state)).toBe(false);
+    const dark = feed(repeat('too_dark', APPEAR_AFTER), state);
+    expect(currentHint(dark)?.kind).toBe('too_dark');
+  });
+});

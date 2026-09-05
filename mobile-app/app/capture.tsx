@@ -106,11 +106,18 @@ export default function CaptureScreen() {
   };
 
   // ----- live coaching ------------------------------------------------------
-  const { hint, ready, signals, suspendForCapture, resumeAfterCapture, injectServerAdvice } =
-    useLiveQuality({
-      camera: cameraRef,
-      enabled: cameraReady && !isCapturing,
-    });
+  const {
+    hint,
+    ready,
+    signals,
+    suspendForCapture,
+    resumeAfterCapture,
+    injectServerAdvice,
+    rememberShot,
+  } = useLiveQuality({
+    camera: cameraRef,
+    enabled: cameraReady && !isCapturing,
+  });
 
   const { count, uncertain, available } = useLiveCount({
     camera: cameraRef,
@@ -129,6 +136,7 @@ export default function CaptureScreen() {
       if (photo?.uri) {
         dismissIntro();
         setShotCount((n) => n + 1);
+        void rememberShot(photo.uri);
         // Narrate + show the frame flying onto the reel, then dispatch.
         shotKeyRef.current += 1;
         const key = `shot-${shotKeyRef.current}`;

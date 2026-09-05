@@ -12,7 +12,7 @@ import { type QualityVerdict, adviceFor } from './image-quality';
  * disappearing is: a wrong hint costs more than a late one.
  */
 
-export type CoachHintKind = QualityVerdict | 'unsteady' | 'tilted';
+export type CoachHintKind = QualityVerdict | 'unsteady' | 'tilted' | 'overlap';
 
 export interface CoachHint {
   kind: Exclude<CoachHintKind, 'ok'> | 'server_advice';
@@ -45,6 +45,9 @@ export const MOTION_COPY = {
   unsteady: 'Hold still a moment',
   tilted: 'Straighten up a little',
 } as const;
+
+/** Overlap memory (lib/frame-fingerprint): the viewfinder is back on a shot area. */
+export const OVERLAP_COPY = 'You already shot this area';
 
 export interface MotionSample {
   /** Accelerometer magnitude in g (sqrt(x²+y²+z²)). */
@@ -89,11 +92,14 @@ const PRIORITY: Array<Exclude<CoachHintKind, 'ok'>> = [
   'too_bright',
   'too_blurry',
   'low_detail',
+  // Advice, not a fault: only shown when nothing else needs fixing.
+  'overlap',
 ];
 
 /** Copy comes from the post-capture gate so the two can never contradict. */
 export function messageFor(kind: Exclude<CoachHintKind, 'ok'>): string {
   if (kind === 'unsteady' || kind === 'tilted') return MOTION_COPY[kind];
+  if (kind === 'overlap') return OVERLAP_COPY;
   return adviceFor(kind) ?? '';
 }
 
