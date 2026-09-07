@@ -10,6 +10,25 @@
 /** Reachable only while the phone is tethered (`adb reverse tcp:14000`). */
 export const USB_TUNNEL_URL = 'http://127.0.0.1:14000';
 
+/**
+ * Android hands the tethered computer a DHCP address on these subnets — the
+ * phone itself is always the .129 gateway. When the phone's VPN has swallowed
+ * the Wi-Fi LAN, this link still reaches the Mac, so scanning it is the last
+ * resort before declaring the server unreachable.
+ */
+export const TETHER_SUBNETS = ['192.168.42', '192.168.43'] as const;
+export const TETHER_HOST_RANGE = { first: 2, last: 128 } as const;
+
+export function tetheringCandidates(port = 14000): string[] {
+  const out: string[] = [];
+  for (const subnet of TETHER_SUBNETS) {
+    for (let host = TETHER_HOST_RANGE.first; host <= TETHER_HOST_RANGE.last; host++) {
+      out.push(`http://${subnet}.${host}:${port}`);
+    }
+  }
+  return out;
+}
+
 export interface CandidateSources {
   /** What the user typed in Settings, if anything. Tried first. */
   override: string | null;

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { USB_TUNNEL_URL, candidateUrls } from './server-candidates';
+import { USB_TUNNEL_URL, candidateUrls, tetheringCandidates } from './server-candidates';
 
 describe('candidateUrls', () => {
   it('tries the user setting first but always keeps a fallback behind it', () => {
@@ -36,5 +36,16 @@ describe('candidateUrls', () => {
     expect(candidateUrls({ override: null, discovered: null, extraDefault: null })).toEqual([
       USB_TUNNEL_URL,
     ]);
+  });
+});
+
+describe('tetheringCandidates', () => {
+  it('covers both Android tethering subnets and skips the phone itself', () => {
+    const urls = tetheringCandidates();
+    expect(urls).toContain('http://192.168.42.2:14000');
+    expect(urls).toContain('http://192.168.43.128:14000');
+    // .129 is the phone acting as gateway — never the server.
+    expect(urls).not.toContain('http://192.168.42.129:14000');
+    expect(urls).toHaveLength(254);
   });
 });

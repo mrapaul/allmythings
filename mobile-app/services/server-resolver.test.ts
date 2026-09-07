@@ -42,9 +42,33 @@ describe('resolveReachableServer', () => {
     const url = await resolveReachableServer(prefs, {
       verify: async () => false,
       extraDefault: 'http://lan:14000',
+      scanTethering: false,
     });
     expect(url).toBeNull();
     // A dead address is not promoted to last-known-good.
     expect(prefs.state.discovered).toBe('http://known:14000');
+  });
+
+  it('finds the tethered computer when the Wi-Fi LAN is cut off', async () => {
+    const prefs = fakePrefs(null, null);
+    const verify = vi.fn(async (u: string) => u === 'http://192.168.42.77:14000');
+    const url = await resolveReachableServer(prefs, {
+      verify,
+      extraDefault: 'http://lan:14000',
+      concurrency: 32,
+    });
+    expect(url).toBe('http://192.168.42.77:14000');
+    expect(prefs.state.discovered).toBe('http://192.168.42.77:14000');
+  });
+
+  it('does not scan the cable subnets when told not to', async () => {
+    const verify = vi.fn(async (_url: string) => false);
+    await resolveReachableServer(fakePrefs(null, null), {
+      verify,
+      extraDefault: 'http://lan:14000',
+      scanTethering: false,
+    });
+    const probed = verify.mock.calls.map((c) => String(c[0] ?? ''));
+    expect(probed.some((u) => u.includes('192.168.4'))).toBe(false);
   });
 });
