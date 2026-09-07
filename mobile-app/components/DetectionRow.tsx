@@ -20,6 +20,13 @@ type Props = {
   autoFocusFirst?: boolean;
   /** This row's box is the one drawn in full on the photo. */
   isHighlighted?: boolean;
+  /**
+   * How many identical detections this row stands for (1 = just itself).
+   * Saving or discarding the row applies to all of them.
+   */
+  groupCount?: number;
+  /** Tap the count chip to see each one separately. */
+  onExpandGroup?: () => void;
   /** Tap the thumbnail to highlight this item on the photo. */
   onPressThumb?: () => void;
   onChangeTag: (tagIndex: number, value: string) => void;
@@ -45,6 +52,8 @@ export function DetectionRow({
   index,
   autoFocusFirst,
   isHighlighted = false,
+  groupCount = 1,
+  onExpandGroup,
   onPressThumb,
   onChangeTag,
   onAddTag,
@@ -90,6 +99,19 @@ export function DetectionRow({
           },
         ]}
       >
+        {groupCount > 1 && (
+          <Pressable
+            testID={`row-group-${index}`}
+            accessibilityRole="button"
+            accessibilityLabel={`${groupCount} of these — show each separately`}
+            onPress={onExpandGroup}
+            style={[styles.groupChip, { backgroundColor: colors.primary }]}
+          >
+            <Text style={[styles.groupChipText, { color: colors.primaryForeground }]}>
+              × {groupCount}
+            </Text>
+          </Pressable>
+        )}
         <Pressable
           accessibilityRole="button"
           accessibilityLabel={isHighlighted ? 'Clear highlight' : 'Show on photo'}
@@ -208,6 +230,22 @@ export function DetectionRow({
 }
 
 const styles = StyleSheet.create({
+  groupChip: {
+    position: 'absolute',
+    top: 6,
+    left: 6,
+    zIndex: 2,
+    minWidth: 30,
+    height: 20,
+    paddingHorizontal: 6,
+    borderRadius: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  groupChipText: {
+    fontFamily: 'Inter_600SemiBold',
+    fontSize: 11,
+  },
   outer: {
     marginBottom: 8,
   },

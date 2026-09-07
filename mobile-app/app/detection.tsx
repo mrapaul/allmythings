@@ -22,6 +22,7 @@ import { buildLabels, labelsForDisplay } from '@/lib/labels';
 import { startsExcluded, visibilityNote, visibilityVerdict } from '@/lib/partial-visibility';
 import { removePendingCapture, upsertPendingCapture } from '@/lib/pending-captures';
 import { buildItemPayload, effectiveTags } from '@/lib/review-payload';
+import { groupRows } from '@/lib/row-groups';
 import { withSpan } from '@/observability/otel';
 import { inspectCaptureQuality } from '@/services/image-quality';
 import { renderThumbnail } from '@/services/thumbnail';
@@ -99,6 +100,8 @@ export default function DetectionScreen() {
   const [verdictDismissed, setVerdictDismissed] = useState(false);
   /** The one detection drawn in full on the photo (tap a box or a row thumbnail). */
   const [highlightedId, setHighlightedId] = useState<string | null>(null);
+  /** Groups of identical detections the user has expanded into single rows. */
+  const [expandedGroups, setExpandedGroups] = useState<Set<string>>(() => new Set());
   // Post-save undo window (2b/4): count + created item ids + review row ids.
   /** A save that threw (database/photo error): shown, never swallowed. */
   const [saveError, setSaveError] = useState<string | null>(null);
@@ -163,6 +166,7 @@ export default function DetectionScreen() {
     setQaAdvice(null);
     setVerdictDismissed(false);
     setHighlightedId(null);
+    setExpandedGroups(new Set());
     setSaveToast(null);
     correctionsSentRef.current = false;
     startedAtRef.current = Date.now();
@@ -634,6 +638,34 @@ export default function DetectionScreen() {
   }
 
   const savedCount = rows.filter((r) => r.saved).length;
+  /**
+   * One entry per rendered row. Identical detections collapse into a single
+   * entry carrying the whole group, so a stack of nine identical books is one
+   * row and one tap — expandable when the user wants each one.
+   */
+  const displayRows = useMemo(() => {
+    const byId = new Map(rows.map((r) => [r.id, r]));
+    const out: Array<{ row: DetectionStoreRow; group: DetectionStoreRow[] }> = [];
+    for (const g of groupRows(rows.map((r) => ({ id: r.id, label: r.item.label })))) {
+      const members = g.rowIds
+        .map((id) => byId.get(id))
+        .filter((r): r is DetectionStoreRow => r !== undefined);
+      const lead = members[0];
+      if (!lead) continue;
+      if (members.length === 1 || expandedGroups.has(lead.id)) {
+        for (const m of members) out.push({ row: m, group: [m] });
+        continue;
+      }
+      out.push({ row: lead, group: members });
+    }
+    return out;
+  }, [rows, expandedGroups]);
+
+  /** Saving a collapsed row saves every detection it stands for. */
+  const onToggleSaveGroup = async (group: DetectionStoreRow[]) => {
+    for (const row of group) await onToggleSave(row);
+  };
+
   const pendingValid = rows.filter((r) => !r.saved && r.included).length;
   const isLoading = phase === 'loading' && !qaSuspect;
   const isStreaming = phase === 'streaming';
@@ -849,7 +881,7 @@ export default function DetectionScreen() {
                   </Text>
                 </View>
 
-                {rows.map((row, idx) => (
+                {displayRows.map(({ row, group }, idx) => (
                   <View key={row.id}>
                     {dupRowIds.has(row.id) && (
                       <View style={styles.dupFlag} testID="dup-flag">
@@ -879,6 +911,8 @@ export default function DetectionScreen() {
                       }
                       index={idx}
                       autoFocusFirst={autoFocusByRow[row.id] ?? false}
+                      groupCount={group.length}
+                      onExpandGroup={() => setExpandedGroups((prev) => new Set([...prev, row.id]))}
                       isHighlighted={highlightedId === row.id}
                       onPressThumb={() =>
                         setHighlightedId((cur) => (cur === row.id ? null : row.id))
@@ -887,9 +921,11 @@ export default function DetectionScreen() {
                       onAddTag={() => onAddTag(row.id)}
                       onRemoveTag={(i) => onRemoveTag(row.id, i)}
                       onToggleSave={() => {
-                        void onToggleSave(row);
+                        void onToggleSaveGroup(group);
                       }}
-                      onDiscard={() => onDiscard(row.id)}
+                      onDiscard={() => {
+                        for (const r of group) onDiscard(r.id);
+                      }}
                     />
                   </View>
                 ))}

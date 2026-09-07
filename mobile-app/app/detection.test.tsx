@@ -1,6 +1,20 @@
 import { act, render } from '@testing-library/react-native';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
+function findNode(node: unknown, testID: string): { props: Record<string, unknown> } | null {
+  if (!node || typeof node !== 'object') return null;
+  if (Array.isArray(node)) {
+    for (const child of node) {
+      const hit = findNode(child, testID);
+      if (hit) return hit;
+    }
+    return null;
+  }
+  const n = node as { props?: Record<string, unknown>; children?: unknown };
+  if (n.props?.testID === testID) return n as { props: Record<string, unknown> };
+  return findNode(n.children, testID);
+}
+
 function collectStrings(node: unknown, out: string[] = []): string[] {
   if (typeof node === 'string') {
     out.push(node);
@@ -306,5 +320,51 @@ describe('DetectionScreen resume onto a lost run', () => {
     });
     const texts = collectStrings(view.toJSON());
     expect(texts).not.toContain('The server lost track of this one');
+  });
+
+  it('shows identical detections as one row with a count, expandable to each', async () => {
+    const book = (y: number) => ({
+      type: 'item',
+      item: {
+        label: 'white book',
+        description: '',
+        category: 'Books',
+        tags: ['white'],
+        box: { x: 0.8, y, width: 0.1, height: 0.05 },
+      },
+    });
+    sse.events = [
+      { type: 'meta', runId: 'r-group', traceId: 't-group' },
+      {
+        type: 'item',
+        item: {
+          label: 'black computer monitor',
+          description: '',
+          category: 'Electronics',
+          tags: ['black'],
+          box: { x: 0, y: 0, width: 0.4, height: 0.3 },
+        },
+      },
+      book(0.1),
+      book(0.2),
+      book(0.3),
+      { type: 'done', runId: 'r-group', totalItems: 4 },
+    ];
+    const view = render(<DetectionScreen />);
+    await act(async () => {
+      await new Promise((r) => setTimeout(r, 0));
+    });
+    const json = () => JSON.stringify(view.toJSON());
+    // Four detections, two rows: the monitor and one grouped row of books.
+    const chip = findNode(view.toJSON(), 'row-group-1');
+    expect(chip?.props.accessibilityLabel).toBe('3 of these — show each separately');
+    expect((json().match(/"testID":"row-thumb-/g) ?? []).length).toBe(2);
+
+    await act(async () => {
+      (chip?.props.onPress as () => void)();
+    });
+    // Expanded: every book gets its own row and the chip is gone.
+    expect((json().match(/"testID":"row-thumb-/g) ?? []).length).toBe(4);
+    expect(findNode(view.toJSON(), 'row-group-1')).toBeNull();
   });
 });
