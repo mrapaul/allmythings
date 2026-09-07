@@ -102,7 +102,7 @@ vi.mock('react-native-gesture-handler', () => {
   };
   return {
     GestureDetector: ({ children }: { children: unknown }) => children,
-    Gesture: { Pan: builder, Tap: builder, LongPress: builder },
+    Gesture: { Pan: builder, Tap: builder, LongPress: builder, Pinch: builder },
     GestureHandlerRootView: 'GestureHandlerRootView',
     Pressable: 'Pressable',
   };

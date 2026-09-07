@@ -17,6 +17,17 @@ vi.mock('expo-router', () => ({
 
 vi.mock('@/services/walk-capture', () => ({ dispatchShot: dispatchSpy }));
 
+const nativeCameraSpy = vi.fn(async () => ({
+  canceled: false,
+  assets: [{ uri: 'file:///native.jpg' }],
+}));
+vi.mock('expo-image-picker', () => ({
+  requestCameraPermissionsAsync: async () => ({ granted: true }),
+  requestMediaLibraryPermissionsAsync: async () => ({ granted: true }),
+  launchCameraAsync: nativeCameraSpy,
+  launchImageLibraryAsync: async () => ({ canceled: true }),
+}));
+
 // A CameraView whose ref exposes takePictureAsync, so the shutter can run.
 vi.mock('expo-camera', async () => {
   const { createElement, forwardRef, useImperativeHandle } = await import('react');
@@ -161,7 +172,7 @@ describe('CaptureScreen', () => {
   it('shows the first-run narrative once and dismisses it on the first shutter', async () => {
     const view = render(<CaptureScreen />);
     expect(findByTestId(view.toJSON(), 'capture-intro')).toBeTruthy();
-    expect(JSON.stringify(view.toJSON())).toContain('Shoot each shelf or corner');
+    expect(JSON.stringify(view.toJSON())).toContain('Take as many photos as you like');
 
     await act(async () => {
       (findByTestId(view.toJSON(), 'capture-shutter')?.props.onPress as () => void)();
@@ -182,5 +193,40 @@ describe('CaptureScreen', () => {
     const view = render(<CaptureScreen />);
     // Silence is the default: no hint pill until something is corroborated.
     expect(findByTestId(view.toJSON(), 'coach-hint')).toBeNull();
+  });
+
+  it('Done shows how many shots were taken this session', async () => {
+    const view = render(<CaptureScreen />);
+    expect(JSON.stringify(view.toJSON())).toContain('"Done"');
+    await act(async () => {
+      (findByTestId(view.toJSON(), 'capture-shutter')?.props.onPress as () => void)();
+      await new Promise((r) => setTimeout(r, 0));
+    });
+    expect(JSON.stringify(view.toJSON())).toContain('Done · 1');
+  });
+
+  it('flash cycles off → auto → on like every phone camera', async () => {
+    const view = render(<CaptureScreen />);
+    const label = () => findByTestId(view.toJSON(), 'capture-flash')?.props.accessibilityLabel;
+    expect(label()).toBe('Flash Off');
+    await act(async () => {
+      (findByTestId(view.toJSON(), 'capture-flash')?.props.onPress as () => void)();
+    });
+    expect(label()).toBe('Flash Auto');
+    await act(async () => {
+      (findByTestId(view.toJSON(), 'capture-flash')?.props.onPress as () => void)();
+    });
+    expect(label()).toBe('Flash On');
+  });
+
+  it("the phone's own camera app feeds the same strip and queue", async () => {
+    const view = render(<CaptureScreen />);
+    await act(async () => {
+      (findByTestId(view.toJSON(), 'capture-native')?.props.onPress as () => void)();
+      await new Promise((r) => setTimeout(r, 0));
+    });
+    expect(nativeCameraSpy).toHaveBeenCalled();
+    expect(dispatchSpy).toHaveBeenCalledWith(expect.anything(), 'file:///native.jpg');
+    expect(findByTestId(view.toJSON(), 'capture-reel')).toBeTruthy();
   });
 });

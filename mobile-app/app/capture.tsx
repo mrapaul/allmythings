@@ -5,15 +5,25 @@ import { ReadinessStrip } from '@/components/Viewfinder/ReadinessStrip';
 import { useColors } from '@/hooks/useColors';
 import { useLiveCount } from '@/hooks/useLiveCount';
 import { useLiveQuality } from '@/hooks/useLiveQuality';
+import {
+  FLASH_LABEL,
+  lensLabel,
+  nextFlashMode,
+  pinchToZoom,
+  toggleZoom,
+  zoomLabel,
+} from '@/lib/camera-controls';
 import { initialQueueState, queueNeedsClock, queueReduce } from '@/lib/capture-queue';
 import { dispatchShot } from '@/services/walk-capture';
 import { useJobsStore } from '@/stores/jobs.store';
 import { Prefs } from '@/stores/prefs';
 import { Feather } from '@expo/vector-icons';
-import { CameraView, useCameraPermissions } from 'expo-camera';
+import { CameraView, type FlashMode, useCameraPermissions } from 'expo-camera';
+import * as ImagePicker from 'expo-image-picker';
 import { useRouter } from 'expo-router';
 import { useEffect, useMemo, useReducer, useRef, useState } from 'react';
 import { Platform, Pressable, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
+import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 /**
@@ -29,11 +39,10 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
  * explicit: shots keep processing after the camera closes.
  */
 
-/** Reel position (bottom-left, clear of the centered shutter). */
-const REEL_LEFT = 20;
-const REEL_BOTTOM_GAP = 24;
-/** Matches the reel's thumbnail size (fly-in landing slot). */
-const REEL_THUMB = 44;
+/** Strip inset and the fly-in landing slot (matches the strip's first thumb). */
+const REEL_LEFT = 16;
+const REEL_BOTTOM_GAP = 112;
+const REEL_THUMB = 52;
 
 export default function CaptureScreen() {
   const colors = useColors();
@@ -45,6 +54,11 @@ export default function CaptureScreen() {
   const [permission, requestPermission] = useCameraPermissions();
   const [cameraReady, setCameraReady] = useState(false);
   const [torch, setTorch] = useState(false);
+  const [flash, setFlash] = useState<FlashMode>('off');
+  const [zoom, setZoom] = useState(0);
+  const pinchStartZoom = useRef(0);
+  const [lenses, setLenses] = useState<string[]>([]);
+  const [lensIndex, setLensIndex] = useState(0);
   const [isCapturing, setIsCapturing] = useState(false);
   const [shotCount, setShotCount] = useState(0);
 
@@ -125,6 +139,29 @@ export default function CaptureScreen() {
     onGuidance: injectServerAdvice,
   });
 
+  /**
+   * One path for every source of a photo (our shutter, the system camera,
+   * the library): land it on the strip, remember its look, dispatch it.
+   */
+  const ingestShot = (uri: string) => {
+    dismissIntro();
+    setShotCount((n) => n + 1);
+    void rememberShot(uri);
+    shotKeyRef.current += 1;
+    const key = `shot-${shotKeyRef.current}`;
+    dispatchReel({ type: 'shutter', key, uri, at: Date.now() });
+    setFlyingShot({ uri, key: shotKeyRef.current });
+    void dispatchShot(prefs, uri).then(
+      (result) =>
+        dispatchReel(
+          result.ok && result.runId
+            ? { type: 'dispatched', key, runId: result.runId }
+            : { type: 'dispatch_failed', key, at: Date.now() },
+        ),
+      () => dispatchReel({ type: 'dispatch_failed', key, at: Date.now() }),
+    );
+  };
+
   const handleShutter = async () => {
     const view = cameraRef.current;
     if (!view || isCapturing) return;
@@ -133,25 +170,7 @@ export default function CaptureScreen() {
     suspendForCapture();
     try {
       const photo = await view.takePictureAsync({ quality: 0.8 });
-      if (photo?.uri) {
-        dismissIntro();
-        setShotCount((n) => n + 1);
-        void rememberShot(photo.uri);
-        // Narrate + show the frame flying onto the reel, then dispatch.
-        shotKeyRef.current += 1;
-        const key = `shot-${shotKeyRef.current}`;
-        dispatchReel({ type: 'shutter', key, uri: photo.uri, at: Date.now() });
-        setFlyingShot({ uri: photo.uri, key: shotKeyRef.current });
-        void dispatchShot(prefs, photo.uri).then(
-          (result) =>
-            dispatchReel(
-              result.ok && result.runId
-                ? { type: 'dispatched', key, runId: result.runId }
-                : { type: 'dispatch_failed', key, at: Date.now() },
-            ),
-          () => dispatchReel({ type: 'dispatch_failed', key, at: Date.now() }),
-        );
-      }
+      if (photo?.uri) ingestShot(photo.uri);
     } catch {
       // A failed frame is not worth a dialog mid-walk; the user can shoot again.
     } finally {
@@ -159,6 +178,61 @@ export default function CaptureScreen() {
       resumeAfterCapture();
     }
   };
+
+  // The device's own camera app, for everything ours does not expose (HDR,
+  // night mode, pro controls). The shot goes through the same strip and queue.
+  const handleNativeCamera = async () => {
+    if (isCapturing) return;
+    suspendForCapture();
+    try {
+      const perm = await ImagePicker.requestCameraPermissionsAsync();
+      if (!perm.granted) return;
+      const result = await ImagePicker.launchCameraAsync({ mediaTypes: 'images', quality: 0.9 });
+      const uri = result.canceled ? undefined : result.assets?.[0]?.uri;
+      if (uri) ingestShot(uri);
+    } catch {
+      // The system camera can be unavailable; our viewfinder is still here.
+    } finally {
+      resumeAfterCapture();
+    }
+  };
+
+  const handleLibrary = async () => {
+    suspendForCapture();
+    try {
+      const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (!perm.granted) return;
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: 'images',
+        quality: 0.9,
+      });
+      const uri = result.canceled ? undefined : result.assets?.[0]?.uri;
+      if (uri) ingestShot(uri);
+    } catch {
+      // Same as above: nothing to say mid-walk.
+    } finally {
+      resumeAfterCapture();
+    }
+  };
+
+  // Native lenses (ultra-wide, telephoto) when the device has them.
+  const handleCameraReady = () => {
+    setCameraReady(true);
+    const view = cameraRef.current as
+      | (CameraView & { getAvailableLensesAsync?: () => Promise<string[]> })
+      | null;
+    void view?.getAvailableLensesAsync?.().then(
+      (found) => setLenses(Array.isArray(found) ? found : []),
+      () => setLenses([]),
+    );
+  };
+
+  const pinch = Gesture.Pinch()
+    .onBegin(() => {
+      pinchStartZoom.current = zoom;
+    })
+    .onUpdate((e) => setZoom(pinchToZoom(pinchStartZoom.current, e.scale)))
+    .runOnJS(true);
 
   // Leaving the camera: the very FIRST completed run ever lands the user on
   // its inbox card once, so the review step teaches itself.
@@ -211,13 +285,19 @@ export default function CaptureScreen() {
 
   return (
     <View style={styles.container}>
-      <CameraView
-        ref={cameraRef}
-        style={StyleSheet.absoluteFill}
-        facing="back"
-        enableTorch={torch}
-        onCameraReady={() => setCameraReady(true)}
-      />
+      <GestureDetector gesture={pinch}>
+        <CameraView
+          ref={cameraRef}
+          style={StyleSheet.absoluteFill}
+          facing="back"
+          enableTorch={torch}
+          flash={flash}
+          zoom={zoom}
+          autofocus="on"
+          selectedLens={lenses[lensIndex]}
+          onCameraReady={handleCameraReady}
+        />
+      </GestureDetector>
 
       <View style={[styles.topBar, { paddingTop }]} pointerEvents="box-none">
         <Pressable
@@ -246,13 +326,62 @@ export default function CaptureScreen() {
           )
         )}
 
+        <View style={styles.topActions}>
+          <Pressable
+            testID="capture-flash"
+            accessibilityLabel={`Flash ${FLASH_LABEL[flash]}`}
+            onPress={() => setFlash((f) => nextFlashMode(f))}
+            style={({ pressed }) => [styles.chipBtn, { opacity: pressed ? 0.7 : 1 }]}
+          >
+            <Feather name="zap" size={15} color="#ffffff" />
+            <Text style={styles.chipBtnText}>{FLASH_LABEL[flash]}</Text>
+          </Pressable>
+          <Pressable
+            testID="capture-torch"
+            accessibilityLabel={torch ? 'Turn light off' : 'Turn light on'}
+            onPress={() => setTorch((t) => !t)}
+            style={({ pressed }) => [styles.roundBtn, { opacity: pressed ? 0.7 : 1 }]}
+          >
+            <Feather name="sun" size={19} color={torch ? '#FFD666' : '#ffffff'} />
+          </Pressable>
+          <Pressable
+            testID="capture-native"
+            accessibilityLabel="Open the phone's camera app"
+            onPress={() => void handleNativeCamera()}
+            style={({ pressed }) => [styles.roundBtn, { opacity: pressed ? 0.7 : 1 }]}
+          >
+            <Feather name="aperture" size={19} color="#ffffff" />
+          </Pressable>
+        </View>
+      </View>
+
+      <View style={styles.zoomRow} pointerEvents="box-none">
+        {lenses.length > 1 &&
+          lenses.map((name, i) => (
+            <Pressable
+              key={name}
+              testID={`capture-lens-${i}`}
+              accessibilityLabel={`Lens ${lensLabel(name, i)}`}
+              onPress={() => {
+                setLensIndex(i);
+                setZoom(0);
+              }}
+              style={[styles.zoomChip, i === lensIndex && styles.zoomChipActive]}
+            >
+              <Text style={[styles.zoomChipText, i === lensIndex && styles.zoomChipTextActive]}>
+                {lensLabel(name, i)}
+              </Text>
+            </Pressable>
+          ))}
         <Pressable
-          testID="capture-torch"
-          accessibilityLabel={torch ? 'Turn torch off' : 'Turn torch on'}
-          onPress={() => setTorch((t) => !t)}
-          style={({ pressed }) => [styles.roundBtn, { opacity: pressed ? 0.7 : 1 }]}
+          testID="capture-zoom"
+          accessibilityLabel={`Zoom ${zoomLabel(zoom)}`}
+          onPress={() => setZoom((z) => toggleZoom(z))}
+          style={[styles.zoomChip, zoom > 0 && styles.zoomChipActive]}
         >
-          <Feather name={torch ? 'zap-off' : 'zap'} size={19} color="#ffffff" />
+          <Text style={[styles.zoomChipText, zoom > 0 && styles.zoomChipTextActive]}>
+            {zoomLabel(zoom)}
+          </Text>
         </Pressable>
       </View>
 
@@ -265,10 +394,11 @@ export default function CaptureScreen() {
         >
           <View style={styles.introCard}>
             <Text style={styles.introLine}>
-              Shoot each shelf or corner — I'll catalogue every item.
+              Take as many photos as you like — each shelf, drawer, or corner.
             </Text>
             <Text style={styles.introLineSecondary}>
-              Your shots collect in the tray; review them whenever you like.
+              Every shot is catalogued in the background and lands in the strip below. Tap Done when
+              you're finished.
             </Text>
           </View>
         </Pressable>
@@ -285,14 +415,12 @@ export default function CaptureScreen() {
 
       {/* The reel: a floating film strip where every shot visibly lands and
           narrates its own journey. */}
-      <View
-        style={[styles.reelWrap, { left: REEL_LEFT, bottom: reelBottom }]}
-        pointerEvents="box-none"
-      >
+      <View style={[styles.reelWrap, { bottom: reelBottom }]} pointerEvents="box-none">
         <CaptureReel
           shots={reel}
           now={nowTick}
           readyCount={readyCount}
+          shotCount={shotCount}
           onPress={() => router.push('/inbox')}
         />
       </View>
@@ -308,6 +436,14 @@ export default function CaptureScreen() {
       )}
 
       <View style={[styles.shutterBar, { paddingBottom: shutterBottom }]}>
+        <Pressable
+          testID="capture-library"
+          accessibilityLabel="Choose from library"
+          onPress={() => void handleLibrary()}
+          style={({ pressed }) => [styles.sideBtn, { opacity: pressed ? 0.7 : 1 }]}
+        >
+          <Feather name="image" size={22} color="#ffffff" />
+        </Pressable>
         <Pressable
           testID="capture-shutter"
           accessibilityLabel="Take photo"
@@ -327,21 +463,21 @@ export default function CaptureScreen() {
         >
           <View style={styles.shutterInner} />
         </Pressable>
+        {/* Leaving is always one obvious tap — shots keep processing after
+            the camera closes (the home pill and inbox pick up the story). */}
+        <Pressable
+          testID="capture-done"
+          accessibilityLabel={shotCount > 0 ? `Done, ${shotCount} shots taken` : 'Done shooting'}
+          onPress={handleClose}
+          style={({ pressed }) => [
+            styles.donePill,
+            shotCount > 0 && { backgroundColor: colors.primary },
+            { opacity: pressed ? 0.75 : 1 },
+          ]}
+        >
+          <Text style={styles.donePillText}>{shotCount > 0 ? `Done · ${shotCount}` : 'Done'}</Text>
+        </Pressable>
       </View>
-
-      {/* Leaving is always one obvious tap — shots keep processing after
-          the camera closes (the home pill and inbox pick up the story). */}
-      <Pressable
-        testID="capture-done"
-        accessibilityLabel="Done shooting"
-        onPress={handleClose}
-        style={({ pressed }) => [
-          styles.donePill,
-          { bottom: shutterBottom + 16, opacity: pressed ? 0.75 : 1 },
-        ]}
-      >
-        <Text style={styles.donePillText}>Done</Text>
-      </Pressable>
     </View>
   );
 }
@@ -460,17 +596,56 @@ const styles = StyleSheet.create({
   },
   reelWrap: {
     position: 'absolute',
+    left: REEL_LEFT,
+    right: REEL_LEFT,
   },
   donePill: {
-    position: 'absolute',
-    right: 20,
-    height: 40,
-    paddingHorizontal: 20,
-    borderRadius: 20,
+    height: 44,
+    minWidth: 96,
+    paddingHorizontal: 18,
+    borderRadius: 22,
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: 'rgba(20,18,40,0.55)',
   },
+  sideBtn: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(20,18,40,0.45)',
+  },
+  topActions: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  chipBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    height: 36,
+    paddingHorizontal: 12,
+    borderRadius: 18,
+    backgroundColor: 'rgba(20,18,40,0.45)',
+  },
+  chipBtnText: { fontFamily: 'Inter_600SemiBold', fontSize: 12, color: '#ffffff' },
+  zoomRow: {
+    position: 'absolute',
+    right: 16,
+    top: '42%',
+    gap: 8,
+    alignItems: 'flex-end',
+  },
+  zoomChip: {
+    minWidth: 44,
+    height: 32,
+    paddingHorizontal: 10,
+    borderRadius: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(20,18,40,0.45)',
+  },
+  zoomChipActive: { backgroundColor: 'rgba(255,255,255,0.92)' },
+  zoomChipText: { fontFamily: 'Inter_600SemiBold', fontSize: 12, color: '#ffffff' },
+  zoomChipTextActive: { color: '#1c1a2e' },
   donePillText: {
     fontFamily: 'Inter_600SemiBold',
     fontSize: 14,
@@ -483,7 +658,10 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     bottom: 0,
+    flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 28,
     paddingTop: 16,
   },
   shutterOuter: {
