@@ -593,6 +593,7 @@ const styles = StyleSheet.create({
     position: 'absolute',
     left: 0,
     right: 0,
+    alignItems: 'center',
   },
   reelWrap: {
     position: 'absolute',
@@ -652,7 +653,7 @@ const styles = StyleSheet.create({
     letterSpacing: 0.3,
     color: '#ffffff',
   },
-  readinessSlot: { marginTop: 8 },
+  readinessSlot: { marginTop: 10 },
   shutterBar: {
     position: 'absolute',
     left: 0,

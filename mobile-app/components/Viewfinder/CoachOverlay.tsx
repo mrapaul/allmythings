@@ -56,10 +56,9 @@ export function CoachOverlay({ hint }: CoachOverlayProps) {
 
 const styles = StyleSheet.create({
   wrap: {
-    position: 'absolute',
-    left: 0,
-    right: 0,
-    bottom: 0,
+    // Normal flow, not absolute: the hint and the readiness strip live in the
+    // same column and must STACK. Absolute positioning let the pill sit on
+    // top of the strip, so the advice and the state were unreadable together.
     alignItems: 'center',
     minHeight: 44,
     justifyContent: 'flex-end',

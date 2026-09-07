@@ -39,3 +39,14 @@ describe('CoachOverlay', () => {
     expect(flat).not.toMatch(/focusScore|meanLuma|contrast/);
   });
 });
+
+describe('CoachOverlay layout', () => {
+  it('flows in the column instead of overlaying its siblings', () => {
+    const tree = render(
+      <CoachOverlay hint={{ kind: 'tilted', message: 'Straighten up a little' }} />,
+    ).toJSON() as unknown as { props: { style: Record<string, unknown> } };
+    // Regression guard: absolute positioning put the hint pill on top of the
+    // readiness strip on device (both rendered at the same y).
+    expect(tree.props.style.position).not.toBe('absolute');
+  });
+});
