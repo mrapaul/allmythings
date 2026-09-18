@@ -1,0 +1,160 @@
+{
+  "qwen3-vl:30b-a3b-instruct": {
+    "perFixture": [
+      {
+        "fixture": "1776173015803",
+        "recall": 50,
+        "itemCount": 12,
+        "expectedMin": 8,
+        "expectedMax": 15,
+        "countWithinRange": true,
+        "matchedCount": 6,
+        "missed": [
+          "snake plant (sansevieria) small",
+          "two-tone ceramic planter",
+          "wooden stool (plant support)",
+          "white venetian window blinds",
+          "dark navy couch / sofa",
+          "framed painting / artwork"
+        ],
+        "elapsedMs": 1161375,
+        "attempts": 1
+      },
+      {
+        "fixture": "1776174188547",
+        "recall": 54.5,
+        "itemCount": 13,
+        "expectedMin": 7,
+        "expectedMax": 13,
+        "countWithinRange": true,
+        "matchedCount": 6,
+        "missed": [
+          "small snake plant",
+          "two-tone ceramic planter",
+          "wooden stool (plant support)",
+          "white venetian window blinds",
+          "dark navy couch / sofa"
+        ],
+        "elapsedMs": 1012815,
+        "attempts": 1
+      },
+      {
+        "fixture": "1776175427607",
+        "recall": 57.1,
+        "itemCount": 15,
+        "expectedMin": 10,
+        "expectedMax": 16,
+        "countWithinRange": true,
+        "matchedCount": 8,
+        "missed": [
+          "snake plant small",
+          "two-tone ceramic planter",
+          "wooden stool",
+          "gold candle holder",
+          "white venetian window blinds",
+          "dark navy couch / sofa"
+        ],
+        "elapsedMs": 1069386,
+        "attempts": 1
+      },
+      {
+        "fixture": "1776176976030",
+        "recall": 30.8,
+        "itemCount": 14,
+        "expectedMin": 8,
+        "expectedMax": 14,
+        "countWithinRange": true,
+        "matchedCount": 4,
+        "missed": [
+          "black throw blanket",
+          "snake plant small",
+          "two-tone ceramic planter",
+          "gold wire plant stand",
+          "wooden stool",
+          "gold candle holder",
+          "wooden sideboard / cabinet",
+          "dark navy couch / sofa",
+          "framed painting"
+        ],
+        "elapsedMs": 1243642,
+        "attempts": 1
+      },
+      {
+        "fixture": "bedroom_01",
+        "recall": 78.6,
+        "itemCount": 19,
+        "expectedMin": 9,
+        "expectedMax": 18,
+        "countWithinRange": false,
+        "matchedCount": 11,
+        "missed": [
+          "blue flower in small vase",
+          "black round tray table",
+          "built-in oven"
+        ],
+        "elapsedMs": 646759,
+        "attempts": 1
+      },
+      {
+        "fixture": "dining_room_01",
+        "recall": 87.5,
+        "itemCount": 9,
+        "expectedMin": 5,
+        "expectedMax": 10,
+        "countWithinRange": true,
+        "matchedCount": 7,
+        "missed": [
+          "white mug"
+        ],
+        "elapsedMs": 920078,
+        "attempts": 1
+      },
+      {
+        "fixture": "living_room_02",
+        "recall": 44.4,
+        "itemCount": 16,
+        "expectedMin": 12,
+        "expectedMax": 24,
+        "countWithinRange": true,
+        "matchedCount": 8,
+        "missed": [
+          "dark grey daybed / futon",
+          "wooden desk",
+          "laptop computer",
+          "white sideboard cabinet",
+          "hanging macrame planter with pothos",
+          "small potted plant on coffee table",
+          "potted plant in dark pot on rug",
+          "terracotta plant pots",
+          "window blinds",
+          "computer mouse"
+        ],
+        "elapsedMs": 657356,
+        "attempts": 1
+      },
+      {
+        "fixture": "mockup_living_01",
+        "recall": 72.7,
+        "itemCount": 13,
+        "expectedMin": 8,
+        "expectedMax": 14,
+        "countWithinRange": true,
+        "matchedCount": 8,
+        "missed": [
+          "framed abstract art print",
+          "marble decorative cube",
+          "white TV console"
+        ],
+        "elapsedMs": 1345505,
+        "attempts": 1
+      }
+    ],
+    "aggregate": {
+      "avgRecall": 59.4,
+      "avgItems": 13.9,
+      "avgLatencyMs": 1007115,
+      "failures": 0,
+      "n": 8
+    }
+  }
+}
