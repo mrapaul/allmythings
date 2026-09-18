@@ -37,15 +37,15 @@
         "android.permission.CAMERA",
         "android.permission.READ_MEDIA_IMAGES",
         "android.permission.CHANGE_WIFI_MULTICAST_STATE"
-      ],
-      "usesCleartextTraffic": true
+      ]
     },
     "plugins": [
       "expo-router",
       "expo-font",
       "expo-sqlite",
       "@sentry/react-native",
-      "./plugins/withUIScene"
+      "./plugins/withUIScene",
+      "./plugins/withAndroidCleartext"
     ],
     "experiments": {
       "typedRoutes": true

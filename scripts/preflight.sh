@@ -52,12 +52,33 @@ ok "Ollama CLI present"
 # Memory headroom
 MEM_BYTES=$(sysctl -n hw.memsize)
 MEM_GB=$(( MEM_BYTES / 1024 / 1024 / 1024 ))
-# vm_stat reports pages; page size is typically 16384 on Apple Silicon
-FREE_PAGES=$(vm_stat | awk '/Pages free/ {gsub("\\.", "", $3); print $3; exit}')
+# vm_stat reports pages; page size is typically 16384 on Apple Silicon.
+# "Pages free" alone is misleading on macOS: the kernel keeps almost all RAM
+# populated with reclaimable file cache, so it reads ~0 on a healthy machine.
+# Available = free + inactive + speculative + purgeable.
 PAGE_SIZE=$(vm_stat | head -1 | awk -F' ' '{for (i=1; i<=NF; i++) if ($i ~ /^[0-9]+$/) { print $i; exit } }')
 PAGE_SIZE=${PAGE_SIZE:-16384}
-FREE_BYTES=$(( FREE_PAGES * PAGE_SIZE ))
-FREE_GB=$(( FREE_BYTES / 1024 / 1024 / 1024 ))
+avail_pages() {
+  vm_stat | awk -F: '
+    /Pages free/        {gsub(/[ .]/,"",$2); f=$2}
+    /Pages inactive/    {gsub(/[ .]/,"",$2); i=$2}
+    /Pages speculative/ {gsub(/[ .]/,"",$2); s=$2}
+    /Pages purgeable/   {gsub(/[ .]/,"",$2); p=$2}
+    END {print f+i+s+p}'
+}
+FREE_GB=$(( $(avail_pages) * PAGE_SIZE / 1024 / 1024 / 1024 ))
+
+# An idle-but-resident Ollama model is the usual cause of a failure here: it
+# holds 20GB+ of wired memory and unloads instantly with `ollama stop`.
+if [ "$FREE_GB" -lt 10 ] && command -v ollama >/dev/null 2>&1; then
+  LOADED=$(ollama ps 2>/dev/null | awk 'NR>1 && NF {print $1}')
+  if [ -n "$LOADED" ]; then
+    warn "Low memory; unloading resident models: $(echo "$LOADED" | tr '\n' ' ')"
+    echo "$LOADED" | while read -r m; do [ -n "$m" ] && ollama stop "$m" >/dev/null 2>&1; done
+    sleep 3
+    FREE_GB=$(( $(avail_pages) * PAGE_SIZE / 1024 / 1024 / 1024 ))
+  fi
+fi
 if [ "$FREE_GB" -lt 10 ]; then
   fail "Only ${FREE_GB}GB free of ${MEM_GB}GB — need ≥ 10GB"
 fi

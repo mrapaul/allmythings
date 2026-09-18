@@ -36,6 +36,19 @@ export class PhotoStorage {
   }
 
   /**
+   * Persists a dispatched walk-capture frame under documentDirectory/jobs/.
+   *
+   * Camera frames live in the OS cache directory, which the platform may purge
+   * (reboot, storage pressure) while a detection job is still running or
+   * awaiting retry — the job's photoUri would then dangle and the retry would
+   * fail permanently. Copying into documentDirectory at dispatch time makes
+   * the job durable for its whole lifecycle.
+   */
+  async saveJobShot(sourceUri: string, name: string): Promise<string> {
+    return this.saveInto('jobs/', sourceUri, name);
+  }
+
+  /**
    * Persists a generated per-item thumbnail (manipulator output lives in the
    * volatile cache directory) under documentDirectory/thumbnails/.
    */

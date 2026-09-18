@@ -8,6 +8,7 @@ import { addJob, getJobsStore, patchJob } from '@/stores/jobs.store';
 import type { Prefs } from '@/stores/prefs';
 import { prepareJpeg } from './image-prep';
 import { inspectCaptureQuality } from './image-quality';
+import { PhotoStorage } from './photo-storage';
 
 /**
  * Walk mode: dispatch a shot for background detection and return to camera
@@ -55,6 +56,22 @@ function withDispatchTimeout<T>(work: Promise<T>): Promise<T> {
   });
 }
 
+/**
+ * Copy a camera-cache frame into documentDirectory so the job survives OS
+ * cache purges (reboot / storage pressure) while running or awaiting retry.
+ * FAIL-OPEN: any failure (test envs without expo-file-system, odd URIs,
+ * already-document URIs on re-dispatch) returns the source uri unchanged.
+ */
+async function persistShotForJob(photoUri: string, now: number): Promise<string> {
+  try {
+    if (photoUri.startsWith('file://') && photoUri.includes('/jobs/')) return photoUri;
+    const storage = PhotoStorage.fromExpo();
+    return await storage.saveJobShot(photoUri, `capture-${now}`);
+  } catch {
+    return photoUri;
+  }
+}
+
 export interface DispatchResult {
   ok: boolean;
   runId?: string;
@@ -83,10 +100,13 @@ export async function dispatchShot(
 ): Promise<DispatchResult> {
   const now = Date.now();
   const sessionId = options.roomSessionId ?? nextRoomSessionId(getJobsStore().getState().jobs, now);
+  // Durable copy FIRST so every reference below (job card, pending capture,
+  // retry) points at documentDirectory, not the volatile camera cache.
+  const jobUri = await persistShotForJob(photoUri, now);
   try {
     const handle = await withDispatchTimeout(
       (async () => {
-        const prepared = await prepareJpeg(photoUri, UPLOAD_WIDTH);
+        const prepared = await prepareJpeg(jobUri, UPLOAD_WIDTH);
         return startDetection({
           fileUri: prepared.uri,
           fileName: 'frame.jpg',
@@ -94,10 +114,10 @@ export async function dispatchShot(
         });
       })(),
     );
-    prefs.setPendingCaptures(removePendingCapture(prefs.getPendingCaptures(), photoUri));
+    prefs.setPendingCaptures(removePendingCapture(prefs.getPendingCaptures(), jobUri));
     addJob({
       runId: handle.runId,
-      photoUri,
+      photoUri: jobUri,
       startedAt: now,
       roomSessionId: sessionId,
       status: 'running',
@@ -108,15 +128,15 @@ export async function dispatchShot(
     });
     // Detached on purpose: the semantic verdict lands on the job when it
     // arrives, seconds after the user has already moved on.
-    void attachSemanticVerdict(handle.runId, photoUri);
+    void attachSemanticVerdict(handle.runId, jobUri);
     return { ok: true, runId: handle.runId };
   } catch {
     // Never lose a capture: queue the photo AND surface a failed job in the
     // inbox — retry re-dispatches from there.
-    prefs.setPendingCaptures(upsertPendingCapture(prefs.getPendingCaptures(), photoUri));
+    prefs.setPendingCaptures(upsertPendingCapture(prefs.getPendingCaptures(), jobUri));
     addJob({
       runId: `local-${now}`,
-      photoUri,
+      photoUri: jobUri,
       startedAt: now,
       roomSessionId: sessionId,
       status: 'failed',
