@@ -141,15 +141,17 @@ async function runGemini(model, imagePath, apiKey) {
 
 // Score the PRODUCTION detector (two-pass + adaptive tiling + dedupe) via the
 // live api-service, instead of a raw single model call. Tag: api:<anything>.
+// DETECT_TIER=quality routes through the API's quality VLM tier (?tier=quality).
 async function runProductionApi(imagePath) {
   const t0 = Date.now();
   const apiUrl = process.env.API_URL ?? 'http://localhost:14000';
+  const tierQs = process.env.DETECT_TIER ? `?tier=${process.env.DETECT_TIER}` : '';
   const form = new FormData();
   form.append('frame', new Blob([await fs.readFile(imagePath)], { type: 'image/jpeg' }), 'frame.jpg');
   try {
     // The SSE endpoint sends headers immediately, so long detections don't
     // trip undici's 300s response-headers timeout like sync /v1/detect does.
-    const res = await fetch(`${apiUrl}/v1/detect/stream`, {
+    const res = await fetch(`${apiUrl}/v1/detect/stream${tierQs}`, {
       method: 'POST',
       headers: { 'x-api-key': 'eval' },
       body: form,
