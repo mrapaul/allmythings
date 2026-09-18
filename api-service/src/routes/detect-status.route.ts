@@ -13,14 +13,18 @@ export async function detectStatusRoute(app: FastifyInstance): Promise<void> {
   const pipeline = (app as any).pipeline as PipelineClient | undefined;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const vlmRuns = (app as any).vlmRuns as VlmRunStore | undefined;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const qualityVlmRuns = (app as any).qualityVlmRuns as VlmRunStore | undefined;
 
   app.get<{ Params: { workflowId: string } }>('/v1/detect/status/:workflowId', async (request, reply) => {
     const { workflowId } = request.params;
 
     // VLM async runs live in the in-memory run store. Partial items are
     // served while running so the app can render results incrementally.
+    // Quality-tier runs (POST /v1/detect?async=1&tier=quality) live in their
+    // own store behind the same Detector contract.
     if (envConfig.detector === 'vlm') {
-      const run = vlmRuns?.get(workflowId);
+      const run = vlmRuns?.get(workflowId) ?? qualityVlmRuns?.get(workflowId);
       if (!run) {
         return reply.code(404).send({ error: 'run_not_found', workflowId });
       }

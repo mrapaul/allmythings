@@ -27,6 +27,24 @@ export interface EnvConfig {
   openaiBaseUrl: string;
   openaiModel: string;
   openaiApiKey: string;
+  /**
+   * Optional 'quality' tier: a second, env-configured OpenAI-compatible VLM
+   * (e.g. a remote 30B vision prefill) that POST /v1/detect?tier=quality and
+   * /v1/detect/stream?tier=quality route to. Unconfigured (empty url/model)
+   * means tier=quality is rejected with a 4xx before any frame processing.
+   */
+  qualityVlmUrl: string;
+  qualityVlmApiKey: string;
+  qualityVlmModel: string;
+  qualityVlmTimeoutMs: number;
+  /**
+   * Stage A closed-vocab proposer sidecar (PROPOSER_ENABLED, default off).
+   * When enabled with DETECTOR=vlm, detection runs entirely through this
+   * HTTP proposer instead of the two-pass VLM chain.
+   */
+  proposerEnabled: boolean;
+  proposerUrl: string;
+  proposerTimeoutMs: number;
   // Two-pass VLM detector knobs (DETECTOR=vlm path).
   vlmTwoPass: boolean;
   vlmMaxImageSize: number;
@@ -123,6 +141,18 @@ export const envConfig: EnvConfig = {
   openaiBaseUrl: process.env.OPENAI_BASE_URL || 'http://127.0.0.1:8080/v1',
   openaiModel: process.env.OPENAI_MODEL || '',
   openaiApiKey: process.env.OPENAI_API_KEY || '',
+  // Quality tier: both URL and model must be set for tier=quality to be
+  // servable; QUALITY_VLM_TIMEOUT_MS falls back to VLM_TIMEOUT_MS.
+  qualityVlmUrl: process.env.QUALITY_VLM_URL || '',
+  qualityVlmApiKey: process.env.QUALITY_VLM_API_KEY || '',
+  qualityVlmModel: process.env.QUALITY_VLM_MODEL || '',
+  qualityVlmTimeoutMs: parseInt(
+    process.env.QUALITY_VLM_TIMEOUT_MS || process.env.VLM_TIMEOUT_MS || '300000',
+    10,
+  ),
+  proposerEnabled: process.env.PROPOSER_ENABLED === 'true',
+  proposerUrl: process.env.PROPOSER_URL || 'http://127.0.0.1:8001',
+  proposerTimeoutMs: parseInt(process.env.PROPOSER_TIMEOUT_MS || '30000', 10),
   vlmTwoPass: process.env.VLM_TWO_PASS !== 'false',
   vlmMaxImageSize: parseInt(process.env.VLM_MAX_IMAGE_SIZE || '1024', 10),
   // Per model call. gemma4:31b-cloud (free tier) measures 28-138s per pass on

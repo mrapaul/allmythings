@@ -11,6 +11,7 @@ import {
   QueueFullError,
 } from '../clients/pipeline.client';
 import { mapSceneToItems } from './detect.mapper';
+import { parseDetectTier, qualityTierUnavailableMessage } from './detect-tier';
 import type { Detector } from '../services/vlm-detector';
 import type { VlmRunStore } from '../services/vlm-run-store';
 import { DetectorUnavailableError } from '../clients/vlm-client';
@@ -28,7 +29,11 @@ export async function detectRoute(app: FastifyInstance): Promise<void> {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const vlmDetector = (app as any).vlmDetector as Detector | undefined;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const qualityVlmDetector = (app as any).qualityVlmDetector as Detector | undefined;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const vlmRuns = (app as any).vlmRuns as VlmRunStore | undefined;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const qualityVlmRuns = (app as any).qualityVlmRuns as VlmRunStore | undefined;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const detectGate = (app as any).detectGate as DetectGate | undefined;
 
@@ -125,6 +130,14 @@ export async function detectRoute(app: FastifyInstance): Promise<void> {
         throw new BadRequestError('No image file uploaded');
       }
 
+      // Quality-tier selection (?tier=quality routes to the env-configured
+      // quality VLM). Reject an unservable quality tier BEFORE any frame
+      // processing (no photo is persisted, no detector runs).
+      const tier = parseDetectTier(request.query);
+      if (tier === 'quality' && (envConfig.detector !== 'vlm' || !qualityVlmDetector)) {
+        throw new BadRequestError(qualityTierUnavailableMessage());
+      }
+
       // Idempotency formula (must match mobile detection_repository
       // exactly, see scene_observation §7): sha256 of concatenated
       // per-frame sha256 *bytes*. For a single-frame burst this collapses
@@ -144,27 +157,29 @@ export async function detectRoute(app: FastifyInstance): Promise<void> {
 
       // VLM path: synchronous two-pass detection, no sidecar required.
       if (envConfig.detector === 'vlm') {
+        const tierRuns = tier === 'quality' ? qualityVlmRuns : vlmRuns;
+        const tierDetector = tier === 'quality' ? qualityVlmDetector : vlmDetector;
         // async=1: register a background run and return immediately — the
         // mobile app polls /v1/detect/status/<runId> (survives disconnects).
         const wantsAsync =
           (request.query as Record<string, unknown> | undefined)?.async === '1';
         if (wantsAsync) {
-          if (!vlmRuns) {
+          if (!tierRuns) {
             return reply.code(503).send({ error: 'detector_unavailable' });
           }
           const frame = frames[0]!;
           await persistFrame(frame);
-          const run = vlmRuns.start(frame.buffer, frame.sha256);
+          const run = tierRuns.start(frame.buffer, frame.sha256);
           return reply.code(202).send({
             runId: run.runId,
             photoSha256: frame.sha256,
             statusUrl: `/v1/detect/status/${run.runId}`,
           });
         }
-        if (!vlmDetector) {
+        if (!tierDetector) {
           return reply.code(503).send({ error: 'detector_unavailable' });
         }
-        return runVlmPath({ reply, vlmDetector, detectGate, frame: frames[0]! });
+        return runVlmPath({ reply, vlmDetector: tierDetector, detectGate, frame: frames[0]! });
       }
 
       if (!pipeline) {

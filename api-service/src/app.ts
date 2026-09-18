@@ -32,6 +32,7 @@ import {
   createEmbeddingsService,
   createLabelClient,
   createPossessionJudge,
+  createQualityVlmDetector,
   createVlmDetector,
   warmDetectorModel,
 } from './services/vlm-detector.factory';
@@ -104,7 +105,8 @@ export async function buildApp(options?: { disableRateLimit?: boolean }): Promis
 
   if (envConfig.detector === 'vlm') {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const detector = createVlmDetector(createPossessionJudge());
+    const possessionJudge = createPossessionJudge();
+    const detector = createVlmDetector(possessionJudge);
     (app as any).vlmDetector = detector;
     // Shared admission gate: the sync route rejects fast (503 + Retry-After)
     // when full; async runs queue FIFO on the same gate so sync and async
@@ -119,6 +121,21 @@ export async function buildApp(options?: { disableRateLimit?: boolean }): Promis
       dataDir: envConfig.photoDir,
       gate: detectGate,
     });
+    // Optional 'quality' tier (QUALITY_VLM_URL + QUALITY_VLM_MODEL): same
+    // Detector contract over a second, env-configured OpenAI-compatible
+    // engine; the detect routes select it via ?tier=quality. Absent unless
+    // configured — the routes 400 on tier=quality when this is unset.
+    const qualityDetector = createQualityVlmDetector(possessionJudge);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    (app as any).qualityVlmDetector = qualityDetector;
+    if (qualityDetector) {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      (app as any).qualityVlmRuns = new VlmRunStore(qualityDetector, {
+        dataDir: envConfig.photoDir,
+        gate: detectGate,
+      });
+      logger.info({ model: envConfig.qualityVlmModel }, 'quality_vlm_tier_active');
+    }
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     (app as any).labelClient = createLabelClient();
     // eslint-disable-next-line @typescript-eslint/no-explicit-any

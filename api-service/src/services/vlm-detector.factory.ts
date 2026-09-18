@@ -2,11 +2,13 @@ import { envConfig } from '../config/env.config';
 import { OllamaVlmClient } from '../clients/ollama-vlm.client';
 import { OpenAiVlmClient } from '../clients/openai-vlm.client';
 import { GeminiVlmClient } from '../clients/gemini-vlm.client';
+import { ProposerClient } from '../clients/proposer.client';
 import type { VlmClient } from '../clients/vlm-client';
 import { logger } from '../utils/logger';
 import { VlmDetector, type Detector, type VlmDetectorOptions } from './vlm-detector';
 import type { CoordMode } from './vlm-detector.parse';
 import { FallbackDetector } from './vlm-detector.fallback';
+import { ProposerDetector } from './proposer-detector';
 import { EmbeddingsService } from './embeddings.service';
 import { PossessionJudge } from './possession-judge.service';
 
@@ -40,6 +42,38 @@ function createLocalVlmClient(): VlmClient {
     numCtx: envConfig.vlmNumCtx,
     numPredict: envConfig.vlmNumPredict,
   });
+}
+
+/**
+ * The optional 'quality' tier: a second, env-configured OpenAI-compatible
+ * engine (QUALITY_VLM_URL + QUALITY_VLM_MODEL — e.g. a remote 30B vision
+ * prefill) behind the same two-pass Detector contract. The detect routes
+ * select it via ?tier=quality; when this returns null they reject that tier
+ * with a 4xx before any frame processing. The local engine stays the default.
+ */
+export function createQualityVlmDetector(
+  possessionJudge: PossessionJudge | null = null,
+): Detector | null {
+  if (!envConfig.qualityVlmUrl || !envConfig.qualityVlmModel) return null;
+  const client = new OpenAiVlmClient({
+    baseUrl: envConfig.qualityVlmUrl,
+    model: envConfig.qualityVlmModel,
+    apiKey: envConfig.qualityVlmApiKey,
+    timeoutMs: envConfig.qualityVlmTimeoutMs,
+  });
+  logger.info(
+    { model: envConfig.qualityVlmModel, url: envConfig.qualityVlmUrl },
+    'quality_vlm_tier_configured',
+  );
+  return new VlmDetector(
+    client,
+    {
+      twoPass: envConfig.vlmTwoPass,
+      maxImageSize: envConfig.vlmMaxImageSize,
+      coordMode: resolveLocalCoordMode(envConfig.qualityVlmModel, envConfig.vlmCoordMode),
+    },
+    possessionJudge,
+  );
 }
 
 /** Single-call VLM client for crop labeling — same backend priority as the chain. */
@@ -108,6 +142,22 @@ export function resolveLocalCoordMode(
 }
 
 export function createVlmDetector(possessionJudge: PossessionJudge | null = null): Detector {
+  // Stage A closed-vocab proposer path (default OFF). When enabled, detection
+  // runs entirely through the proposer sidecar; the VLM chain below is
+  // bypassed. Loud on purpose: this changes what model answers every frame.
+  if (envConfig.detector === 'vlm' && envConfig.proposerEnabled) {
+    logger.warn(
+      { url: envConfig.proposerUrl, timeoutMs: envConfig.proposerTimeoutMs },
+      'PROPOSER_ENABLED: detection routed to the Stage A closed-vocab proposer; VLM detector bypassed',
+    );
+    return new ProposerDetector(
+      new ProposerClient({
+        baseUrl: envConfig.proposerUrl,
+        timeoutMs: envConfig.proposerTimeoutMs,
+      }),
+    );
+  }
+
   const opts: VlmDetectorOptions = {
     twoPass: envConfig.vlmTwoPass,
     maxImageSize: envConfig.vlmMaxImageSize,

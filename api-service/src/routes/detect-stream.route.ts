@@ -10,6 +10,7 @@ import {
   QueueFullError,
 } from '../clients/pipeline.client';
 import { mapPipelineDetectionToItem } from './detect.mapper';
+import { parseDetectTier, qualityTierUnavailableMessage } from './detect-tier';
 import { encodeSseEvent, SSE_KEEPALIVE } from '../utils/sse';
 import type { Detector } from '../services/vlm-detector';
 import { DetectorUnavailableError } from '../clients/vlm-client';
@@ -23,6 +24,8 @@ export async function detectStreamRoute(app: FastifyInstance): Promise<void> {
   const pipeline = (app as any).pipeline as PipelineClient | undefined;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const vlmDetector = (app as any).vlmDetector as Detector | undefined;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const qualityVlmDetector = (app as any).qualityVlmDetector as Detector | undefined;
 
   app.post(
     '/v1/detect/stream',
@@ -72,8 +75,18 @@ export async function detectStreamRoute(app: FastifyInstance): Promise<void> {
       }
       if (rejected) return reply.code(rejected.code).send(rejected.body);
       if (frames.length === 0) return reply.code(400).send({ error: 'no_frame' });
+      // Quality-tier selection. Rejected before headers are flushed (so this
+      // stays a plain 4xx, not an SSE error event) and before the frame is
+      // persisted or sent to any detector.
+      const tier = parseDetectTier(request.query);
+      if (tier === 'quality' && (envConfig.detector !== 'vlm' || !qualityVlmDetector)) {
+        return reply
+          .code(400)
+          .send({ error: 'quality_tier_unavailable', message: qualityTierUnavailableMessage() });
+      }
       const useVlm = envConfig.detector === 'vlm';
-      if (useVlm && !vlmDetector)
+      const detector = tier === 'quality' ? qualityVlmDetector : vlmDetector;
+      if (useVlm && !detector)
         return reply.code(503).send({ error: 'detector_unavailable' });
       if (!useVlm && !pipeline)
         return reply.code(503).send({ error: 'pipeline_unavailable' });
@@ -123,7 +136,7 @@ export async function detectStreamRoute(app: FastifyInstance): Promise<void> {
           const runId = crypto.randomBytes(16).toString('hex');
           writeEvent('meta', { runId, traceId, photoSha256: f.sha256 });
           let total = 0;
-          for await (const ev of vlmDetector!.detectStream(f.buffer)) {
+          for await (const ev of detector!.detectStream(f.buffer)) {
             if (aborted) return;
             if (ev.kind === 'scene') {
               writeEvent('scene', ev.scene);
