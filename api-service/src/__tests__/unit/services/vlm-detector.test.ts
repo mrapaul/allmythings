@@ -3,6 +3,7 @@ import sharp from 'sharp';
 import { VlmDetector } from '../../../services/vlm-detector';
 import type { OllamaVlmClient } from '../../../clients/ollama-vlm.client';
 import { OllamaUnavailableError } from '../../../clients/ollama-vlm.client';
+import { DetectorUnavailableError } from '../../../clients/vlm-client';
 import { normalizeText } from '../../../services/embeddings.service';
 import type { PossessionJudge } from '../../../services/possession-judge.service';
 
@@ -281,6 +282,125 @@ describe('VlmDetector', () => {
     });
     const { items } = await detector.detect(image);
     expect(items).toEqual([]);
+  });
+});
+
+/**
+ * Fail-loud hardening: a backend outage must never be reported as a
+ * successfully-empty scene. Empty is only a valid answer when model calls
+ * actually succeeded.
+ */
+describe('VlmDetector — fail-loud on backend outage', () => {
+  const opts = { twoPass: false, maxImageSize: 1024, coordMode: 'auto' as const };
+  // Room scene that triggers tiling with zero pass-1 items found: the model
+  // itself claims ~10 items exist, so an empty result after failed tiles is
+  // definitely a backend outage, not an empty room.
+  const denseRoomPass1 = JSON.stringify({
+    scene: { type: 'room', estimated_total_items: 10, photo_quality: { verdict: 'ok', reason: null } },
+    items: [],
+  });
+
+  it('pass-1 transport failure surfaces as DetectorUnavailableError', async () => {
+    const client = {
+      modelName: 'hosted-tier',
+      generateJson: async (): Promise<string> => {
+        throw new DetectorUnavailableError('hosted tier returned 503');
+      },
+    };
+    const detector = new VlmDetector(client, { ...opts, twoPass: true });
+    await expect(detector.detect(image)).rejects.toBeInstanceOf(DetectorUnavailableError);
+  });
+
+  it('throws DetectorUnavailableError when every tile pass fails', async () => {
+    let call = 0;
+    const client = {
+      modelName: 'stub',
+      generateJson: async (): Promise<string> => {
+        call += 1;
+        if (call === 1) return denseRoomPass1;
+        throw new DetectorUnavailableError(`hosted tier 503 (call ${call})`);
+      },
+    };
+    const detector = new VlmDetector(client, opts);
+    await expect(detector.detect(image)).rejects.toMatchObject({
+      name: 'DetectorUnavailableError',
+      message: expect.stringContaining('tile'),
+    });
+    // pass 1 + all 4 tiles attempted before giving up
+    expect(call).toBe(5);
+  });
+
+  it('returns partial results when only one tile fails', async () => {
+    const lampFromTile = JSON.stringify({
+      items: [
+        {
+          object: 'floor lamp',
+          category: 'Lighting',
+          bounding_box: { x_min: 0.1, y_min: 0.1, x_max: 0.3, y_max: 0.5 },
+          tags: { color: 'black' },
+        },
+      ],
+    });
+    const responses = [
+      denseRoomPass1,
+      null, // tile (0,0) — fails
+      lampFromTile, // tile (340,0)
+      JSON.stringify({ items: [] }), // tile (0,255)
+      JSON.stringify({ items: [] }), // tile (340,255)
+    ];
+    let call = 0;
+    const client = {
+      modelName: 'stub',
+      generateJson: async (): Promise<string> => {
+        call += 1;
+        const r = responses[call - 1];
+        if (r === null) throw new DetectorUnavailableError('tile backend hiccup');
+        return r;
+      },
+    };
+    const detector = new VlmDetector(client, opts);
+    const { items } = await detector.detect(image);
+    expect(items.map((i) => i.label)).toEqual(['floor lamp']);
+  });
+
+  it('returns 200-with-zero-items when calls succeed and the scene is genuinely empty', async () => {
+    const client = {
+      modelName: 'stub',
+      generateJson: async (): Promise<string> => '{"items":[]}',
+    };
+    const detector = new VlmDetector(client, { ...opts, twoPass: true });
+    const { items, scene } = await detector.detect(image);
+    expect(items).toEqual([]);
+    expect(scene.type).toBe('unknown');
+  });
+
+  it('fails loud when the pass-2 audit fails and nothing has been found yet', async () => {
+    let call = 0;
+    const client = {
+      modelName: 'stub',
+      generateJson: async (): Promise<string> => {
+        call += 1;
+        if (call === 1) return '{"items":[]}'; // pass 1: genuinely empty, no scene → no tiling
+        throw new DetectorUnavailableError('hosted tier 503');
+      },
+    };
+    const detector = new VlmDetector(client, { ...opts, twoPass: true });
+    await expect(detector.detect(image)).rejects.toBeInstanceOf(DetectorUnavailableError);
+  });
+
+  it('keeps pass-2 failure soft when pass 1 already found items', async () => {
+    let call = 0;
+    const client = {
+      modelName: 'stub',
+      generateJson: async (): Promise<string> => {
+        call += 1;
+        if (call === 1) return PASS1;
+        throw new DetectorUnavailableError('hosted tier 503');
+      },
+    };
+    const detector = new VlmDetector(client, { ...opts, twoPass: true });
+    const { items } = await detector.detect(image);
+    expect(items).toHaveLength(2);
   });
 });
 

@@ -1,6 +1,6 @@
 import sharp from 'sharp';
 import type { DetectedItem } from '../types/detected-item';
-import type { VlmClient } from '../clients/vlm-client';
+import { DetectorUnavailableError, type VlmClient } from '../clients/vlm-client';
 import { logger } from '../utils/logger';
 import {
   buildPass1Prompt,
@@ -167,7 +167,19 @@ export class VlmDetector {
       logger.info({ count: pass2Items.detected.length }, 'vlm_pass2_complete');
       yield* this.absorb(pass2Items.detected, seen, pass2Items.dedupeOpts);
     } catch (err: unknown) {
-      // Pass 2 is an enhancement; never fail the whole detection on it.
+      // With zero items on the board, the pass-2 audit is the only remaining
+      // signal that could contradict "empty scene". If it fails, "200 + zero
+      // items" is a backend outage dressed as a legitimately empty room, so
+      // fail loud. Once items exist, pass 2 stays an enhancement and its
+      // failure stays soft.
+      if (seen.items.length === 0) {
+        const wrapped =
+          err instanceof DetectorUnavailableError
+            ? err
+            : new DetectorUnavailableError(err instanceof Error ? err.message : String(err));
+        logger.error({ err: wrapped.message }, 'vlm_pass2_failed_fatal');
+        throw wrapped;
+      }
       logger.warn(
         { err: err instanceof Error ? err.message : String(err) },
         'vlm_pass2_failed_continuing',
@@ -202,7 +214,10 @@ export class VlmDetector {
   /**
    * Run one detection pass per overlapping tile, map boxes back into
    * full-image coordinates, and yield only items that survive dedupe against
-   * everything already seen. A failed tile is skipped, never fatal.
+   * everything already seen. A failed tile is skipped, never fatal — unless
+   * EVERY tile fails, which means the backend is down, not the scene empty:
+   * returning zero items then would be indistinguishable from a legitimately
+   * empty room, so the run fails loud instead.
    */
   private async *tilePasses(
     img: PreparedImage,
@@ -210,6 +225,8 @@ export class VlmDetector {
   ): AsyncGenerator<DetectorEvent> {
     const rects = computeTileRects(img.width, img.height);
     logger.info({ tiles: rects.length }, 'vlm_tiling_started');
+    let succeeded = 0;
+    const failures: string[] = [];
     for (const rect of rects) {
       try {
         const tileJpeg = await sharp(img.buffer)
@@ -236,13 +253,23 @@ export class VlmDetector {
           if (ev.kind === 'item') yielded += 1;
           yield ev;
         }
+        succeeded += 1;
         logger.info({ rect, found: parsed.detected.length, yielded }, 'vlm_tile_complete');
       } catch (err: unknown) {
+        failures.push(err instanceof Error ? err.message : String(err));
         logger.warn(
           { rect, err: err instanceof Error ? err.message : String(err) },
           'vlm_tile_failed_continuing',
         );
       }
+    }
+    if (succeeded === 0) {
+      throw new DetectorUnavailableError(
+        `all ${rects.length} VLM tile passes failed; first error: ${failures[0] ?? 'unknown'}`,
+      );
+    }
+    if (failures.length > 0) {
+      logger.warn({ failed: failures.length, succeeded }, 'vlm_tiles_partial_failure');
     }
   }
 
