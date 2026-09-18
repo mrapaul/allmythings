@@ -262,6 +262,13 @@ train-taxonomy: ## Derive the detector class list from the data (embeds labels v
 train-dataset-detr: train-taxonomy ## Build merged RF-DETR COCO dataset (derived taxonomy, regenerated first)
 	python3 training/dataset/build_detr_dataset.py $(TRAIN_FLYWHEEL_FLAG) $(TRAIN_BOOTSTRAP_FLAGS) --out training/data/detr
 
+# Provisions/trains on a GPU box: rfdetr is intentionally NOT installed on this
+# Mac (training/requirements.txt:11-13) — launch.sh builds the uv venv on the
+# box and runs training/rf_detr/train.py in tmux (launch.sh:49).
+train-rf-detr: ## Launch RF-DETR training on the GPU box: bash training/lambda/launch.sh detr
+	@test -d training/data/detr/train || { echo "No DETR dataset at training/data/detr. Run 'make train-dataset-detr' first."; exit 1; }
+	bash training/lambda/launch.sh detr
+
 train-status: ## Flywheel counts vs retrain threshold (TRAIN_MIN_NEW_IMAGES/TRAIN_GROWTH_PCT)
 	-python3 training/dataset/flywheel_status.py
 
@@ -280,4 +287,4 @@ train-promote: ## Release gate for a candidate: make train-promote CANDIDATE=<na
 train-rollback: ## Revert the model registry to the previously active entry
 	node training/release/promote.mjs --rollback
 
-.PHONY: train-test train-fetch-bootstrap train-taxonomy train-dataset-vlm train-dataset-detr train-status train-continuous train-benchmark train-promote train-rollback
+.PHONY: train-test train-fetch-bootstrap train-taxonomy train-dataset-vlm train-dataset-detr train-rf-detr train-status train-continuous train-benchmark train-promote train-rollback
