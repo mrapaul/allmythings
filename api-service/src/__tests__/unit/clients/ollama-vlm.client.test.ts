@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { Agent } from 'undici';
 import { OllamaVlmClient, OllamaUnavailableError } from '../../../clients/ollama-vlm.client';
 
 function makeClient() {
@@ -137,6 +138,38 @@ describe('OllamaVlmClient think flag', () => {
     await makeClient().generateJson('p', 'img');
     const body = JSON.parse(fetchMock.mock.calls[0]?.[1]?.body as string);
     expect('think' in body).toBe(false);
+  });
+});
+
+describe('OllamaVlmClient dispatcher timeouts', () => {
+  beforeEach(() => {
+    vi.stubGlobal('fetch', vi.fn());
+  });
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it('passes a custom dispatcher so undici 300s defaults do not apply', async () => {
+    const fetchMock = fetch as unknown as ReturnType<typeof vi.fn>;
+    fetchMock.mockResolvedValue(okResponse('{}'));
+    const client = new OllamaVlmClient({
+      baseUrl: 'http://localhost:11434',
+      model: 'm',
+      timeoutMs: 900_000,
+    });
+
+    await client.generateJson('p', 'img');
+    await client.warm();
+
+    for (const call of fetchMock.mock.calls) {
+      const init = call[1] as RequestInit & { dispatcher?: unknown };
+      // Regression guard: global fetch applies undici's 300s
+      // headersTimeout/bodyTimeout, which kills CPU-bound vision prefills
+      // with a bare "fetch failed". The client must always bring its own
+      // dispatcher (timeouts are constructor-set to timeoutMs; undici keeps
+      // them in private symbol fields, not inspectable here).
+      expect(init.dispatcher).toBeInstanceOf(Agent);
+    }
   });
 });
 

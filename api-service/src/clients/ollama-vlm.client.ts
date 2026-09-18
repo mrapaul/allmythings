@@ -1,3 +1,4 @@
+import { Agent } from 'undici';
 import { logger } from '../utils/logger';
 import { DetectorUnavailableError, type VlmClient } from './vlm-client';
 
@@ -65,6 +66,13 @@ export class OllamaVlmClient implements VlmClient {
   private readonly retryDelayMs: number;
   private readonly think: boolean | undefined;
   private readonly numCtx: number | undefined;
+  /**
+   * Custom dispatcher whose socket timeouts match `timeoutMs`. Global fetch
+   * uses undici defaults (headersTimeout/bodyTimeout 300s), which silently
+   * kills any request whose response doesn't start within 5 min — exactly
+   * what a CPU-bound vision prefill does ("fetch failed", not our AbortError).
+   */
+  private readonly dispatcher: Agent;
 
   constructor(opts: OllamaVlmClientOptions) {
     this.baseUrl = opts.baseUrl.replace(/\/$/, '');
@@ -76,6 +84,11 @@ export class OllamaVlmClient implements VlmClient {
     this.retryDelayMs = opts.retryDelayMs ?? 5_000;
     this.think = opts.think;
     this.numCtx = opts.numCtx;
+    this.dispatcher = new Agent({
+      headersTimeout: opts.timeoutMs,
+      bodyTimeout: opts.timeoutMs,
+      connectTimeout: 30_000,
+    });
   }
 
   get modelName(): string {
@@ -99,6 +112,8 @@ export class OllamaVlmClient implements VlmClient {
           ...(this.numCtx ? { options: { num_ctx: this.numCtx } } : {}),
         }),
         signal: AbortSignal.timeout(WARM_LOAD_TIMEOUT_MS),
+        // @ts-expect-error undici extension — cold loads exceed the 300s default
+        dispatcher: this.dispatcher,
       });
       logger.info({ model: this.model, ok: resp.ok, keepAlive: this.keepAlive }, 'ollama_model_warmed');
     } catch (err: unknown) {
@@ -161,6 +176,8 @@ export class OllamaVlmClient implements VlmClient {
         headers: { 'content-type': 'application/json' },
         body: JSON.stringify(body),
         signal: controller.signal,
+        // @ts-expect-error undici extension — not in TS DOM lib types
+        dispatcher: this.dispatcher,
       });
 
       if (!resp.ok) {
@@ -181,7 +198,7 @@ export class OllamaVlmClient implements VlmClient {
         err instanceof Error && err.name === 'AbortError'
           ? `Ollama request timed out after ${this.timeoutMs}ms`
           : err instanceof Error
-            ? err.message
+            ? `${err.message}${err.cause instanceof Error ? ` (cause: ${err.cause.message})` : ''}`
             : 'unknown error';
       logger.error({ err: message, model: this.model }, 'ollama_vlm_request_failed');
       throw new OllamaUnavailableError(message);
