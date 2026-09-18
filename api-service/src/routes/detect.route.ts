@@ -14,10 +14,13 @@ import { mapSceneToItems } from './detect.mapper';
 import type { Detector } from '../services/vlm-detector';
 import type { VlmRunStore } from '../services/vlm-run-store';
 import { DetectorUnavailableError } from '../clients/vlm-client';
+import type { DetectGate } from '../utils/concurrency';
 
 const MAX_IMAGE_SIZE = 10 * 1024 * 1024;
 const SUPPORTED = new Set(['image/jpeg', 'image/png', 'image/webp']);
 const PIPELINE_DEADLINE_BUFFER_MS = 250;
+/** Retry hint for the sync VLM path when the detector gate is full. */
+const VLM_QUEUE_RETRY_AFTER_S = 15;
 
 export async function detectRoute(app: FastifyInstance): Promise<void> {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -26,6 +29,8 @@ export async function detectRoute(app: FastifyInstance): Promise<void> {
   const vlmDetector = (app as any).vlmDetector as Detector | undefined;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const vlmRuns = (app as any).vlmRuns as VlmRunStore | undefined;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const detectGate = (app as any).detectGate as DetectGate | undefined;
 
   app.post(
     '/v1/detect',
@@ -83,23 +88,29 @@ export async function detectRoute(app: FastifyInstance): Promise<void> {
       // Section-08 §7: accept 1–3 multipart parts. Each part is an
       // independent capture frame; the pipeline's cross_frame_dedup uses
       // every frame as its own signal class for agreement scoring.
+      //
+      // Every part is ALWAYS fully consumed (toBuffer), even after a
+      // validation error: bailing out of request.parts() mid-stream leaves
+      // bytes on the wire and corrupts the next request on a keep-alive
+      // socket. The first validation error wins; the rest of the body is
+      // drained and discarded.
       const frames: Array<{ buffer: Buffer; mime: string; sha256: string }> = [];
+      let rejected: PayloadTooLargeError | BadRequestError | null = null;
       for await (const part of request.parts()) {
         if (part.type !== 'file') continue;
-        if (frames.length >= 3) {
-          // Drain the rest so the connection closes cleanly.
-          await part.toBuffer();
-          continue;
-        }
         const buf = await part.toBuffer();
+        if (frames.length >= 3) continue;
+        if (rejected) continue;
         if (buf.length > MAX_IMAGE_SIZE) {
-          throw new PayloadTooLargeError(
+          rejected = new PayloadTooLargeError(
             `Frame ${frames.length} exceeds ${MAX_IMAGE_SIZE} bytes`,
           );
+          continue;
         }
         const mime = part.mimetype ?? 'image/jpeg';
         if (!SUPPORTED.has(mime)) {
-          throw new BadRequestError(`Unsupported mime: ${mime}`);
+          rejected = new BadRequestError(`Unsupported mime: ${mime}`);
+          continue;
         }
         frames.push({
           buffer: buf,
@@ -107,6 +118,8 @@ export async function detectRoute(app: FastifyInstance): Promise<void> {
           sha256: crypto.createHash('sha256').update(buf).digest('hex'),
         });
       }
+
+      if (rejected) throw rejected;
 
       if (frames.length === 0) {
         throw new BadRequestError('No image file uploaded');
@@ -151,7 +164,7 @@ export async function detectRoute(app: FastifyInstance): Promise<void> {
         if (!vlmDetector) {
           return reply.code(503).send({ error: 'detector_unavailable' });
         }
-        return runVlmPath({ reply, vlmDetector, frame: frames[0]! });
+        return runVlmPath({ reply, vlmDetector, detectGate, frame: frames[0]! });
       }
 
       if (!pipeline) {
@@ -175,6 +188,7 @@ export async function detectRoute(app: FastifyInstance): Promise<void> {
 interface VlmPathArgs {
   reply: FastifyReply;
   vlmDetector: Detector;
+  detectGate: DetectGate | undefined;
   frame: { buffer: Buffer; mime: string; sha256: string };
 }
 
@@ -191,7 +205,17 @@ async function persistFrame(frame: {
 }
 
 async function runVlmPath(args: VlmPathArgs) {
-  const { reply, vlmDetector, frame } = args;
+  const { reply, vlmDetector, detectGate, frame } = args;
+  // Backpressure, mirroring the pipeline path's queue_full contract: when the
+  // detector gate is full (another run holds the GPU-bound model), reject
+  // fast with Retry-After instead of accepting and doubling everyone's
+  // latency against a serial Ollama.
+  if (detectGate && !detectGate.tryAcquire()) {
+    reply.header('Retry-After', String(VLM_QUEUE_RETRY_AFTER_S));
+    return reply
+      .code(503)
+      .send({ error: 'queue_full', retry_after_s: VLM_QUEUE_RETRY_AFTER_S });
+  }
   try {
     // Persist so /photos/<sha> resolves, matching the pipeline path.
     await persistFrame(frame);
@@ -202,6 +226,8 @@ async function runVlmPath(args: VlmPathArgs) {
       return reply.code(503).send({ error: 'detector_unavailable', message: err.message });
     }
     throw err;
+  } finally {
+    detectGate?.release();
   }
 }
 

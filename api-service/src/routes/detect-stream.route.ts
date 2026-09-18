@@ -44,25 +44,33 @@ export async function detectStreamRoute(app: FastifyInstance): Promise<void> {
     },
     async (request: FastifyRequest, reply: FastifyReply) => {
       const itemDribbleMs = Number(process.env.SSE_ITEM_DRIBBLE_MS ?? 50);
+      // Every part is ALWAYS fully consumed, even after a validation error:
+      // bailing out of request.parts() mid-stream leaves bytes on the wire and
+      // corrupts the next request on a keep-alive socket. The stream route
+      // accepts exactly one frame; extra parts are drained and discarded.
       const frames: Array<{ buffer: Buffer; mime: string; sha256: string }> = [];
+      let rejected: { code: number; body: Record<string, unknown> } | null = null;
       for await (const part of request.parts()) {
         if (part.type !== 'file') continue;
-        if (frames.length >= 1) {
-          await part.toBuffer();
+        const buf = await part.toBuffer();
+        if (frames.length >= 1) continue;
+        if (rejected) continue;
+        if (buf.length > MAX_IMAGE_SIZE) {
+          rejected = { code: 413, body: { error: 'payload_too_large' } };
           continue;
         }
-        const buf = await part.toBuffer();
-        if (buf.length > MAX_IMAGE_SIZE)
-          return reply.code(413).send({ error: 'payload_too_large' });
         const mime = part.mimetype ?? 'image/jpeg';
-        if (!SUPPORTED.has(mime))
-          return reply.code(400).send({ error: 'unsupported_mime', mime });
+        if (!SUPPORTED.has(mime)) {
+          rejected = { code: 400, body: { error: 'unsupported_mime', mime } };
+          continue;
+        }
         frames.push({
           buffer: buf,
           mime,
           sha256: crypto.createHash('sha256').update(buf).digest('hex'),
         });
       }
+      if (rejected) return reply.code(rejected.code).send(rejected.body);
       if (frames.length === 0) return reply.code(400).send({ error: 'no_frame' });
       const useVlm = envConfig.detector === 'vlm';
       if (useVlm && !vlmDetector)
@@ -115,53 +123,32 @@ export async function detectStreamRoute(app: FastifyInstance): Promise<void> {
           const runId = crypto.randomBytes(16).toString('hex');
           writeEvent('meta', { runId, traceId, photoSha256: f.sha256 });
           let total = 0;
-          try {
-            for await (const ev of vlmDetector!.detectStream(f.buffer)) {
-              if (aborted) return;
-              if (ev.kind === 'scene') {
-                writeEvent('scene', ev.scene);
-                continue;
-              }
-              if (ev.kind === 'merge-suggestion') {
-                // Distinct event: the app collects these and asks the user
-                // later, so a suggestion never delays or replaces an item.
-                writeEvent('merge-suggestion', ev.suggestion);
-                continue;
-              }
-              writeEvent('item', ev.item);
-              total += 1;
-              if (itemDribbleMs > 0) await new Promise((r) => setTimeout(r, itemDribbleMs));
+          for await (const ev of vlmDetector!.detectStream(f.buffer)) {
+            if (aborted) return;
+            if (ev.kind === 'scene') {
+              writeEvent('scene', ev.scene);
+              continue;
             }
-          } catch (err) {
-            if (err instanceof DetectorUnavailableError) {
-              writeEvent('error', { code: 'detector_unavailable', message: err.message });
-              return;
+            if (ev.kind === 'merge-suggestion') {
+              // Distinct event: the app collects these and asks the user
+              // later, so a suggestion never delays or replaces an item.
+              writeEvent('merge-suggestion', ev.suggestion);
+              continue;
             }
-            throw err;
+            writeEvent('item', ev.item);
+            total += 1;
+            if (itemDribbleMs > 0) await new Promise((r) => setTimeout(r, itemDribbleMs));
           }
           writeEvent('done', { runId, totalItems: total });
           return;
         }
 
-        let launch;
-        try {
-          launch = await pipeline!.launchRun({
-            idempotencyKey,
-            photoPaths: [photoPath],
-            traceId,
-            requestId,
-          });
-        } catch (err) {
-          if (err instanceof QueueFullError) {
-            writeEvent('error', { code: 'queue_full', retryAfterS: err.retryAfterS });
-            return;
-          }
-          if (err instanceof PipelineUnavailableError) {
-            writeEvent('error', { code: 'pipeline_unavailable' });
-            return;
-          }
-          throw err;
-        }
+        const launch = await pipeline!.launchRun({
+          idempotencyKey,
+          photoPaths: [photoPath],
+          traceId,
+          requestId,
+        });
 
         writeEvent('meta', { runId: launch.runId, traceId });
 
@@ -189,6 +176,23 @@ export async function detectStreamRoute(app: FastifyInstance): Promise<void> {
           if (itemDribbleMs > 0) await new Promise((r) => setTimeout(r, itemDribbleMs));
         }
         writeEvent('done', { runId: launch.runId, totalItems: items.length });
+      } catch (err) {
+        // Headers are already flushed, so the ONLY error channel left is an
+        // SSE event. Every failure — a corrupt JPEG in sharp, a multipart
+        // read failure, an unexpected detector error — must produce a
+        // terminal `error` event: a stream that just stops is
+        // indistinguishable from a network drop on the client.
+        const message = err instanceof Error ? err.message : String(err);
+        if (err instanceof QueueFullError) {
+          writeEvent('error', { code: 'queue_full', retryAfterS: err.retryAfterS, message });
+        } else if (err instanceof PipelineUnavailableError) {
+          writeEvent('error', { code: 'pipeline_unavailable', message });
+        } else if (err instanceof DetectorUnavailableError) {
+          writeEvent('error', { code: 'detector_unavailable', message });
+        } else {
+          writeEvent('error', { code: 'internal_error', message });
+        }
+        return;
       } finally {
         clearInterval(keepalive);
         reply.raw.off('close', onClose);

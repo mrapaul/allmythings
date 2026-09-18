@@ -5,6 +5,7 @@ import { GeminiVlmClient } from '../clients/gemini-vlm.client';
 import type { VlmClient } from '../clients/vlm-client';
 import { logger } from '../utils/logger';
 import { VlmDetector, type Detector, type VlmDetectorOptions } from './vlm-detector';
+import type { CoordMode } from './vlm-detector.parse';
 import { FallbackDetector } from './vlm-detector.fallback';
 import { EmbeddingsService } from './embeddings.service';
 import { PossessionJudge } from './possession-judge.service';
@@ -83,6 +84,29 @@ export function createPossessionJudge(): PossessionJudge {
   });
 }
 
+/**
+ * Resolve the coordinate convention for the LOCAL detector.
+ *
+ * The pass prompts MANDATE a 0-1000 integer scale, so prompt-compliant models
+ * are 'thousand' by contract. Inference ('auto') cannot be the default: on
+ * production-sized images (maxImageSize 1024) a compliant 0-1000 output always
+ * fits "within the image", so inferCoordMode systematically misclassifies it
+ * as pixels and shrinks every box by ~2.3% on both axes. Only the known
+ * legacy pixel-mode emitters get a pin; unknown models keep value inference,
+ * whose worst case (slight shrink) beats forcing the wrong convention
+ * (boxes 1000x too small).
+ */
+export function resolveLocalCoordMode(
+  model: string,
+  configured: CoordMode | 'auto',
+): CoordMode | 'auto' {
+  if (configured !== 'auto') return configured;
+  const m = model.toLowerCase();
+  if (m.includes('qwen2.5') || m.includes('qwen2-vl')) return 'pixel';
+  if (m.includes('qwen3')) return 'thousand';
+  return 'auto';
+}
+
 export function createVlmDetector(possessionJudge: PossessionJudge | null = null): Detector {
   const opts: VlmDetectorOptions = {
     twoPass: envConfig.vlmTwoPass,
@@ -91,7 +115,11 @@ export function createVlmDetector(possessionJudge: PossessionJudge | null = null
   };
 
   const local = createLocalVlmClient();
-  const ollama = new VlmDetector(local, opts, possessionJudge);
+  const ollama = new VlmDetector(
+    local,
+    { ...opts, coordMode: resolveLocalCoordMode(envConfig.ollamaModel, envConfig.vlmCoordMode) },
+    possessionJudge,
+  );
 
   if (!envConfig.geminiApiKey) {
     logger.info(

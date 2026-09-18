@@ -45,15 +45,21 @@ export async function labelRoute(app: FastifyInstance): Promise<void> {
         return reply.code(503).send({ error: 'detector_unavailable' });
       }
       let crop: Buffer | null = null;
+      let rejected: { code: number; body: Record<string, unknown> } | null = null;
       for await (const part of request.parts()) {
         if (part.type !== 'file') continue;
+        // Always fully consume every part: bailing out of request.parts()
+        // mid-stream leaves bytes on the wire and corrupts the next request
+        // on a keep-alive socket. Only the first file part is used.
         const buf = await part.toBuffer();
+        if (crop || rejected) continue;
         if (buf.length > MAX_CROP_SIZE) {
-          return reply.code(413).send({ error: 'payload_too_large' });
+          rejected = { code: 413, body: { error: 'payload_too_large' } };
+          continue;
         }
         crop = buf;
-        break;
       }
+      if (rejected) return reply.code(rejected.code).send(rejected.body);
       if (!crop) {
         return reply.code(400).send({ error: 'no_crop_uploaded' });
       }

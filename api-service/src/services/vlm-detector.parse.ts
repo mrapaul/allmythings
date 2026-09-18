@@ -293,13 +293,21 @@ export function extractCorners(box: unknown): [number, number, number, number] |
 }
 
 /**
- * Decide the coordinate convention for a whole pass.
+ * Decide the coordinate convention for a whole pass by VALUE INFERENCE alone.
  *
  * Done at pass level (not per box) using the global maximum across every box,
- * because a single edge-spanning object reliably reveals the scale. Image
- * dimensions disambiguate the hard case: a coordinate that fits within the
- * image is pixels (Qwen2.5-VL), while one that exceeds the image must be on the
- * 0-1000 scale (Qwen3-VL). Values <= 1.5 are already normalized.
+ * because a single edge-spanning object reliably reveals the scale. Values
+ * <= 1.5 are already normalized; a coordinate that exceeds the image must be
+ * on the 0-1000 scale (Qwen3-VL).
+ *
+ * WARNING — known systematic bias: for production-sized images (long side
+ * >= ~981 px) pixelCeiling exceeds 1000, so prompt-compliant 0-1000 output
+ * (the pass prompts MANDATE that scale) is always classified 'pixel' and
+ * divided by the image size instead of 1000 — a ~2.3% shrink on both axes of
+ * every box. Values alone cannot disambiguate the ambiguous band (see
+ * vlm-detector.factory.ts#resolveLocalCoordMode, which pins known models by
+ * name and only falls back here for unknown ones). Keep that pin in place;
+ * do not widen this heuristic to "fix" it.
  */
 export function inferCoordMode(
   allCorners: number[][],
