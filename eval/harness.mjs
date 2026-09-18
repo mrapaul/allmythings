@@ -5,14 +5,30 @@
 
 import fs from 'node:fs/promises';
 import path from 'node:path';
+import { createRequire } from 'node:module';
 import { buildColourLexicon, parseLabel, scoreRun } from './scoring.mjs';
 import { buildTokenEq, tokenUniverse } from './synonyms.mjs';
+
+// Global fetch rides undici defaults (headersTimeout/bodyTimeout 300s), which
+// silently kills slow backend responses ("fetch failed", not our AbortError).
+// Resolve undici from api-service (same trick as resolveGeminiKey below) and
+// give the raw Ollama path a dispatcher whose timeouts honor OLLAMA_TIMEOUT_MS.
+const require = createRequire(new URL('../api-service/package.json', import.meta.url));
+const { Agent } = require('undici');
 
 const EVAL_ROOT = path.dirname(new URL(import.meta.url).pathname);
 const FIXTURES = path.join(EVAL_ROOT, 'fixtures');
 const ORACLES  = path.join(EVAL_ROOT, 'oracle');
 const RUNS     = path.join(EVAL_ROOT, 'runs');
 const OLLAMA      = process.env.OLLAMA_BASE_URL ?? 'http://localhost:11434';
+// Remote/CPU backends (e.g. the Tailscale nixos box) can blow past the local
+// 3-min budget; override without editing code. Default keeps local behavior.
+const OLLAMA_TIMEOUT_MS = Number(process.env.OLLAMA_TIMEOUT_MS ?? 180_000);
+const ollamaDispatcher = new Agent({
+  headersTimeout: OLLAMA_TIMEOUT_MS,
+  bodyTimeout: OLLAMA_TIMEOUT_MS,
+  connectTimeout: 30_000,
+});
 const HYBRID_URL  = process.env.HYBRID_URL ?? 'http://localhost:14000/v1/detect?mode=full';
 const GEMINI_BASE = 'https://generativelanguage.googleapis.com/v1beta';
 
@@ -54,6 +70,7 @@ async function runModel(model, imagePath) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ model, prompt: 'hi', stream: false, options: { num_ctx: 4096, num_predict: 1 } }),
         signal: AbortSignal.timeout(30000),
+        dispatcher: ollamaDispatcher,
       }).catch(() => undefined);
     }
     try {
@@ -67,7 +84,8 @@ async function runModel(model, imagePath) {
           stream: false,
           options: { num_ctx: 4096, temperature: 0.2 },
         }),
-        signal: AbortSignal.timeout(180_000),
+        signal: AbortSignal.timeout(OLLAMA_TIMEOUT_MS),
+        dispatcher: ollamaDispatcher,
       });
       if (!res.ok) {
         const body = await res.text().catch(() => '');
