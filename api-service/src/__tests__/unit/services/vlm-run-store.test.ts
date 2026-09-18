@@ -3,6 +3,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { VlmRunStore } from '../../../services/vlm-run-store';
+import { DetectGate } from '../../../utils/concurrency';
 import type { Detector, DetectorEvent } from '../../../services/vlm-detector';
 import { DEFAULT_SCENE } from '../../../services/vlm-detector.parse';
 import { DetectorUnavailableError } from '../../../clients/vlm-client';
@@ -209,5 +210,86 @@ describe('VlmRunStore persistence', () => {
     expect(store.get(expiredId)).toBeNull();
     expect(fs.existsSync(path.join(runsDir, `${expiredId}.json`))).toBe(false);
     expect(fs.existsSync(path.join(runsDir, 'torn.json'))).toBe(false);
+  });
+
+  it('redispatching the identical photo returns the same run (idempotency)', async () => {
+    let consumptions = 0;
+    const detector: Detector = {
+      async detect() {
+        throw new Error('unused');
+      },
+      async *detectStream(): AsyncGenerator<DetectorEvent> {
+        consumptions += 1;
+        yield { kind: 'item', item: ITEM };
+      },
+    };
+    const store = new VlmRunStore(detector);
+    const sha = 'f'.repeat(64);
+    const first = store.start(Buffer.from('img'), sha);
+    const second = store.start(Buffer.from('img'), sha);
+
+    expect(second.runId).toBe(first.runId);
+    await tick();
+    await tick();
+    expect(consumptions).toBe(1);
+    expect(store.get(first.runId)?.status).toBe('completed');
+  });
+
+  it('a failed run does not shadow a redispatch of the same photo', async () => {
+    let shouldFail = true;
+    const detector: Detector = {
+      async detect() {
+        throw new Error('unused');
+      },
+      // eslint-disable-next-line require-yield
+      async *detectStream(): AsyncGenerator<DetectorEvent> {
+        if (shouldFail) throw new Error('boom');
+        yield { kind: 'item', item: ITEM };
+      },
+    };
+    const store = new VlmRunStore(detector);
+    const sha = 'e'.repeat(64);
+    const first = store.start(Buffer.from('img'), sha);
+    await tick();
+    expect(store.get(first.runId)?.status).toBe('failed');
+
+    shouldFail = false;
+    const second = store.start(Buffer.from('img'), sha);
+    expect(second.runId).not.toBe(first.runId);
+    await tick();
+    expect(store.get(second.runId)?.status).toBe('completed');
+  });
+
+  it('fails fast with server_busy when the gate queue is full', async () => {
+    const hang = makeGate(); // never released: occupies the only slot
+    const store = new VlmRunStore(slowDetector(hang), {
+      gate: new DetectGate(1, 0),
+    });
+    const first = store.start(Buffer.from('img'), 'a'.repeat(64));
+    await tick();
+    const second = store.start(Buffer.from('img'), 'b'.repeat(64));
+    await tick();
+    expect(store.get(first.runId)?.status).toBe('running');
+    expect(store.get(second.runId)?.status).toBe('failed');
+    expect(store.get(second.runId)?.error).toContain('server_busy');
+    hang.release();
+  });
+
+  it('queues async runs FIFO on the gate and runs them once slots free', async () => {
+    const firstGate = makeGate();
+    const store = new VlmRunStore(slowDetector(firstGate), {
+      gate: new DetectGate(1, 1),
+    });
+    const first = store.start(Buffer.from('img'), 'a'.repeat(64));
+    const second = store.start(Buffer.from('img'), 'b'.repeat(64));
+    await tick();
+    // Second is queued, not failed (queue cap 1 not exceeded).
+    expect(store.get(second.runId)?.status).toBe('running');
+
+    firstGate.release();
+    await tick();
+    await tick();
+    expect(store.get(first.runId)?.status).toBe('completed');
+    expect(store.get(second.runId)?.status).toBe('completed');
   });
 });

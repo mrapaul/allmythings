@@ -6,6 +6,7 @@ import { logger } from '../utils/logger';
 import type { DetectedItem } from '../types/detected-item';
 import type { Detector } from './vlm-detector';
 import type { MergeSuggestion, SceneInfo } from './vlm-detector.parse';
+import type { DetectGate } from '../utils/concurrency';
 
 /**
  * Store of asynchronous VLM detection runs: in-memory Map for speed, mirrored
@@ -44,6 +45,13 @@ export interface VlmRunStoreOptions {
   ttlMs?: number;
   /** Data root (same root the flywheel/photos use); null disables persistence. */
   dataDir?: string | null;
+  /**
+   * Admission gate shared with the sync detect path. Runs wait FIFO for a
+   * detector slot; when the queue is full the run fails fast with a
+   * server_busy error the app can retry, instead of piling unbounded GPU
+   * work onto one Ollama instance.
+   */
+  gate?: DetectGate;
 }
 
 const DEFAULT_TTL_MS = 30 * 60_000;
@@ -56,8 +64,11 @@ let tmpFileCounter = 0;
 
 export class VlmRunStore {
   private readonly runs = new Map<string, VlmRun>();
+  /** photoSha256 → runId, for idempotent redispatch (see start()). */
+  private readonly byPhoto = new Map<string, string>();
   private readonly ttlMs: number;
   private readonly runsDir: string | null;
+  private readonly gate: DetectGate | undefined;
   private readonly pendingIo = new Set<Promise<void>>();
   /** Serializes writes/deletes so state transitions land on disk in order. */
   private ioChain: Promise<void> = Promise.resolve();
@@ -69,12 +80,25 @@ export class VlmRunStore {
   ) {
     this.ttlMs = opts?.ttlMs ?? DEFAULT_TTL_MS;
     this.runsDir = opts?.dataDir ? path.join(opts.dataDir, 'runs') : null;
+    this.gate = opts?.gate;
     this.loadFromDisk();
   }
 
-  /** Register a run and start consuming the detector stream in the background. */
+  /**
+   * Register a run and start consuming the detector stream in the background.
+   *
+   * Idempotent: the mobile client retries dispatch after disconnects and
+   * backgrounding, so the identical photo must map to the same run instead
+   * of queuing a second multi-minute GPU pass. A failed run is the one case
+   * where a redispatch is a genuinely new attempt.
+   */
   start(imageBuffer: Buffer, photoSha256: string): VlmRun {
     this.prune();
+    const existingId = this.byPhoto.get(photoSha256);
+    if (existingId) {
+      const existing = this.runs.get(existingId);
+      if (existing && existing.status !== 'failed') return existing;
+    }
     const run: VlmRun = {
       runId: crypto.randomBytes(16).toString('hex'),
       photoSha256,
@@ -85,9 +109,21 @@ export class VlmRunStore {
       startedAt: Date.now(),
     };
     this.runs.set(run.runId, run);
+    this.byPhoto.set(photoSha256, run.runId);
     this.persist(run);
 
     void (async () => {
+      if (this.gate) {
+        const admitted = await this.gate.acquire();
+        if (!admitted) {
+          run.status = 'failed';
+          run.error = 'server_busy: detection queue is full, retry later';
+          run.completedAt = Date.now();
+          this.persist(run);
+          logger.warn({ runId: run.runId }, 'vlm_async_run_rejected_queue_full');
+          return;
+        }
+      }
       try {
         for await (const ev of this.detector.detectStream(imageBuffer)) {
           if (ev.kind === 'scene') run.scene = ev.scene;
@@ -107,6 +143,8 @@ export class VlmRunStore {
         run.completedAt = Date.now();
         this.persist(run);
         logger.warn({ runId: run.runId, err: run.error }, 'vlm_async_run_failed');
+      } finally {
+        this.gate?.release();
       }
     })();
 
@@ -132,6 +170,7 @@ export class VlmRunStore {
     for (const [id, run] of this.runs) {
       if (now - run.startedAt > this.ttlMs) {
         this.runs.delete(id);
+        if (this.byPhoto.get(run.photoSha256) === id) this.byPhoto.delete(run.photoSha256);
         this.deleteFile(id);
       }
     }
@@ -200,6 +239,9 @@ export class VlmRunStore {
           this.persist(run);
         }
         this.runs.set(run.runId, run);
+        // Only non-failed runs can satisfy an idempotent redispatch; a failed
+        // run must not shadow a fresh attempt at the same photo.
+        if (run.status !== 'failed') this.byPhoto.set(run.photoSha256, run.runId);
         restored += 1;
       }
       if (restored > 0) {

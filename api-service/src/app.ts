@@ -39,6 +39,7 @@ import { vocabRoute } from './routes/vocab.route';
 import { type PrecheckService, createPrecheckService } from './services/precheck.service';
 import { keepModelsWarm } from './utils/keep-warm';
 import { VlmRunStore } from './services/vlm-run-store';
+import { DetectGate } from './utils/concurrency';
 import { detectedItemSchema } from './schemas/detected-item.schema';
 
 // unhandledRejection logs and continues; uncaughtException stays fatal.
@@ -105,10 +106,19 @@ export async function buildApp(options?: { disableRateLimit?: boolean }): Promis
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const detector = createVlmDetector(createPossessionJudge());
     (app as any).vlmDetector = detector;
+    // Shared admission gate: the sync route rejects fast (503 + Retry-After)
+    // when full; async runs queue FIFO on the same gate so sync and async
+    // paths contend for the same bounded detector capacity.
+    const detectGate = new DetectGate(envConfig.vlmMaxConcurrent, envConfig.vlmMaxQueue);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    (app as any).detectGate = detectGate;
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     // Durable: runs are mirrored to <photoDir>/runs so a restart (e.g. the
     // telemetry incident) never turns a completed run into run_not_found.
-    (app as any).vlmRuns = new VlmRunStore(detector, { dataDir: envConfig.photoDir });
+    (app as any).vlmRuns = new VlmRunStore(detector, {
+      dataDir: envConfig.photoDir,
+      gate: detectGate,
+    });
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     (app as any).labelClient = createLabelClient();
     // eslint-disable-next-line @typescript-eslint/no-explicit-any

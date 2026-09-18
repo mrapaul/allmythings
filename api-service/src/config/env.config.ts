@@ -42,6 +42,10 @@ export interface EnvConfig {
   /** Re-warm cadence for resident models; 0 disables. Must beat the shortest keep_alive. */
   modelRewarmMs: number;
   vlmCoordMode: 'auto' | 'norm' | 'thousand' | 'pixel';
+  /** Max detector runs consuming the VLM at once (sync rejects, async queues). */
+  vlmMaxConcurrent: number;
+  /** FIFO cap for queued async runs; beyond this, new runs fail fast. */
+  vlmMaxQueue: number;
   // Text embeddings (Ollama /api/embed) — power the vocabulary-free semantic
   // layer: same-kind label matching during dedupe, and /v1/vocab/match.
   embeddingsEnabled: boolean;
@@ -130,6 +134,13 @@ export const envConfig: EnvConfig = {
   modelRewarmMs: parseInt(process.env.MODEL_REWARM_MS || String(25 * 60 * 1000), 10),
   vlmThink:
     process.env.VLM_THINK === 'false' ? false : process.env.VLM_THINK === 'true' ? true : undefined,
+  // Concurrency control for the VLM path. The legacy pipeline had
+  // QueueFullError/Retry-After backpressure; the VLM path accepted unlimited
+  // concurrent runs and doubled latency under contention (each run fires up
+  // to 7 serial model calls at one Ollama). Sync requests reject with 503 +
+  // Retry-When full; async runs queue FIFO up to vlmMaxQueue, then fail fast.
+  vlmMaxConcurrent: parseInt(process.env.VLM_MAX_CONCURRENT || '2', 10),
+  vlmMaxQueue: parseInt(process.env.VLM_MAX_QUEUE || '8', 10),
   vlmCoordMode: (['auto', 'norm', 'thousand', 'pixel'] as const).includes(
     process.env.VLM_COORD_MODE as 'auto' | 'norm' | 'thousand' | 'pixel',
   )
