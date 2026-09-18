@@ -272,6 +272,9 @@ train-rf-detr: ## Launch RF-DETR training on the GPU box: bash training/lambda/l
 train-status: ## Flywheel counts vs retrain threshold (TRAIN_MIN_NEW_IMAGES/TRAIN_GROWTH_PCT)
 	-python3 training/dataset/flywheel_status.py
 
+train-regression-export: ## Export fully-reviewed flywheel photos as regression eval candidates → datasets/regression-candidates/
+	python3 training/dataset/export_regression_suite.py
+
 train-continuous: ## Export flywheel, rebuild both datasets, print launch cmd when threshold met
 	-$(MAKE) dataset-export
 	@$(MAKE) train-dataset-vlm train-dataset-detr
@@ -280,11 +283,11 @@ train-continuous: ## Export flywheel, rebuild both datasets, print launch cmd wh
 train-benchmark: ## Benchmark every available contender against the home-inventory oracle
 	node training/benchmarks/run_benchmark.mjs $(if $(CANDIDATE),--candidate-name $(CANDIDATE),) $(if $(CANDIDATE_URL),--candidate-url $(CANDIDATE_URL),)
 
-train-promote: ## Release gate for a candidate: make train-promote CANDIDATE=<name> [CANDIDATE_URL=…]
-	@test -n "$(CANDIDATE)" || { echo "Usage: make train-promote CANDIDATE=<name> [CANDIDATE_URL=http://localhost:8000/v1]"; exit 1; }
-	node training/release/promote.mjs --candidate $(CANDIDATE) $(if $(CANDIDATE_URL),--candidate-url $(CANDIDATE_URL),)
+train-promote: ## Release gate for a candidate: make train-promote CANDIDATE=<name> [CANDIDATE_URL=…] [RECALL_FLOOR=…]
+	@test -n "$(CANDIDATE)" || { echo "Usage: make train-promote CANDIDATE=<name> [CANDIDATE_URL=http://localhost:8000/v1] [RECALL_FLOOR=73.5]"; exit 1; }
+	node training/release/promote.mjs --candidate $(CANDIDATE) $(if $(CANDIDATE_URL),--candidate-url $(CANDIDATE_URL),) $(if $(RECALL_FLOOR),--recall-floor $(RECALL_FLOOR),)
 
 train-rollback: ## Revert the model registry to the previously active entry
 	node training/release/promote.mjs --rollback
 
-.PHONY: train-test train-fetch-bootstrap train-taxonomy train-dataset-vlm train-dataset-detr train-rf-detr train-status train-continuous train-benchmark train-promote train-rollback
+.PHONY: train-test train-fetch-bootstrap train-taxonomy train-dataset-vlm train-dataset-detr train-rf-detr train-status train-regression-export train-continuous train-benchmark train-promote train-rollback
