@@ -1,3 +1,4 @@
+import { Agent } from 'undici';
 import { logger } from '../utils/logger';
 import { DetectorUnavailableError, type VlmClient } from './vlm-client';
 
@@ -36,6 +37,13 @@ export class OpenAiVlmClient implements VlmClient {
   private readonly temperature: number;
   private readonly maxTokens: number;
   private readonly retryDelayMs: number;
+  /**
+   * Custom dispatcher whose socket timeouts match `timeoutMs`. Global fetch
+   * uses undici defaults (headersTimeout/bodyTimeout 300s), which silently
+   * kills any request whose response doesn't start within 5 min — exactly
+   * what a remote 30B vision prefill does ("fetch failed", not our AbortError).
+   */
+  private readonly dispatcher: Agent;
 
   constructor(opts: OpenAiVlmClientOptions) {
     this.baseUrl = opts.baseUrl.replace(/\/$/, '');
@@ -45,6 +53,11 @@ export class OpenAiVlmClient implements VlmClient {
     this.temperature = opts.temperature ?? 0.1;
     this.maxTokens = opts.maxTokens ?? 8192;
     this.retryDelayMs = opts.retryDelayMs ?? 2_000;
+    this.dispatcher = new Agent({
+      headersTimeout: opts.timeoutMs,
+      bodyTimeout: opts.timeoutMs,
+      connectTimeout: 30_000,
+    });
   }
 
   get modelName(): string {
@@ -98,6 +111,8 @@ export class OpenAiVlmClient implements VlmClient {
         headers,
         body: JSON.stringify(body),
         signal: controller.signal,
+        // @ts-expect-error undici extension — not in TS DOM lib types
+        dispatcher: this.dispatcher,
       });
       if (!resp.ok) {
         const text = await resp.text().catch(() => '');

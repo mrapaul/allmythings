@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { Agent } from 'undici';
 import { OpenAiVlmClient } from '../../../clients/openai-vlm.client';
 import { DetectorUnavailableError } from '../../../clients/vlm-client';
 
@@ -94,5 +95,37 @@ describe('OpenAiVlmClient', () => {
     const fetchMock = fetch as unknown as ReturnType<typeof vi.fn>;
     fetchMock.mockResolvedValue({ ok: true, json: async () => ({ choices: [] }) });
     expect(await makeClient().generateJson('p', 'img')).toBe('');
+  });
+});
+
+describe('OpenAiVlmClient dispatcher timeouts', () => {
+  beforeEach(() => {
+    vi.stubGlobal('fetch', vi.fn());
+  });
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it('passes a custom dispatcher so undici 300s defaults do not apply', async () => {
+    const fetchMock = fetch as unknown as ReturnType<typeof vi.fn>;
+    fetchMock.mockResolvedValue(okResponse('{}'));
+    const client = new OpenAiVlmClient({
+      baseUrl: 'http://remote-mlx:8080/v1',
+      model: 'mlx-community/Qwen3-VL-30B-A3B-Instruct-4bit',
+      timeoutMs: 900_000,
+    });
+
+    await client.generateJson('p', 'img');
+
+    for (const call of fetchMock.mock.calls) {
+      const init = call[1] as RequestInit & { dispatcher?: unknown };
+      // Regression guard: global fetch applies undici's 300s
+      // headersTimeout/bodyTimeout, which kills a remote 30B vision prefill
+      // with a bare "fetch failed" before our own timeoutMs can matter. The
+      // client must always bring its own dispatcher (timeouts are
+      // constructor-set to timeoutMs; undici keeps them in private symbol
+      // fields, not inspectable here).
+      expect(init.dispatcher).toBeInstanceOf(Agent);
+    }
   });
 });
