@@ -8,6 +8,7 @@ import HomePickerSheet from '@/components/HomePickerSheet';
 import { ItemThumb } from '@/components/ItemThumb';
 import { JiggleView } from '@/components/JiggleView';
 import MasonryGrid from '@/components/MasonryGrid';
+import QueueTile from '@/components/QueueTile';
 import SearchHeader from '@/components/SearchHeader';
 import { Snackbar } from '@/components/Snackbar';
 import TopBar from '@/components/TopBar';
@@ -22,7 +23,7 @@ import { useWalkCapture } from '@/hooks/useWalkCapture';
 import { isDetectedBox } from '@/lib/bbox-layout';
 import { categoryIcon } from '@/lib/category-icons';
 import { stageTitle } from '@/lib/detect-stages';
-import { type DetectionJob, autoRetryableJobs, inboxCount } from '@/lib/jobs';
+import { type DetectionJob, autoRetryableJobs, inboxCount, queueJobs } from '@/lib/jobs';
 import { labelsForDisplay, primaryChips, typeHandle } from '@/lib/labels';
 import { groupByCategory, toggleCollapsed } from '@/lib/overview';
 import { visibilityVerdict } from '@/lib/partial-visibility';
@@ -93,6 +94,9 @@ export default function HomeScreen() {
   const jobs = useJobsStore((s) => s.jobs);
   const runningJob = jobs.find((j) => j.status === 'running');
   const inboxBadgeCount = inboxCount(jobs);
+  // In-flight + failed jobs become first-class tiles at the front of the
+  // collection, and the header queue button badges the same set.
+  const queue = queueJobs(jobs);
   // The home pill speaks the same staged vocabulary as the capture tray —
   // one mental model wherever the user meets a processing shot.
   const [pillTick, setPillTick] = useState(() => Date.now());
@@ -399,7 +403,7 @@ export default function HomeScreen() {
       <GlowBackdrop />
 
       <View style={[styles.contentClamp, { maxWidth: contentMaxWidth }]}>
-        <TopBar onPickHome={() => setPickerVisible(true)} />
+        <TopBar onPickHome={() => setPickerVisible(true)} queueCount={queue.length} />
 
         {/* An unreachable server is a visible, actionable state — never a
             silent one. Shots taken while offline queue and retry. */}
@@ -481,6 +485,31 @@ export default function HomeScreen() {
                 sort={toCategorySort(sort)}
                 onSortCycle={cycleSort}
               />
+            </View>
+          )}
+
+          {/* In-flight and failed captures lead the grid: the photo itself is
+              the tile — a spinner ring while it catalogs, a dimmed warning
+              badge when it needs a retry. Tapping opens its detection screen. */}
+          {queue.length > 0 && (
+            <View testID="queue-section">
+              <View style={styles.sectionHeader}>
+                <Feather name="layers" size={14} color={colors.primary} />
+                <Text style={[styles.sectionCount, { color: colors.foreground }]}>
+                  {queue.length}
+                </Text>
+                <Text style={[styles.sectionLabel, { color: colors.mutedForeground }]}>
+                  Cataloging
+                </Text>
+                <View style={styles.sectionRule} />
+              </View>
+              <View style={styles.sectionTiles}>
+                {queue.map((job, i) => (
+                  <View key={job.runId} style={styles.overviewTileSlot}>
+                    <QueueTile job={job} index={i} colors={colors} onPress={openLiveReview} />
+                  </View>
+                ))}
+              </View>
             </View>
           )}
 

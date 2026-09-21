@@ -30,9 +30,40 @@ function collectStrings(node: unknown, out: string[] = []): string[] {
   return out;
 }
 
+// Icon-only actions: the button row carries NO visible text — the action
+// names live on accessibilityLabel/accessibilityHint only.
+function findByLabel(node: unknown, label: string): { props: Record<string, unknown> } | null {
+  if (!node || typeof node !== 'object') return null;
+  if (Array.isArray(node)) {
+    for (const child of node) {
+      const hit = findByLabel(child, label);
+      if (hit) return hit;
+    }
+    return null;
+  }
+  const n = node as { props?: Record<string, unknown>; children?: unknown };
+  if (n.props?.accessibilityLabel === label) return n as { props: Record<string, unknown> };
+  return findByLabel(n.children, label);
+}
+
 // Stub the SSE generator; each test can swap the event script.
 const sse = vi.hoisted(() => ({
   events: [] as unknown[],
+}));
+
+// Annotated-photo download: null by default (the fallback path every other
+// test exercises); the annotated-primary-photo suite swaps in a uri.
+const annotated = vi.hoisted(() => ({ uri: null as string | null }));
+
+vi.mock('@/services/annotated-photo', () => ({
+  fetchAnnotatedPhoto: vi.fn(async () => annotated.uri),
+}));
+
+// The inventory sink, exposed so tests can assert what a save persisted.
+const inventory = vi.hoisted(() => ({
+  addItems: vi.fn(async (_items: Array<{ primaryPhotoUri: string }>) => ['item-1']),
+  deleteItem: vi.fn(async () => undefined),
+  deleteItems: vi.fn(async () => undefined),
 }));
 
 // Pre-upload quality gate. Default null = "no opinion" (fail open), which is
@@ -116,9 +147,9 @@ vi.mock('@/contexts/HomesContext', () => ({
 vi.mock('@/contexts/InventoryContext', () => ({
   useInventory: () => ({
     items: [],
-    addItems: vi.fn(async () => ['item-1']),
-    deleteItem: vi.fn(async () => undefined),
-    deleteItems: vi.fn(async () => undefined),
+    addItems: inventory.addItems,
+    deleteItem: inventory.deleteItem,
+    deleteItems: inventory.deleteItems,
   }),
 }));
 
@@ -147,6 +178,8 @@ describe('DetectionScreen', () => {
   beforeEach(() => {
     sse.events = [...DEFAULT_EVENTS];
     quality.report = null;
+    annotated.uri = null;
+    inventory.addItems.mockClear();
     routeParams.current = { imageUri: 'file:///fake.jpg' };
   });
 
@@ -187,7 +220,12 @@ describe('DetectionScreen', () => {
     const texts = collectStrings(view.toJSON());
     expect(texts).toContain('Photo rejected: too blurry');
     expect(texts).toContain('severe motion blur');
-    expect(texts).toContain('Retake');
+    // Icon-only contract: the action row is glyphs + accessibility text.
+    expect(findByLabel(view.toJSON(), 'Retake')).toBeTruthy();
+    // No items survived the verdict, so the secondary is 'Dismiss' (the
+    // 'Keep results anyway' variant only exists when there are rows).
+    expect(findByLabel(view.toJSON(), 'Dismiss')).toBeTruthy();
+    expect(texts).not.toContain('Retake');
   });
 });
 
@@ -239,8 +277,8 @@ describe('DetectionScreen pre-upload quality gate', () => {
     // The card names the specific fault, in the same words the live coach
     // would have used — not the old generic "too dark or blurry".
     expect(texts).toContain('Too dark — a little more light usually does it.');
-    expect(texts).toContain('Retake');
-    expect(texts).toContain('Use anyway');
+    expect(findByLabel(view.toJSON(), 'Retake')).toBeTruthy();
+    expect(findByLabel(view.toJSON(), 'Use anyway')).toBeTruthy();
     // Nothing is uploaded until the user decides.
     expect(detect.startDetection).not.toHaveBeenCalled();
   });
@@ -305,8 +343,11 @@ describe('DetectionScreen resume onto a lost run', () => {
 
     const texts = collectStrings(view.toJSON());
     expect(texts).toContain('The server lost track of this one');
-    expect(texts).toContain('Run it again');
-    expect(texts).toContain('View collection');
+    // Icon-only action row: rotate-cw re-run + grid collection, named via
+    // accessibility labels rather than visible button text.
+    expect(findByLabel(view.toJSON(), 'Run it again')).toBeTruthy();
+    expect(findByLabel(view.toJSON(), 'View collection')).toBeTruthy();
+    expect(texts).not.toContain('Run it again');
     // Neither the generic snag copy nor a stuck loading state.
     expect(texts).not.toContain('We hit a snag');
     expect(texts).not.toContain('Reading the scene…');
@@ -366,5 +407,93 @@ describe('DetectionScreen resume onto a lost run', () => {
     // Expanded: every book gets its own row and the chip is gone.
     expect((json().match(/"testID":"row-thumb-/g) ?? []).length).toBe(4);
     expect(findNode(view.toJSON(), 'row-group-1')).toBeNull();
+  });
+});
+
+/**
+ * Annotated primary photo: derived from photoSha256, best-effort. When the
+ * server's annotated render downloads, it becomes the item's primary photo;
+ * a 404/failed download falls back to the existing processed capture.
+ */
+describe('DetectionScreen annotated primary photo', () => {
+  const ANNOTATED_URI = 'file:///cache/annotated_ab.jpg';
+
+  const eventsWithSha = [
+    { type: 'meta', runId: 'r-ann', traceId: 't-ann', photoSha256: 'ab'.repeat(32) },
+    {
+      type: 'item',
+      item: {
+        label: 'Sofa',
+        description: 'leather couch',
+        category: 'Furniture',
+        tags: ['leather'],
+        box: { x: 0.1, y: 0.1, width: 0.4, height: 0.4 },
+      },
+    },
+    { type: 'done', runId: 'r-ann', totalItems: 1 },
+  ];
+
+  beforeEach(() => {
+    sse.events = [...eventsWithSha];
+    quality.report = null;
+    annotated.uri = null;
+    inventory.addItems.mockClear();
+    routeParams.current = { imageUri: 'file:///fake.jpg' };
+  });
+
+  it('uses the annotated render as the saved item primary photo on success', async () => {
+    annotated.uri = ANNOTATED_URI;
+    const view = render(<DetectionScreen />);
+    // Flush the stream (review) AND the annotated download resolution.
+    await act(async () => {
+      await new Promise((r) => setTimeout(r, 0));
+      await new Promise((r) => setTimeout(r, 0));
+    });
+
+    await act(async () => {
+      (findNode(view.toJSON(), 'save-all')?.props.onPress as () => void)();
+      await new Promise((r) => setTimeout(r, 0));
+    });
+
+    expect(inventory.addItems).toHaveBeenCalledTimes(1);
+    const payload = inventory.addItems.mock.calls[0]?.[0]?.[0];
+    expect(payload?.primaryPhotoUri).toBe(ANNOTATED_URI);
+  });
+
+  it('falls back to the processed capture when the annotated render is unavailable', async () => {
+    annotated.uri = null; // 404 / failed download
+    const view = render(<DetectionScreen />);
+    await act(async () => {
+      await new Promise((r) => setTimeout(r, 0));
+      await new Promise((r) => setTimeout(r, 0));
+    });
+
+    await act(async () => {
+      (findNode(view.toJSON(), 'save-all')?.props.onPress as () => void)();
+      await new Promise((r) => setTimeout(r, 0));
+    });
+
+    expect(inventory.addItems).toHaveBeenCalledTimes(1);
+    const payload = inventory.addItems.mock.calls[0]?.[0]?.[0];
+    // The expo-image-manipulator stub renders to this uri in tests; the
+    // point is the RAW capture flow, not the annotated cache file.
+    expect(payload?.primaryPhotoUri).toBe('file:///processed.jpg');
+  });
+
+  it('never blocks saving when the run has no photoSha256', async () => {
+    sse.events = [...DEFAULT_EVENTS]; // meta without photoSha256
+    const view = render(<DetectionScreen />);
+    await act(async () => {
+      await new Promise((r) => setTimeout(r, 0));
+    });
+
+    await act(async () => {
+      (findNode(view.toJSON(), 'save-all')?.props.onPress as () => void)();
+      await new Promise((r) => setTimeout(r, 0));
+    });
+
+    expect(inventory.addItems).toHaveBeenCalledTimes(1);
+    const payload = inventory.addItems.mock.calls[0]?.[0]?.[0];
+    expect(payload?.primaryPhotoUri).toBe('file:///processed.jpg');
   });
 });

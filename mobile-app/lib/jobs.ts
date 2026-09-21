@@ -95,6 +95,19 @@ export function inboxJobs(jobs: DetectionJob[]): DetectionJob[] {
   return jobs.filter((j) => (j.status === 'ready' && !j.reviewed) || j.status === 'failed');
 }
 
+/**
+ * Jobs that become first-class tiles on the home grid: still in flight
+ * ('running') plus failures awaiting action. Review-ready results stay
+ * inbox-only — their card is the review entry point.
+ */
+export function queueJobs(jobs: DetectionJob[]): DetectionJob[] {
+  return jobs.filter((j) => j.status === 'running' || j.status === 'failed');
+}
+
+export function queueCount(jobs: DetectionJob[]): number {
+  return queueJobs(jobs).length;
+}
+
 export function inboxCount(jobs: DetectionJob[]): number {
   return inboxJobs(jobs).length;
 }

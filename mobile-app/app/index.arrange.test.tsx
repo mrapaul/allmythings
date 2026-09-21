@@ -88,6 +88,19 @@ function findByTestId(node: unknown, testID: string): { props: Record<string, un
   return null;
 }
 
+/** In-document-order testID collection, for asserting visual ordering. */
+function collectTestIDs(node: unknown, out: string[] = []): string[] {
+  if (!node || typeof node !== 'object') return out;
+  if (Array.isArray(node)) {
+    for (const child of node) collectTestIDs(child, out);
+    return out;
+  }
+  const n = node as { props?: Record<string, unknown>; children?: unknown };
+  if (typeof n.props?.testID === 'string') out.push(n.props.testID);
+  collectTestIDs(n.children, out);
+  return out;
+}
+
 describe('collection grid arrange mode', () => {
   beforeEach(() => {
     pushSpy.mockClear();
@@ -186,5 +199,31 @@ describe('overview mode (default)', () => {
       (findByTestId(view.toJSON(), 'overview-section-Furniture')?.props.onPress as () => void)();
     });
     expect(findByTestId(view.toJSON(), 'collection-tile-0')).toBeTruthy();
+  });
+});
+
+describe('queue tiles lead the collection', () => {
+  it('renders the queue section ahead of every category section', async () => {
+    const { addJob, getJobsStore } = await import('@/stores/jobs.store');
+    getJobsStore().setState({ jobs: [] });
+    try {
+      addJob({
+        runId: 'r-walk-running',
+        photoUri: 'file:///walk.jpg',
+        startedAt: Date.now(),
+        roomSessionId: 'session-1',
+        status: 'running',
+        itemCount: 0,
+        errorCode: null,
+        reviewed: false,
+        advice: null,
+      });
+      const view = renderHome();
+      const ids = collectTestIDs(view.toJSON());
+      expect(ids).toContain('queue-section');
+      expect(ids.indexOf('queue-section')).toBeLessThan(ids.indexOf('overview-section-Furniture'));
+    } finally {
+      getJobsStore().setState({ jobs: [] });
+    }
   });
 });

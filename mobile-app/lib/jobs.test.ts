@@ -7,6 +7,8 @@ import {
   isDetectionJob,
   isRunNotFoundError,
   nextRoomSessionId,
+  queueCount,
+  queueJobs,
   sessionDisplayName,
 } from './jobs';
 
@@ -91,5 +93,16 @@ describe('autoRetryableJobs', () => {
     const lost = job({ status: 'failed', errorCode: 'run_lost' });
     const running = job({ status: 'running' });
     expect(autoRetryableJobs([retryable, lost, running])).toEqual([retryable]);
+  });
+});
+
+describe('queueJobs / queueCount', () => {
+  it('selects running and failed jobs only — ready results stay inbox-only', () => {
+    const running = job({ status: 'running' });
+    const failed = job({ status: 'failed', runId: 'r2', errorCode: 'run_lost' });
+    const ready = job({ status: 'ready', runId: 'r3', itemCount: 4 });
+    const reviewed = job({ status: 'ready', reviewed: true, runId: 'r4', itemCount: 2 });
+    expect(queueJobs([running, ready, failed, reviewed])).toEqual([running, failed]);
+    expect(queueCount([running, ready, failed, reviewed])).toBe(2);
   });
 });

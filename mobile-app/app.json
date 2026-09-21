@@ -22,7 +22,21 @@
         "NSPhotoLibraryAddUsageDescription": "Home Inventory can save processed photos of your items back to your photo library.",
         "ITSAppUsesNonExemptEncryption": false,
         "NSLocalNetworkUsageDescription": "Home Inventory connects to your own inventory server on your home network to detect objects in your photos.",
-        "NSBonjourServices": ["_http._tcp"]
+        "NSBonjourServices": ["_http._tcp"],
+        "NSAppTransportSecurity": {
+          "NSAllowsArbitraryLoads": false,
+          "NSAllowsLocalNetworking": true,
+          "NSExceptionDomains": {
+            "100.99.186.121": {
+              "NSExceptionAllowsInsecureHTTPLoads": true,
+              "NSIncludesSubdomains": false
+            },
+            "192.168.2.47": {
+              "NSExceptionAllowsInsecureHTTPLoads": true,
+              "NSIncludesSubdomains": false
+            }
+          }
+        }
       },
       "appleTeamId": "93LZ247AMZ"
     },

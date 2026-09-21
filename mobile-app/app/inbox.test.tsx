@@ -58,6 +58,16 @@ describe('InboxScreen — lost runs', () => {
     expect(findByTestId(view.toJSON(), 'inbox-retry-0')).toBeTruthy();
   });
 
+  it('renders retry as an icon-only button with accessibility text', () => {
+    addJob(LOST_JOB);
+    const view = render(<InboxScreen />);
+    const retry = findByTestId(view.toJSON(), 'inbox-retry-0');
+    expect(retry?.props.accessibilityLabel).toBe('Retry this photo');
+    expect(typeof retry?.props.accessibilityHint).toBe('string');
+    // Icon-only contract: no visible "Retry now" label text remains.
+    expect(JSON.stringify(view.toJSON())).not.toContain('Retry now');
+  });
+
   it('keeps the queue copy for ordinary dispatch failures', () => {
     addJob({ ...LOST_JOB, runId: 'r-offline', errorCode: 'start_failed' });
     const view = render(<InboxScreen />);

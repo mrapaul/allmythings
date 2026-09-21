@@ -131,15 +131,14 @@ export default function InboxScreen() {
                     <Pressable
                       testID={`inbox-retry-${index}`}
                       accessibilityLabel="Retry this photo"
+                      accessibilityHint="Re-runs detection on the saved photo"
                       onPress={() => retry(job)}
                       style={({ pressed }) => [
                         styles.retryBtn,
                         { backgroundColor: colors.primary, opacity: pressed ? 0.85 : 1 },
                       ]}
                     >
-                      <Text style={[styles.retryText, { color: colors.primaryForeground }]}>
-                        Retry now
-                      </Text>
+                      <Feather name="rotate-cw" size={16} color={colors.primaryForeground} />
                     </Pressable>
                   </>
                 )}
@@ -229,14 +228,10 @@ const styles = StyleSheet.create({
   retryBtn: {
     alignSelf: 'flex-start',
     marginTop: 8,
-    paddingHorizontal: 14,
-    height: 32,
-    borderRadius: 16,
+    width: 34,
+    height: 34,
+    borderRadius: 17,
     alignItems: 'center',
     justifyContent: 'center',
-  },
-  retryText: {
-    fontFamily: 'Inter_600SemiBold',
-    fontSize: 12,
   },
 });

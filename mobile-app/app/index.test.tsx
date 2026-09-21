@@ -1,5 +1,5 @@
 import { act, render } from '@testing-library/react-native';
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 /**
  * Contract test for the capture → walk-mode dispatch handoff. Regression
@@ -67,6 +67,7 @@ vi.mock('@/contexts/InventoryContext', () => ({
 }));
 
 const { QueryClient, QueryClientProvider } = await import('@tanstack/react-query');
+const { addJob, getJobsStore } = await import('@/stores/jobs.store');
 const HomeScreen = (await import('./index')).default;
 
 function renderHomeElement() {
@@ -92,6 +93,34 @@ function findByTestId(node: unknown, testID: string): { props: Record<string, un
   }
   return null;
 }
+
+const RUNNING_JOB = {
+  runId: 'r-running',
+  photoUri: 'file:///running.jpg',
+  startedAt: Date.now(),
+  roomSessionId: 'session-1',
+  status: 'running' as const,
+  itemCount: 0,
+  errorCode: null,
+  reviewed: false,
+  advice: null,
+};
+
+const FAILED_JOB = {
+  ...RUNNING_JOB,
+  runId: 'r-failed',
+  photoUri: 'file:///failed.jpg',
+  status: 'failed' as const,
+  errorCode: 'run_lost',
+};
+
+const READY_JOB = {
+  ...RUNNING_JOB,
+  runId: 'r-ready',
+  photoUri: 'file:///ready.jpg',
+  status: 'ready' as const,
+  itemCount: 3,
+};
 
 describe('HomeScreen capture → walk-mode dispatch contract', () => {
   it('hands the picked photo URI to the background dispatch (no navigation)', async () => {
@@ -188,5 +217,71 @@ describe('HomeScreen capture → walk-mode dispatch contract', () => {
       serverHealth = 'unknown';
       getJobsStore().setState({ jobs: [] });
     }
+  });
+});
+
+/**
+ * Queue tiles: in-flight and failed captures lead the home grid as
+ * first-class tiles — spinner ring while cataloging, dimmed warning badge
+ * on failure — and the header queue button badges the same set.
+ */
+describe('HomeScreen queue tiles', () => {
+  beforeEach(() => {
+    getJobsStore().setState({ jobs: [] });
+    pushSpy.mockClear();
+  });
+
+  afterEach(() => {
+    getJobsStore().setState({ jobs: [] });
+  });
+
+  it('shows each queued job with the status overlay for its phase', () => {
+    // addJob prepends: the store order is [RUNNING, FAILED].
+    addJob(FAILED_JOB);
+    addJob(RUNNING_JOB);
+    const view = renderHome();
+    expect(findByTestId(view.toJSON(), 'queue-section')).toBeTruthy();
+    expect(findByTestId(view.toJSON(), 'queue-tile-0')).toBeTruthy();
+    expect(findByTestId(view.toJSON(), 'queue-tile-1')).toBeTruthy();
+    // Running job → spinner ring; failed job → warning badge. Never both.
+    expect(findByTestId(view.toJSON(), 'queue-tile-spinner-0')).toBeTruthy();
+    expect(findByTestId(view.toJSON(), 'queue-tile-warning-0')).toBeNull();
+    expect(findByTestId(view.toJSON(), 'queue-tile-warning-1')).toBeTruthy();
+    expect(findByTestId(view.toJSON(), 'queue-tile-spinner-1')).toBeNull();
+  });
+
+  it('hides the section entirely when nothing is queued', () => {
+    const view = renderHome();
+    expect(findByTestId(view.toJSON(), 'queue-section')).toBeNull();
+  });
+
+  it('navigates to the job’s detection screen on tap', async () => {
+    addJob(RUNNING_JOB);
+    const view = renderHome();
+    const tile = findByTestId(view.toJSON(), 'queue-tile-0');
+    expect(tile?.props.accessibilityLabel).toBe('Photo being cataloged');
+    await act(async () => {
+      (tile?.props.onPress as () => void)();
+    });
+    expect(pushSpy).toHaveBeenCalledWith({
+      pathname: '/detection',
+      params: { imageUri: 'file:///running.jpg', runId: 'r-running' },
+    });
+  });
+
+  it('badges the header queue button with pending+failed and opens the inbox', async () => {
+    // A ready-unreviewed job is inbox work, not a queue tile: it must not
+    // inflate the header badge.
+    addJob(READY_JOB);
+    addJob(FAILED_JOB);
+    addJob(RUNNING_JOB);
+    const view = renderHome();
+    const btn = findByTestId(view.toJSON(), 'top-bar-queue');
+    expect(btn?.props.accessibilityLabel).toBe('Review queue, 2 photos waiting');
+    expect(btn?.props.accessibilityHint).toBeTruthy();
+    await act(async () => {
+      (btn?.props.onPress as () => void)();
+    });
+    expect(pushSpy).toHaveBeenCalledWith('/inbox');
   });
 });

@@ -8,7 +8,10 @@ import { useRouter } from 'expo-router';
 import { Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-export function TopBar({ onPickHome }: { onPickHome: () => void }) {
+export function TopBar({
+  onPickHome,
+  queueCount = 0,
+}: { onPickHome: () => void; queueCount?: number }) {
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const colors = useColors();
@@ -72,6 +75,37 @@ export function TopBar({ onPickHome }: { onPickHome: () => void }) {
       </Pressable>
 
       <Pressable
+        testID="top-bar-queue"
+        accessibilityLabel={
+          queueCount > 0
+            ? `Review queue, ${queueCount} photo${queueCount === 1 ? '' : 's'} waiting`
+            : 'Review queue'
+        }
+        accessibilityHint="Opens the review inbox"
+        onPress={() => {
+          tap();
+          router.push('/inbox');
+        }}
+        style={({ pressed }) => [
+          styles.iconBtn,
+          {
+            backgroundColor: colors.card,
+            borderColor: colors.border,
+            opacity: pressed ? 0.8 : 1,
+          },
+        ]}
+      >
+        <Feather name="inbox" size={18} color={colors.foreground} />
+        {queueCount > 0 && (
+          <View style={[styles.queueCountDot, { backgroundColor: colors.primary }]}>
+            <Text style={[styles.queueCountText, { color: colors.primaryForeground }]}>
+              {queueCount}
+            </Text>
+          </View>
+        )}
+      </Pressable>
+
+      <Pressable
         testID="top-bar-settings"
         accessibilityLabel="Settings"
         onPress={() => {
@@ -112,6 +146,21 @@ const styles = StyleSheet.create({
     fontFamily: 'Inter_600SemiBold',
     fontSize: 14,
     letterSpacing: 0.5,
+  },
+  queueCountDot: {
+    position: 'absolute',
+    top: -3,
+    right: -3,
+    minWidth: 18,
+    height: 18,
+    borderRadius: 9,
+    paddingHorizontal: 4,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  queueCountText: {
+    fontFamily: 'Inter_700Bold',
+    fontSize: 10,
   },
   homePill: {
     flexDirection: 'row',

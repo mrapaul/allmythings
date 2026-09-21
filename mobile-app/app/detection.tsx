@@ -14,6 +14,7 @@ import { useColors } from '@/hooks/useColors';
 import { useResponsive } from '@/hooks/useResponsive';
 import { useReviewAutosave } from '@/hooks/useReviewAutosave';
 import { useStartFailedRetry } from '@/hooks/useStartFailedRetry';
+import { pickPrimaryPhotoUri } from '@/lib/annotated-photo';
 import { CorrectionsQueue, buildCorrectionEvents } from '@/lib/corrections';
 import { stageSubline, stageTitle } from '@/lib/detect-stages';
 import { isPossibleDuplicate } from '@/lib/duplicates';
@@ -24,6 +25,7 @@ import { removePendingCapture, upsertPendingCapture } from '@/lib/pending-captur
 import { buildItemPayload, effectiveTags } from '@/lib/review-payload';
 import { groupRows } from '@/lib/row-groups';
 import { withSpan } from '@/observability/otel';
+import { fetchAnnotatedPhoto } from '@/services/annotated-photo';
 import { inspectCaptureQuality } from '@/services/image-quality';
 import { renderThumbnail } from '@/services/thumbnail';
 import { dispatchShot } from '@/services/walk-capture';
@@ -79,6 +81,7 @@ export default function DetectionScreen() {
   const rows = useDetectionStore((s) => s.rows);
   const scene = useDetectionStore((s) => s.scene);
   const errorCode = useDetectionStore((s) => s.errorCode);
+  const photoSha256 = useDetectionStore((s) => s.photoSha256);
 
   const prefs = useMemo(() => {
     try {
@@ -89,6 +92,13 @@ export default function DetectionScreen() {
   }, []);
 
   const [processedUri, setProcessedUri] = useState<string | undefined>(undefined);
+  /**
+   * Server-rendered annotated photo (boxes burned in), downloaded to cache
+   * once the run reaches review. Derived from photoSha256; null keeps the
+   * existing raw-photo flow.
+   */
+  const [annotatedUri, setAnnotatedUri] = useState<string | null>(null);
+  const annotatedAttemptRef = useRef<string | null>(null);
   const [imgWH, setImgWH] = useState<{ w: number; h: number }>({ w: screenW, h: screenW });
   const [isBulkSaving, setIsBulkSaving] = useState(false);
   const [savingIds, setSavingIds] = useState<Set<string>>(() => new Set());
@@ -160,6 +170,8 @@ export default function DetectionScreen() {
     // Fresh capture or retry: clear per-photo local state so a relaunched
     // detection (camera-first loop, auto-retry) starts from a clean slate.
     setProcessedUri(undefined);
+    setAnnotatedUri(null);
+    annotatedAttemptRef.current = null;
     setTagsByRow({});
     setAutoFocusByRow({});
     setQaSuspect(false);
@@ -320,6 +332,23 @@ export default function DetectionScreen() {
     };
   }, [imageUri, prefs, screenW, retryNonce, resumeRunId, resetAttempts]);
 
+  // Annotated primary photo: once the run reaches review, try the server's
+  // annotated render of the run's photo. One attempt per run — a 404 (no
+  // render for this photo) or a failed download simply keeps the raw-photo
+  // flow. Never blocks saving; the effect only sets state when it wins.
+  useEffect(() => {
+    if (!photoSha256 || phase !== 'review') return;
+    if (annotatedAttemptRef.current === photoSha256) return;
+    annotatedAttemptRef.current = photoSha256;
+    let alive = true;
+    void fetchAnnotatedPhoto(photoSha256).then((uri) => {
+      if (alive && uri) setAnnotatedUri(uri);
+    });
+    return () => {
+      alive = false;
+    };
+  }, [photoSha256, phase]);
+
   // Possible-duplicate flags (suggest-never-auto): once per run, compare each
   // row's type+color labels against the existing inventory; flagged rows
   // start EXCLUDED from save-all and carry a subtle marker.
@@ -447,11 +476,13 @@ export default function DetectionScreen() {
     if (row.saved) return; // saved rows are frozen in this minimal port
     const tags = effectiveTags(row, tagsByRow[row.id]);
     if (!(tags[0] ?? row.item.label)) return;
+    const primaryPhotoUri = pickPrimaryPhotoUri(annotatedUri, processedUri);
+    if (!primaryPhotoUri) return;
     setSavingIds((s) => new Set([...s, row.id]));
     try {
       getDetectionStore().getState().beginSave([row.id]);
       const ids = await addItems([
-        buildItemPayload(row, tags, processedUri, await makeThumbnail(row.item.box)),
+        buildItemPayload(row, tags, primaryPhotoUri, await makeThumbnail(row.item.box)),
       ]);
       if (ids[0]) {
         getDetectionStore().getState().endSave([row.id]);
@@ -475,6 +506,8 @@ export default function DetectionScreen() {
       router.replace('/');
       return;
     }
+    const primaryPhotoUri = pickPrimaryPhotoUri(annotatedUri, processedUri);
+    if (!primaryPhotoUri) return;
     setIsBulkSaving(true);
     try {
       const ids = pending.map((p) => p.id);
@@ -484,7 +517,9 @@ export default function DetectionScreen() {
       const payloads = [];
       for (const row of pending) {
         const tags = effectiveTags(row, tagsByRow[row.id]);
-        payloads.push(buildItemPayload(row, tags, processedUri, await makeThumbnail(row.item.box)));
+        payloads.push(
+          buildItemPayload(row, tags, primaryPhotoUri, await makeThumbnail(row.item.box)),
+        );
       }
       const itemIds = await addItems(payloads);
       getDetectionStore().getState().endSave(ids);
@@ -814,6 +849,21 @@ export default function DetectionScreen() {
               secondaryLabel="Use anyway"
               onSecondary={() => proceedRef.current?.()}
               colors={colors}
+              actions={[
+                {
+                  icon: 'camera',
+                  label: 'Retake',
+                  hint: 'Discard this photo and capture a new one',
+                  onPress: closeOut,
+                  variant: 'primary',
+                },
+                {
+                  icon: 'check',
+                  label: 'Use anyway',
+                  hint: 'Send this photo to detection as it is',
+                  onPress: () => proceedRef.current?.(),
+                },
+              ]}
             />
           )}
 
@@ -827,6 +877,28 @@ export default function DetectionScreen() {
               secondaryLabel={rows.length > 0 ? 'Keep results anyway' : 'Dismiss'}
               onSecondary={() => setVerdictDismissed(true)}
               colors={colors}
+              actions={[
+                {
+                  icon: 'camera',
+                  label: 'Retake',
+                  hint: 'Discard this photo and capture a new one',
+                  onPress: closeOut,
+                  variant: 'primary',
+                },
+                rows.length > 0
+                  ? {
+                      icon: 'check',
+                      label: 'Keep results anyway',
+                      hint: 'Ignore the verdict and review the detected items',
+                      onPress: () => setVerdictDismissed(true),
+                    }
+                  : {
+                      icon: 'x',
+                      label: 'Dismiss',
+                      hint: 'Dismiss the verdict',
+                      onPress: () => setVerdictDismissed(true),
+                    },
+              ]}
             />
           )}
 
@@ -849,6 +921,21 @@ export default function DetectionScreen() {
                   secondaryLabel="View collection"
                   onSecondary={closeOut}
                   colors={colors}
+                  actions={[
+                    {
+                      icon: 'rotate-cw',
+                      label: 'Run it again',
+                      hint: 'Re-run detection on this photo',
+                      onPress: rerunLostJob,
+                      variant: 'primary',
+                    },
+                    {
+                      icon: 'grid',
+                      label: 'View collection',
+                      hint: 'Go back to your collection',
+                      onPress: closeOut,
+                    },
+                  ]}
                 />
               ) : startFailed ? (
                 <QualityCard
@@ -861,6 +948,21 @@ export default function DetectionScreen() {
                   secondaryLabel="View collection"
                   onSecondary={closeOut}
                   colors={colors}
+                  actions={[
+                    {
+                      icon: 'rotate-cw',
+                      label: 'Retry now',
+                      hint: 'Retry detection on this saved photo',
+                      onPress: retryNow,
+                      variant: 'primary',
+                    },
+                    {
+                      icon: 'grid',
+                      label: 'View collection',
+                      hint: 'Go back to your collection',
+                      onPress: closeOut,
+                    },
+                  ]}
                 />
               ) : (
                 <View style={styles.helperWrap}>
