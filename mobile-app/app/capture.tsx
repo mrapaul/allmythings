@@ -1,10 +1,14 @@
 import { CaptureReel } from '@/components/Viewfinder/CaptureReel';
 import { CoachOverlay } from '@/components/Viewfinder/CoachOverlay';
 import { FlyToTray } from '@/components/Viewfinder/FlyToTray';
+import { GridOverlay } from '@/components/Viewfinder/GridOverlay';
+import { LevelBubble } from '@/components/Viewfinder/LevelBubble';
 import { ReadinessStrip } from '@/components/Viewfinder/ReadinessStrip';
+import { ScoutOverlay } from '@/components/Viewfinder/ScoutOverlay';
 import { useColors } from '@/hooks/useColors';
 import { useLiveCount } from '@/hooks/useLiveCount';
 import { useLiveQuality } from '@/hooks/useLiveQuality';
+import { useScout } from '@/hooks/useScout';
 import {
   FLASH_LABEL,
   lensLabel,
@@ -48,7 +52,7 @@ export default function CaptureScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
   const router = useRouter();
-  const { height: screenH } = useWindowDimensions();
+  const { height: screenH, width: screenW } = useWindowDimensions();
   const cameraRef = useRef<CameraView | null>(null);
 
   const [permission, requestPermission] = useCameraPermissions();
@@ -124,6 +128,8 @@ export default function CaptureScreen() {
     hint,
     ready,
     signals,
+    level,
+    motion,
     suspendForCapture,
     resumeAfterCapture,
     injectServerAdvice,
@@ -137,6 +143,27 @@ export default function CaptureScreen() {
     camera: cameraRef,
     active: cameraReady && !isCapturing && ready,
     onGuidance: injectServerAdvice,
+  });
+
+  // ----- viewfinder aids ----------------------------------------------------
+  const [gridOn, setGridOn] = useState(() => prefs.getViewfinderGrid());
+  const toggleGrid = () => {
+    setGridOn((on) => {
+      prefs.setViewfinderGrid(!on);
+      return !on;
+    });
+  };
+
+  /**
+   * Live scout: predicted boxes while framing. Purely advisory — it never
+   * blocks the shutter, cancels itself on capture/unmount/strong motion, and
+   * fails silently.
+   */
+  const scout = useScout({
+    camera: cameraRef,
+    enabled: cameraReady && !isCapturing,
+    autoArm: ready,
+    motion,
   });
 
   /**
@@ -166,8 +193,10 @@ export default function CaptureScreen() {
     const view = cameraRef.current;
     if (!view || isCapturing) return;
     setIsCapturing(true);
-    // Mutex: the sampling loop must not contend for the camera.
+    // Mutex: the sampling loop must not contend for the camera; the scout's
+    // predictions are void the moment a real shot is taken.
     suspendForCapture();
+    scout.cancel();
     try {
       const photo = await view.takePictureAsync({ quality: 0.8 });
       if (photo?.uri) ingestShot(photo.uri);
@@ -184,6 +213,7 @@ export default function CaptureScreen() {
   const handleNativeCamera = async () => {
     if (isCapturing) return;
     suspendForCapture();
+    scout.cancel();
     try {
       const perm = await ImagePicker.requestCameraPermissionsAsync();
       if (!perm.granted) return;
@@ -199,6 +229,7 @@ export default function CaptureScreen() {
 
   const handleLibrary = async () => {
     suspendForCapture();
+    scout.cancel();
     try {
       const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
       if (!perm.granted) return;
@@ -237,6 +268,7 @@ export default function CaptureScreen() {
   // Leaving the camera: the very FIRST completed run ever lands the user on
   // its inbox card once, so the review step teaches itself.
   const handleClose = () => {
+    scout.cancel();
     if (!prefs.getFirstReviewDone() && jobs.some((j) => j.status === 'ready' && !j.reviewed)) {
       prefs.setFirstReviewDone();
       router.replace('/inbox');
@@ -299,6 +331,16 @@ export default function CaptureScreen() {
         />
       </GestureDetector>
 
+      {/* Viewfinder aids: grid (toggleable) and live scout predictions. Both
+          are pointer-transparent so camera gestures keep working. */}
+      {gridOn && <GridOverlay width={screenW} height={screenH} />}
+      <ScoutOverlay
+        state={scout.state}
+        progress={scout.progress}
+        viewWidth={screenW}
+        viewHeight={screenH}
+      />
+
       <View style={[styles.topBar, { paddingTop }]} pointerEvents="box-none">
         <Pressable
           testID="capture-close"
@@ -327,6 +369,33 @@ export default function CaptureScreen() {
         )}
 
         <View style={styles.topActions}>
+          <Pressable
+            testID="capture-scout"
+            accessibilityLabel={scout.scanning ? 'Cancel scan' : 'Scan for items'}
+            onPress={() => (scout.scanning ? scout.cancel() : scout.begin())}
+            style={({ pressed }) => [
+              styles.chipBtn,
+              scout.scanning && styles.chipBtnActive,
+              { opacity: pressed ? 0.7 : 1 },
+            ]}
+          >
+            <Feather name="maximize" size={15} color="#ffffff" />
+            <Text style={styles.chipBtnText}>{scout.scanning ? 'Scanning…' : 'Scan'}</Text>
+          </Pressable>
+          <Pressable
+            testID="capture-grid"
+            accessibilityLabel={gridOn ? 'Hide grid' : 'Show grid'}
+            accessibilityState={{ selected: gridOn }}
+            onPress={toggleGrid}
+            style={({ pressed }) => [
+              styles.chipBtn,
+              gridOn && styles.chipBtnActive,
+              { opacity: pressed ? 0.7 : 1 },
+            ]}
+          >
+            <Feather name="grid" size={15} color="#ffffff" />
+            <Text style={styles.chipBtnText}>Grid</Text>
+          </Pressable>
           <Pressable
             testID="capture-flash"
             accessibilityLabel={`Flash ${FLASH_LABEL[flash]}`}
@@ -411,6 +480,12 @@ export default function CaptureScreen() {
             <ReadinessStrip signals={signals} ready={ready} />
           </View>
         )}
+      </View>
+
+      {/* Level: rolls with the camera and greens when square — sits just
+          above the shutter, out of the readiness strip's way. */}
+      <View style={[styles.levelSlot, { bottom: shutterBottom + 96 }]} pointerEvents="none">
+        <LevelBubble roll={level.roll} pitch={level.pitch} />
       </View>
 
       {/* The reel: a floating film strip where every shot visibly lands and
@@ -628,6 +703,7 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(20,18,40,0.45)',
   },
   chipBtnText: { fontFamily: 'Inter_600SemiBold', fontSize: 12, color: '#ffffff' },
+  chipBtnActive: { backgroundColor: 'rgba(167,139,250,0.55)' },
   zoomRow: {
     position: 'absolute',
     right: 16,
@@ -654,6 +730,11 @@ const styles = StyleSheet.create({
     color: '#ffffff',
   },
   readinessSlot: { marginTop: 10 },
+  levelSlot: {
+    position: 'absolute',
+    right: 20,
+    alignItems: 'center',
+  },
   shutterBar: {
     position: 'absolute',
     left: 0,

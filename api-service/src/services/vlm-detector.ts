@@ -50,6 +50,17 @@ export interface VlmDetectorOptions {
 }
 
 /**
+ * Per-request detect overrides (the `mode` query param on the detect routes).
+ * Any field left undefined keeps the detector's configured default — the
+ * routes only ever set `twoPass: false` (scout mode), never `true`, so an
+ * env-configured single-pass detector stays single-pass.
+ */
+export interface DetectOptions {
+  /** false = scout: pass 1 + adaptive tiles only, skip the pass-2 audit. */
+  twoPass?: boolean;
+}
+
+/**
  * Streamed detection event: the pass-1 scene assessment, then items, with
  * merge suggestions interleaved as the pairs are discovered.
  */
@@ -67,8 +78,8 @@ export interface DetectionResult {
 
 /** Public surface every detector (single-backend or composed) exposes. */
 export interface Detector {
-  detect(imageBuffer: Buffer): Promise<DetectionResult>;
-  detectStream(imageBuffer: Buffer): AsyncGenerator<DetectorEvent>;
+  detect(imageBuffer: Buffer, opts?: DetectOptions): Promise<DetectionResult>;
+  detectStream(imageBuffer: Buffer, opts?: DetectOptions): AsyncGenerator<DetectorEvent>;
 }
 
 /** The label a raw model item carries, under any of the keys models emit. */
@@ -114,8 +125,8 @@ export class VlmDetector {
   ) {}
 
   /** Run the full pipeline and return the scene assessment plus all items. */
-  async detect(imageBuffer: Buffer): Promise<DetectionResult> {
-    return collectDetection(this.detectStream(imageBuffer));
+  async detect(imageBuffer: Buffer, opts?: DetectOptions): Promise<DetectionResult> {
+    return collectDetection(this.detectStream(imageBuffer, opts));
   }
 
   /**
@@ -123,8 +134,9 @@ export class VlmDetector {
    * completes: all pass-1 items, then all pass-2 items. Lets the SSE route
    * emit events incrementally.
    */
-  async *detectStream(imageBuffer: Buffer): AsyncGenerator<DetectorEvent> {
+  async *detectStream(imageBuffer: Buffer, opts?: DetectOptions): AsyncGenerator<DetectorEvent> {
     const img = await this.prepareImage(imageBuffer);
+    const twoPass = opts?.twoPass ?? this.opts.twoPass;
 
     // --- Pass 1: detect everything + assess the scene ---
     const pass1Raw = await this.client.generateJson(
@@ -155,7 +167,7 @@ export class VlmDetector {
       yield* this.tilePasses(img, seen);
     }
 
-    if (!this.opts.twoPass) return;
+    if (!twoPass) return;
 
     // --- Pass 2: audit for missed items ---
     try {

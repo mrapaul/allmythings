@@ -17,6 +17,12 @@ vi.mock('expo-router', () => ({
 
 vi.mock('@/services/walk-capture', () => ({ dispatchShot: dispatchSpy }));
 
+// Hermetic scout: the stream never settles, so a started scout stays
+// 'scanning' until the test (or the shutter) cancels it.
+vi.mock('@/api/scout', () => ({
+  streamScoutEvents: vi.fn(() => new Promise(() => {})),
+}));
+
 const nativeCameraSpy = vi.fn(async () => ({
   canceled: false,
   assets: [{ uri: 'file:///native.jpg' }],
@@ -52,6 +58,20 @@ function findByTestId(node: unknown, testID: string): { props: Record<string, un
     if (hit) return hit;
   }
   return null;
+}
+
+function findByProp(node: unknown, key: string): { props: Record<string, unknown> } | null {
+  if (!node || typeof node !== 'object') return null;
+  if (Array.isArray(node)) {
+    for (const child of node) {
+      const hit = findByProp(child, key);
+      if (hit) return hit;
+    }
+    return null;
+  }
+  const n = node as { props?: Record<string, unknown>; children?: unknown };
+  if (n.props && key in n.props) return n as { props: Record<string, unknown> };
+  return findByProp(n.children, key);
 }
 
 describe('CaptureScreen', () => {
@@ -228,5 +248,71 @@ describe('CaptureScreen', () => {
     expect(nativeCameraSpy).toHaveBeenCalled();
     expect(dispatchSpy).toHaveBeenCalledWith(expect.anything(), 'file:///native.jpg');
     expect(findByTestId(view.toJSON(), 'capture-reel')).toBeTruthy();
+  });
+
+  it('exposes the viewfinder aids: level bubble, grid chip, scan chip', () => {
+    const view = render(<CaptureScreen />);
+    expect(findByTestId(view.toJSON(), 'level-bubble')).toBeTruthy();
+    expect(findByTestId(view.toJSON(), 'capture-grid')?.props.accessibilityState).toEqual({
+      selected: false,
+    });
+    expect(findByTestId(view.toJSON(), 'capture-scout')?.props.accessibilityLabel).toBe(
+      'Scan for items',
+    );
+    // Scout is idle until triggered: no overlay, no progress bar.
+    expect(findByTestId(view.toJSON(), 'scout-overlay')).toBeNull();
+  });
+
+  it('grid chip toggles the thirds overlay and persists its state', () => {
+    const view = render(<CaptureScreen />);
+    expect(findByTestId(view.toJSON(), 'grid-overlay')).toBeNull();
+    const chip = () => findByTestId(view.toJSON(), 'capture-grid');
+    act(() => {
+      (chip()?.props.onPress as () => void)();
+    });
+    expect(chip()?.props.accessibilityState).toEqual({ selected: true });
+    expect(findByTestId(view.toJSON(), 'grid-overlay')).toBeTruthy();
+    act(() => {
+      (chip()?.props.onPress as () => void)();
+    });
+    expect(chip()?.props.accessibilityState).toEqual({ selected: false });
+    expect(findByTestId(view.toJSON(), 'grid-overlay')).toBeNull();
+  });
+
+  it('tapping Scan starts a scout and the shutter cancels it without blocking capture', async () => {
+    const view = render(<CaptureScreen />);
+    // The scout (like the coaching loops) only arms once the camera reports
+    // ready — the mock CameraView doesn't fire it on its own.
+    await act(async () => {
+      (findByProp(view.toJSON(), 'onCameraReady')?.props.onCameraReady as () => void)();
+      await new Promise((r) => setTimeout(r, 30));
+    });
+    const chip = () => findByTestId(view.toJSON(), 'capture-scout');
+    const label = () => chip()?.props.accessibilityLabel;
+    // Once the frame reads as ready the scout auto-arms, so the chip may
+    // already say 'Cancel scan' — one press moves it to the other state, a
+    // second press (re)starts the scan. End in the scanning state either way.
+    await act(async () => {
+      (chip()?.props.onPress as () => void)();
+      await new Promise((r) => setTimeout(r, 0));
+    });
+    if (label() !== 'Cancel scan') {
+      await act(async () => {
+        (chip()?.props.onPress as () => void)();
+        await new Promise((r) => setTimeout(r, 0));
+      });
+    }
+    expect(label()).toBe('Cancel scan');
+    expect(findByTestId(view.toJSON(), 'scout-overlay')).toBeTruthy();
+
+    // The shutter stays fully live mid-scout, and taking the shot cancels
+    // the now-stale predictions.
+    await act(async () => {
+      (findByTestId(view.toJSON(), 'capture-shutter')?.props.onPress as () => void)();
+      await new Promise((r) => setTimeout(r, 0));
+    });
+    expect(takePictureSpy).toHaveBeenCalled();
+    expect(dispatchSpy).toHaveBeenCalledWith(expect.anything(), 'file:///shot.jpg');
+    expect(label()).toBe('Scan for items');
   });
 });

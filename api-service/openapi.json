@@ -72,6 +72,7 @@
         "tags": [
           "vision"
         ],
+        "description": "Query params: `tier` (standard|quality) selects the VLM engine; `mode` (full|scout, default full) selects the detection depth — scout runs pass 1 + adaptive tiles only, skipping the pass-2 audit (cheaper, less exhaustive); `async=1` registers a background run and returns 202. The annotated render of a detection photo is derivable as `${base}/photos/<photoSha256>.jpg?annotated=1` (photoSha256 is in the 202 body and the SSE meta event); it 404s until rendered, so clients fall back to the raw photo.",
         "responses": {
           "200": {
             "description": "Default Response",
@@ -405,7 +406,7 @@
         "tags": [
           "vision"
         ],
-        "description": "SSE event types: `meta` (runId/traceId), `scene` (pass-1 assessment), `item` (one DetectedItem), `merge-suggestion` ({itemIndexA, itemIndexB, reason, confidence} indexing the emitted item sequence — a pair the pipeline suspects is one object but did not merge), `error`, `done`.",
+        "description": "SSE event types: `meta` (runId/traceId), `scene` (pass-1 assessment), `item` (one DetectedItem), `merge-suggestion` ({itemIndexA, itemIndexB, reason, confidence} indexing the emitted item sequence — a pair the pipeline suspects is one object but did not merge), `error`, `done`. Query params: `tier` (standard|quality) selects the VLM engine; `mode` (full|scout, default full) — scout runs pass 1 + adaptive tiles only, skipping the pass-2 audit. The annotated render of the frame is derivable as `${base}/photos/<photoSha256>.jpg?annotated=1` (photoSha256 is in the meta event); it 404s until rendered, so clients fall back to the raw photo.",
         "responses": {
           "200": {
             "description": "SSE stream",
@@ -466,6 +467,65 @@
         "responses": {
           "200": {
             "description": "Default Response"
+          }
+        }
+      }
+    },
+    "/photos/{filename}": {
+      "get": {
+        "summary": "Serve a persisted detection photo",
+        "tags": [
+          "vision"
+        ],
+        "description": "Returns the raw photo by default. With `annotated=1`, returns the annotated render of a detection photo (every returned DetectedItem box + label burned in). The annotated URL is derived from photoSha256 — returned by POST /v1/detect?async=1 and the SSE meta event — as `${base}/photos/<photoSha256>.jpg?annotated=1`; it is rendered asynchronously after a successful detection and 404s until ready (fall back to the raw photo).",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "in": "query",
+            "name": "annotated",
+            "required": false,
+            "description": "Pass '1' for the annotated render; absent serves the raw photo."
+          },
+          {
+            "schema": {
+              "type": "string"
+            },
+            "in": "path",
+            "name": "filename",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "image bytes",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "description": "image bytes",
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "statusCode": {
+                      "type": "number"
+                    },
+                    "error": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
           }
         }
       }

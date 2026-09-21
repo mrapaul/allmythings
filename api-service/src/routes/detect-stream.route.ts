@@ -11,8 +11,11 @@ import {
 } from '../clients/pipeline.client';
 import { mapPipelineDetectionToItem } from './detect.mapper';
 import { parseDetectTier, qualityTierUnavailableMessage } from './detect-tier';
+import { parseDetectMode } from './detect-mode';
 import { encodeSseEvent, SSE_KEEPALIVE } from '../utils/sse';
-import type { Detector } from '../services/vlm-detector';
+import type { DetectOptions, Detector } from '../services/vlm-detector';
+import type { DetectedItem } from '../types/detected-item';
+import { annotatePhotoFireAndForget } from '../services/photo-annotator';
 import { DetectorUnavailableError } from '../clients/vlm-client';
 
 const MAX_IMAGE_SIZE = 10 * 1024 * 1024;
@@ -34,7 +37,7 @@ export async function detectStreamRoute(app: FastifyInstance): Promise<void> {
       schema: {
         summary: 'Detect home objects, streaming items via SSE',
         description:
-          'SSE event types: `meta` (runId/traceId), `scene` (pass-1 assessment), `item` (one DetectedItem), `merge-suggestion` ({itemIndexA, itemIndexB, reason, confidence} indexing the emitted item sequence — a pair the pipeline suspects is one object but did not merge), `error`, `done`.',
+          'SSE event types: `meta` (runId/traceId), `scene` (pass-1 assessment), `item` (one DetectedItem), `merge-suggestion` ({itemIndexA, itemIndexB, reason, confidence} indexing the emitted item sequence — a pair the pipeline suspects is one object but did not merge), `error`, `done`. Query params: `tier` (standard|quality) selects the VLM engine; `mode` (full|scout, default full) — scout runs pass 1 + adaptive tiles only, skipping the pass-2 audit. The annotated render of the frame is derivable as `${base}/photos/<photoSha256>.jpg?annotated=1` (photoSha256 is in the meta event); it 404s until rendered, so clients fall back to the raw photo.',
         tags: ['vision'],
         consumes: ['multipart/form-data'],
         produces: ['text/event-stream'],
@@ -77,13 +80,16 @@ export async function detectStreamRoute(app: FastifyInstance): Promise<void> {
       if (frames.length === 0) return reply.code(400).send({ error: 'no_frame' });
       // Quality-tier selection. Rejected before headers are flushed (so this
       // stays a plain 4xx, not an SSE error event) and before the frame is
-      // persisted or sent to any detector.
+      // persisted or sent to any detector. Same for the scout `mode` param.
+      const mode = parseDetectMode(request.query);
       const tier = parseDetectTier(request.query);
       if (tier === 'quality' && (envConfig.detector !== 'vlm' || !qualityVlmDetector)) {
         return reply
           .code(400)
           .send({ error: 'quality_tier_unavailable', message: qualityTierUnavailableMessage() });
       }
+      const detectOpts: DetectOptions | undefined =
+        mode === 'scout' ? { twoPass: false } : undefined;
       const useVlm = envConfig.detector === 'vlm';
       const detector = tier === 'quality' ? qualityVlmDetector : vlmDetector;
       if (useVlm && !detector)
@@ -136,7 +142,8 @@ export async function detectStreamRoute(app: FastifyInstance): Promise<void> {
           const runId = crypto.randomBytes(16).toString('hex');
           writeEvent('meta', { runId, traceId, photoSha256: f.sha256 });
           let total = 0;
-          for await (const ev of detector!.detectStream(f.buffer)) {
+          const items: DetectedItem[] = [];
+          for await (const ev of detector!.detectStream(f.buffer, detectOpts)) {
             if (aborted) return;
             if (ev.kind === 'scene') {
               writeEvent('scene', ev.scene);
@@ -149,10 +156,20 @@ export async function detectStreamRoute(app: FastifyInstance): Promise<void> {
               continue;
             }
             writeEvent('item', ev.item);
+            items.push(ev.item);
             total += 1;
             if (itemDribbleMs > 0) await new Promise((r) => setTimeout(r, itemDribbleMs));
           }
           writeEvent('done', { runId, totalItems: total });
+          // Annotated burn-in after the stream completes: fire-and-forget,
+          // never blocks, failure only logs (annotated URL 404s, client
+          // falls back to the raw photo).
+          annotatePhotoFireAndForget(
+            path.join(envConfig.photoDir, 'photos'),
+            f.sha256,
+            f.buffer,
+            items,
+          );
           return;
         }
 

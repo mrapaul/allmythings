@@ -5,6 +5,7 @@ import {
   rememberShot as rememberShotHash,
 } from '@/lib/frame-fingerprint';
 import { analyzeQuality } from '@/lib/image-quality';
+import { type RollPitch, rollPitchFromGravity } from '@/lib/level';
 import {
   type CoachHint,
   type CoachHintKind,
@@ -54,6 +55,12 @@ export const POST_CAPTURE_PAUSE_MS = 2_000;
 const ANALYSIS_WIDTH = 128;
 /** Accelerometer cadence; motion needs to feel immediate, and it is cheap. */
 const MOTION_INTERVAL_MS = 200;
+/**
+ * Cap on orientation-driven state updates (level bubble, motion read).
+ * 10Hz is well above the accelerometer cadence, but keeps a future faster
+ * sensor from turning the viewfinder into a re-render storm.
+ */
+export const ORIENTATION_EMIT_INTERVAL_MS = 100;
 
 export interface CameraSampler {
   takePictureAsync(options: {
@@ -89,6 +96,14 @@ export interface LiveQuality {
   injectServerAdvice: (message: string) => void;
   /** A shot was taken: remember its look so a return to the area is noticed. */
   rememberShot: (uri: string) => Promise<void>;
+  /** Live camera tilt in radians, for the level bubble. Throttled to ~10Hz. */
+  level: RollPitch;
+  /**
+   * Latest instantaneous motion verdict (no hysteresis), for consumers that
+   * need to react to strong motion immediately (the scout overlay cancels).
+   * Throttled to ~10Hz.
+   */
+  motion: 'unsteady' | 'tilted' | null;
 }
 
 /** Deletes a sampled frame; failures are irrelevant to the user. */
@@ -113,6 +128,8 @@ export function useLiveQuality({
   const [hint, setHint] = useState<CoachHint | null>(null);
   const [ready, setReady] = useState(false);
   const [signals, setSignals] = useState<ReadinessSignals>(() => signalStates(initialCoachState()));
+  const [level, setLevel] = useState<RollPitch>({ roll: 0, pitch: 0 });
+  const [motion, setMotion] = useState<'unsteady' | 'tilted' | null>(null);
 
   const stateRef = useRef(initialCoachState());
   const busyRef = useRef(false);
@@ -120,6 +137,7 @@ export function useLiveQuality({
   const capturingRef = useRef(false);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const motionRef = useRef<CoachHintKind | null>(null);
+  const orientationEmitAtRef = useRef(0);
   const focusedRef = useRef(true);
   const overlapRef = useRef(initialOverlapState());
 
@@ -156,10 +174,18 @@ export function useLiveQuality({
     try {
       Accelerometer.setUpdateInterval(MOTION_INTERVAL_MS);
       subscription = Accelerometer.addListener(({ x, y, z }) => {
-        motionRef.current = motionVerdict({
+        const verdict = motionVerdict({
           magnitude: magnitudeOf(x, y, z),
           tiltDegrees: tiltFromGravity(x, y),
         });
+        motionRef.current = verdict;
+        // The level bubble and the scout's motion cancel consume the raw
+        // read live; throttle to ~10Hz so a faster sensor can't flood renders.
+        const now = Date.now();
+        if (now - orientationEmitAtRef.current < ORIENTATION_EMIT_INTERVAL_MS) return;
+        orientationEmitAtRef.current = now;
+        setLevel(rollPitchFromGravity(x, y, z));
+        setMotion(verdict);
       });
     } catch {
       // No accelerometer (simulator): image coaching still works.
@@ -300,5 +326,7 @@ export function useLiveQuality({
     resumeAfterCapture,
     injectServerAdvice,
     rememberShot,
+    level,
+    motion,
   };
 }

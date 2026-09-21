@@ -4,7 +4,7 @@ import fsp from 'node:fs/promises';
 import path from 'node:path';
 import { logger } from '../utils/logger';
 import type { DetectedItem } from '../types/detected-item';
-import type { Detector } from './vlm-detector';
+import type { DetectOptions, Detector } from './vlm-detector';
 import type { MergeSuggestion, SceneInfo } from './vlm-detector.parse';
 import type { DetectGate } from '../utils/concurrency';
 
@@ -52,6 +52,12 @@ export interface VlmRunStoreOptions {
    * work onto one Ollama instance.
    */
   gate?: DetectGate;
+  /**
+   * Fire-and-forget hook invoked once a run's stream completes successfully.
+   * Used for the annotated-photo burn-in; must never throw (failures are
+   * swallowed and logged — a side effect must not retro-fail a good run).
+   */
+  onCompleted?: (run: VlmRun, imageBuffer: Buffer) => void;
 }
 
 const DEFAULT_TTL_MS = 30 * 60_000;
@@ -69,6 +75,7 @@ export class VlmRunStore {
   private readonly ttlMs: number;
   private readonly runsDir: string | null;
   private readonly gate: DetectGate | undefined;
+  private readonly onCompleted: VlmRunStoreOptions['onCompleted'];
   private readonly pendingIo = new Set<Promise<void>>();
   /** Serializes writes/deletes so state transitions land on disk in order. */
   private ioChain: Promise<void> = Promise.resolve();
@@ -81,6 +88,7 @@ export class VlmRunStore {
     this.ttlMs = opts?.ttlMs ?? DEFAULT_TTL_MS;
     this.runsDir = opts?.dataDir ? path.join(opts.dataDir, 'runs') : null;
     this.gate = opts?.gate;
+    this.onCompleted = opts?.onCompleted;
     this.loadFromDisk();
   }
 
@@ -91,8 +99,11 @@ export class VlmRunStore {
    * backgrounding, so the identical photo must map to the same run instead
    * of queuing a second multi-minute GPU pass. A failed run is the one case
    * where a redispatch is a genuinely new attempt.
+   *
+   * `opts` carries the per-request detect overrides (scout mode) into the
+   * detector call, exactly like the sync and SSE routes pass them.
    */
-  start(imageBuffer: Buffer, photoSha256: string): VlmRun {
+  start(imageBuffer: Buffer, photoSha256: string, opts?: DetectOptions): VlmRun {
     this.prune();
     const existingId = this.byPhoto.get(photoSha256);
     if (existingId) {
@@ -125,7 +136,7 @@ export class VlmRunStore {
         }
       }
       try {
-        for await (const ev of this.detector.detectStream(imageBuffer)) {
+        for await (const ev of this.detector.detectStream(imageBuffer, opts)) {
           if (ev.kind === 'scene') run.scene = ev.scene;
           else if (ev.kind === 'item') run.items = [...run.items, ev.item];
           else run.mergeSuggestions = [...run.mergeSuggestions, ev.suggestion];
@@ -137,6 +148,7 @@ export class VlmRunStore {
           { runId: run.runId, items: run.items.length, ms: run.completedAt - run.startedAt },
           'vlm_async_run_completed',
         );
+        this.notifyCompleted(run, imageBuffer);
       } catch (err: unknown) {
         run.status = 'failed';
         run.error = err instanceof Error ? err.message : String(err);
@@ -154,6 +166,19 @@ export class VlmRunStore {
   get(runId: string): VlmRun | null {
     this.prune();
     return this.runs.get(runId) ?? null;
+  }
+
+  /** Side effects after a successful run (photo annotation); never throws. */
+  private notifyCompleted(run: VlmRun, imageBuffer: Buffer): void {
+    if (!this.onCompleted) return;
+    try {
+      this.onCompleted(run, imageBuffer);
+    } catch (err: unknown) {
+      logger.warn(
+        { runId: run.runId, err: err instanceof Error ? err.message : String(err) },
+        'vlm_run_on_completed_failed',
+      );
+    }
   }
 
   /** Wait for all in-flight persistence writes/deletes (tests, drain on close). */

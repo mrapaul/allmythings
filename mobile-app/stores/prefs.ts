@@ -21,6 +21,7 @@ const KEY_DISCOVERED_API_URL = 'discovered_api_url';
 const KEY_PENDING_CAPTURES = 'pending_captures';
 const KEY_RECENT_SEARCHES = 'recent_searches';
 const KEY_CAPTURE_INTRO_SEEN = 'capture_intro_seen';
+const KEY_VIEWFINDER_GRID = 'viewfinder_grid';
 const KEY_FIRST_REVIEW_DONE = 'first_review_done';
 const KEY_DETECTION_JOBS = 'detection_jobs';
 const KEY_MERGE_SUGGESTIONS = 'merge_suggestions';
@@ -210,6 +211,15 @@ export class Prefs {
   }
   setCaptureIntroSeen(): void {
     this.kv.set(KEY_CAPTURE_INTRO_SEEN, '1');
+  }
+
+  /** Rule-of-thirds grid on the viewfinder (capture-screen chip). */
+  getViewfinderGrid(): boolean {
+    return this.kv.getString(KEY_VIEWFINDER_GRID) === '1';
+  }
+  setViewfinderGrid(on: boolean): void {
+    if (on) this.kv.set(KEY_VIEWFINDER_GRID, '1');
+    else this.kv.delete(KEY_VIEWFINDER_GRID);
   }
 
   /** Set once the very first completed run has been walked into the inbox. */

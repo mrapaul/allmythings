@@ -20,11 +20,13 @@ import { precheckRoute } from './routes/precheck.route';
 import { correctionsRoute } from './routes/corrections.route';
 import { detectStreamRoute } from './routes/detect-stream.route';
 import { detectStatusRoute } from './routes/detect-status.route';
+import { photosRoute } from './routes/photos.route';
 import { healthRoute } from './routes/health.route';
 import { readyRoute } from './routes/ready.route';
 import { metricsRoute } from './routes/metrics.route';
 import { ProviderHealthService } from './services/provider-health.service';
 import { FlywheelService } from './services/flywheel.service';
+import { annotatePhotoFireAndForget } from './services/photo-annotator';
 import { advertiseService } from './utils/bonjour-advertiser';
 import { CircuitBreaker } from './utils/circuit-breaker';
 import { createPipelineClient } from './clients/pipeline.client';
@@ -39,7 +41,7 @@ import {
 import { vocabRoute } from './routes/vocab.route';
 import { type PrecheckService, createPrecheckService } from './services/precheck.service';
 import { keepModelsWarm } from './utils/keep-warm';
-import { VlmRunStore } from './services/vlm-run-store';
+import { VlmRunStore, type VlmRun } from './services/vlm-run-store';
 import { DetectGate } from './utils/concurrency';
 import { detectedItemSchema } from './schemas/detected-item.schema';
 
@@ -68,13 +70,15 @@ export async function buildApp(options?: { disableRateLimit?: boolean }): Promis
     await app.register(rateLimit, { max: 100, timeWindow: '1 minute' });
   }
 
-  // Serve stored photos as static files
+  // Serve stored photos as static files. decorateReply stays on so the
+  // /photos/:filename route can delegate raw requests to the static handler
+  // via reply.sendFile (parametric routes win over the static wildcard).
   const photoDir = path.join(envConfig.photoDir, 'photos');
   fs.mkdirSync(photoDir, { recursive: true });
   await app.register(fastifyStatic, {
     root: photoDir,
     prefix: '/photos/',
-    decorateReply: false,
+    decorateReply: true,
   });
 
   // Pipeline-service client. Section-10 made this the only path; the
@@ -114,12 +118,19 @@ export async function buildApp(options?: { disableRateLimit?: boolean }): Promis
     const detectGate = new DetectGate(envConfig.vlmMaxConcurrent, envConfig.vlmMaxQueue);
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     (app as any).detectGate = detectGate;
+    // Annotated-photo burn-in once an async run completes: fire-and-forget,
+    // never blocks, failure only logs (the annotated route 404s, the app
+    // falls back to the raw photo).
+    const annotateRun = (run: VlmRun, imageBuffer: Buffer): void => {
+      annotatePhotoFireAndForget(photoDir, run.photoSha256, imageBuffer, run.items);
+    };
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     // Durable: runs are mirrored to <photoDir>/runs so a restart (e.g. the
     // telemetry incident) never turns a completed run into run_not_found.
     (app as any).vlmRuns = new VlmRunStore(detector, {
       dataDir: envConfig.photoDir,
       gate: detectGate,
+      onCompleted: annotateRun,
     });
     // Optional 'quality' tier (QUALITY_VLM_URL + QUALITY_VLM_MODEL): same
     // Detector contract over a second, env-configured OpenAI-compatible
@@ -133,6 +144,7 @@ export async function buildApp(options?: { disableRateLimit?: boolean }): Promis
       (app as any).qualityVlmRuns = new VlmRunStore(qualityDetector, {
         dataDir: envConfig.photoDir,
         gate: detectGate,
+        onCompleted: annotateRun,
       });
       logger.info({ model: envConfig.qualityVlmModel }, 'quality_vlm_tier_active');
     }
@@ -188,6 +200,7 @@ export async function buildApp(options?: { disableRateLimit?: boolean }): Promis
   await app.register(correctionsRoute);
   await app.register(detectStreamRoute);
   await app.register(detectStatusRoute);
+  await app.register(photosRoute);
   await app.register(healthRoute);
   await app.register(readyRoute);
   await app.register(metricsRoute);

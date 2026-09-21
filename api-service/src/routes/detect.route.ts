@@ -12,8 +12,10 @@ import {
 } from '../clients/pipeline.client';
 import { mapSceneToItems } from './detect.mapper';
 import { parseDetectTier, qualityTierUnavailableMessage } from './detect-tier';
-import type { Detector } from '../services/vlm-detector';
+import { parseDetectMode } from './detect-mode';
+import type { DetectOptions, Detector } from '../services/vlm-detector';
 import type { VlmRunStore } from '../services/vlm-run-store';
+import { annotatePhotoFireAndForget } from '../services/photo-annotator';
 import { DetectorUnavailableError } from '../clients/vlm-client';
 import type { DetectGate } from '../utils/concurrency';
 
@@ -43,6 +45,8 @@ export async function detectRoute(app: FastifyInstance): Promise<void> {
       preHandler: authMiddleware,
       schema: {
         summary: 'Detect home objects in 1–3 image frames',
+        description:
+          'Query params: `tier` (standard|quality) selects the VLM engine; `mode` (full|scout, default full) selects the detection depth — scout runs pass 1 + adaptive tiles only, skipping the pass-2 audit (cheaper, less exhaustive); `async=1` registers a background run and returns 202. The annotated render of a detection photo is derivable as `${base}/photos/<photoSha256>.jpg?annotated=1` (photoSha256 is in the 202 body and the SSE meta event); it 404s until rendered, so clients fall back to the raw photo.',
         tags: ['vision'],
         response: {
           200: {
@@ -131,12 +135,20 @@ export async function detectRoute(app: FastifyInstance): Promise<void> {
       }
 
       // Quality-tier selection (?tier=quality routes to the env-configured
-      // quality VLM). Reject an unservable quality tier BEFORE any frame
-      // processing (no photo is persisted, no detector runs).
+      // quality VLM) and scout-mode selection (?mode=scout runs a single
+      // VLM pass, skipping the pass-2 audit). Both reject unservable/unknown
+      // values BEFORE any frame processing (no photo is persisted, no
+      // detector runs).
+      const mode = parseDetectMode(request.query);
       const tier = parseDetectTier(request.query);
       if (tier === 'quality' && (envConfig.detector !== 'vlm' || !qualityVlmDetector)) {
         throw new BadRequestError(qualityTierUnavailableMessage());
       }
+      // Per-request detect overrides; 'full' keeps the detector's configured
+      // default. Only an explicit scout mode narrows the run (never widens a
+      // configured single-pass detector).
+      const detectOpts: DetectOptions | undefined =
+        mode === 'scout' ? { twoPass: false } : undefined;
 
       // Idempotency formula (must match mobile detection_repository
       // exactly, see scene_observation §7): sha256 of concatenated
@@ -169,7 +181,7 @@ export async function detectRoute(app: FastifyInstance): Promise<void> {
           }
           const frame = frames[0]!;
           await persistFrame(frame);
-          const run = tierRuns.start(frame.buffer, frame.sha256);
+          const run = tierRuns.start(frame.buffer, frame.sha256, detectOpts);
           return reply.code(202).send({
             runId: run.runId,
             photoSha256: frame.sha256,
@@ -179,7 +191,13 @@ export async function detectRoute(app: FastifyInstance): Promise<void> {
         if (!tierDetector) {
           return reply.code(503).send({ error: 'detector_unavailable' });
         }
-        return runVlmPath({ reply, vlmDetector: tierDetector, detectGate, frame: frames[0]! });
+        return runVlmPath({
+          reply,
+          vlmDetector: tierDetector,
+          detectGate,
+          frame: frames[0]!,
+          detectOpts,
+        });
       }
 
       if (!pipeline) {
@@ -205,6 +223,7 @@ interface VlmPathArgs {
   vlmDetector: Detector;
   detectGate: DetectGate | undefined;
   frame: { buffer: Buffer; mime: string; sha256: string };
+  detectOpts?: DetectOptions;
 }
 
 async function persistFrame(frame: {
@@ -220,7 +239,7 @@ async function persistFrame(frame: {
 }
 
 async function runVlmPath(args: VlmPathArgs) {
-  const { reply, vlmDetector, detectGate, frame } = args;
+  const { reply, vlmDetector, detectGate, frame, detectOpts } = args;
   // Backpressure, mirroring the pipeline path's queue_full contract: when the
   // detector gate is full (another run holds the GPU-bound model), reject
   // fast with Retry-After instead of accepting and doubling everyone's
@@ -234,8 +253,21 @@ async function runVlmPath(args: VlmPathArgs) {
   try {
     // Persist so /photos/<sha> resolves, matching the pipeline path.
     await persistFrame(frame);
-    const { scene, items, mergeSuggestions } = await vlmDetector.detect(frame.buffer);
-    return reply.code(200).send({ scene, items, mergeSuggestions });
+    const { scene, items, mergeSuggestions } = await vlmDetector.detect(
+      frame.buffer,
+      detectOpts,
+    );
+    const sent = reply.code(200).send({ scene, items, mergeSuggestions });
+    // Annotated burn-in AFTER the response: fire-and-forget, never blocks the
+    // detect; a failure only logs (the annotated URL 404s, client falls back
+    // to the raw photo).
+    annotatePhotoFireAndForget(
+      path.join(envConfig.photoDir, 'photos'),
+      frame.sha256,
+      frame.buffer,
+      items,
+    );
+    return sent;
   } catch (err) {
     if (err instanceof DetectorUnavailableError) {
       return reply.code(503).send({ error: 'detector_unavailable', message: err.message });
