@@ -1,18 +1,44 @@
 # Local observability + orchestration stack for allmythings.
 # Brought up by `make start-deps`. Fully local, OSS.
 services:
+  temporal-db:
+    image: postgres:15-alpine
+    container_name: allmythings-temporal-db
+    restart: unless-stopped
+    environment:
+      - POSTGRES_USER=temporal
+      - POSTGRES_PASSWORD=temporal
+    volumes: [temporal-pg-data:/var/lib/postgresql/data]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U temporal"]
+      interval: 5s
+      timeout: 3s
+      retries: 12
+
   temporal:
     image: temporalio/auto-setup:1.24.2
     container_name: allmythings-temporal
     restart: unless-stopped
+    # DB=sqlite was removed from auto-setup (valid: mysql8, postgres12,
+    # postgres12_pgx, cassandra) — 1.24.2 crash-looped on it since the stack
+    # was added. Postgres backend added 2026-09-19; the old sqlite volume
+    # (temporal-data) never contained a database and is no longer used.
+    depends_on:
+      temporal-db:
+        condition: service_healthy
     environment:
-      - DB=sqlite
-      - SQLITE_DB_PATH=/etc/temporal/temporal.db
-      - TEMPORAL_ADDRESS=0.0.0.0:7233
+      - DB=postgres12
+      - DB_PORT=5432
+      - POSTGRES_SEEDS=temporal-db
+      - POSTGRES_USER=temporal
+      - POSTGRES_PWD=temporal
+      # Do NOT set TEMPORAL_ADDRESS here: the server then binds to the eth0
+      # IP only, the in-container wait loop (dialing 127.0.0.1/0.0.0.0) never
+      # succeeds, and the default namespace is never registered. Default bind
+      # is all interfaces.
       - LOG_LEVEL=info
       - PROMETHEUS_ENDPOINT=0.0.0.0:9090
     ports: ["7233:7233", "7243:7243"]
-    volumes: [temporal-data:/etc/temporal]
 
   temporal-ui:
     image: temporalio/ui:2.30.3
@@ -111,7 +137,7 @@ services:
     ports: ["9093:9093"]
 
 volumes:
-  temporal-data: {}
+  temporal-pg-data: {}
   tempo-data: {}
   loki-data: {}
   prom-data: {}
