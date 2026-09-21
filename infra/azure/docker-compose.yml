@@ -1,0 +1,69 @@
+# Home Inventory — GPU inference stack for Azure VM (uksouth, resource group allmythings-prod).
+# The API image is built ON the VM from the rsync'd api-service source (x86_64),
+# because this Mac is arm64 and cross-building node+sharp is slow and brittle.
+
+services:
+  ollama:
+    image: ollama/ollama:latest
+    container_name: ollama
+    restart: unless-stopped
+    volumes:
+      - ollama-data:/root/.ollama
+    environment:
+      - OLLAMA_KEEP_ALIVE=1h
+      # One detection stream at a time is enforced by the API's DetectGate;
+      # 24GB leaves headroom for KV cache alongside the 19GB model.
+      - OLLAMA_NUM_PARALLEL=1
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:11434/api/tags"]
+      interval: 15s
+      timeout: 5s
+      retries: 12
+      start_period: 30s
+
+  api:
+    build:
+      context: ./api-service
+      dockerfile: Dockerfile
+    container_name: allmythings-api
+    restart: unless-stopped
+    depends_on:
+      ollama:
+        condition: service_healthy
+    ports:
+      # Bound to localhost only; Tailscale on the host exposes it to the
+      # tailnet. Nothing is publicly reachable.
+      - "127.0.0.1:14000:14000"
+    volumes:
+      - api-data:/data
+    environment:
+      NODE_ENV: production
+      PORT: "14000"
+      OLLAMA_BASE_URL: http://ollama:11434
+      OLLAMA_MODEL: qwen3-vl:30b-a3b-instruct
+      OLLAMA_ENABLED: "true"
+      VLM_TIMEOUT_MS: "600000"
+      VLM_NUM_PREDICT: "2500"
+      VLM_MAX_IMAGE_SIZE: "1024"
+      PHOTO_DIR: /data/photos
+      MULTI_PASS_ENABLED: "false"
+      HYBRID_ENABLED: "false"
+      # No OTLP collector on the VM — observability rides the app + logs.
+      OTEL_SDK_DISABLED: "true"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:14000/v1/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
+
+volumes:
+  ollama-data:
+  api-data:

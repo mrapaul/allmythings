@@ -1,0 +1,49 @@
+#cloud-config
+# First-boot setup for the Home Inventory GPU VM (Ubuntu 24.04).
+# Deploy script substitutes {{TS_AUTHKEY}} when one is provided; if left as
+# the placeholder, run `sudo tailscale up` manually over SSH once.
+
+package_update: true
+package_upgrade: true
+
+packages:
+  - docker.io
+  - docker-compose-v2
+  - curl
+  - ufw
+  - ca-certificates
+  - gnupg
+
+write_files:
+  - path: /etc/apt/sources.list.d/nvidia-container-toolkit.list
+    content: |
+      deb [signed-by=/usr/share/keyrings/nvidia-container-toolkit.gpg] https://nvidia.github.io/libnvidia-container/stable/deb/$(ARCH) /
+    owner: root:root
+    permissions: '0644'
+
+runcmd:
+  # NVIDIA container toolkit (Docker <-> GPU)
+  - curl -fsSL https://nvidia.github.io/libnvidia-container/gpgkey | gpg --dearmor -o /usr/share/keyrings/nvidia-container-toolkit.gpg
+  - apt-get update
+  - apt-get install -y nvidia-container-toolkit
+  - nvidia-ctk runtime configure --runtime=docker
+  - systemctl restart docker
+
+  # Firewall: SSH only from the public interface; everything else rides Tailscale.
+  - ufw default deny incoming
+  - ufw default allow outgoing
+  - ufw allow ssh
+  - ufw --force enable
+
+  # Tailscale — the ONLY network surface the phones use.
+  - curl -fsSL https://tailscale.com/install.sh | sh
+  - |
+    if [ "{{TS_AUTHKEY}}" != "TS_AUTHKEY_PLACEHOLDER" ]; then
+      tailscale up --auth-key="{{TS_AUTHKEY}}" --hostname=allmythings-gpu --ssh
+    fi
+
+  # Housekeeping user for the app data dir
+  - mkdir -p /opt/allmythings
+  - chown -R 1001:1001 /opt/allmythings || true
+
+final_message: "cloud-init done: docker+GPU ready, tailscale configured if auth key was provided."
