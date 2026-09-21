@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   type DetectionJob,
+  MAX_DISPATCH_ATTEMPTS,
   ROOM_SESSION_GAP_MS,
   autoRetryableJobs,
   inboxCount,
@@ -88,11 +89,27 @@ describe('inboxCount / isDetectionJob', () => {
 });
 
 describe('autoRetryableJobs', () => {
-  it('selects only dispatch failures — server-side failures keep manual retry', () => {
+  it('selects transient failures — model/validation failures keep manual retry', () => {
     const retryable = job({ status: 'failed', errorCode: 'start_failed' });
     const lost = job({ status: 'failed', errorCode: 'run_lost' });
-    const running = job({ status: 'running' });
-    expect(autoRetryableJobs([retryable, lost, running])).toEqual([retryable]);
+    const modelError = job({ status: 'failed', errorCode: 'vlm_timeout', runId: 'r2' });
+    const running = job({ status: 'running', runId: 'r3' });
+    expect(autoRetryableJobs([retryable, lost, modelError, running])).toEqual([retryable, lost]);
+  });
+
+  it('drops a job from the ladder once it exhausted MAX_DISPATCH_ATTEMPTS', () => {
+    const exhausted = job({
+      status: 'failed',
+      errorCode: 'start_failed',
+      attempts: MAX_DISPATCH_ATTEMPTS,
+    });
+    const oneLeft = job({
+      status: 'failed',
+      errorCode: 'start_failed',
+      attempts: MAX_DISPATCH_ATTEMPTS - 1,
+      runId: 'r2',
+    });
+    expect(autoRetryableJobs([exhausted, oneLeft])).toEqual([oneLeft]);
   });
 });
 

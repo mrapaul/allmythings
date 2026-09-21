@@ -26,7 +26,23 @@ export interface DetectionJob {
   advice?: string | null;
   /** True when the server judged the frame not worth processing. */
   unprocessable?: boolean;
+  /** Dispatches attempted so far (auto-retry ladder). Undefined = first try. */
+  attempts?: number;
+  /** Earliest time the auto-retry scheduler may re-dispatch this job. */
+  nextRetryAt?: number;
+  /** Last dispatch failure detail, for diagnosis on the retry screen. */
+  lastError?: string | null;
 }
+
+/**
+ * Auto-retry ceiling: the scheduler re-dispatches a failed job at most this
+ * many times (with growing backoff) before giving up and leaving it failed
+ * for the one-tap manual retry. Chosen so the ladder runs ~4–5 minutes.
+ */
+export const MAX_DISPATCH_ATTEMPTS = 8;
+
+/** Failure modes that are safe to re-run without user confirmation. */
+const AUTO_RETRYABLE_ERROR_CODES = new Set(['start_failed', 'run_lost']);
 
 /** Error code for a run the server no longer knows (restart / result TTL). */
 export const RUN_LOST_ERROR_CODE = 'run_lost';
@@ -113,11 +129,29 @@ export function inboxCount(jobs: DetectionJob[]): number {
 }
 
 /**
- * Shots whose dispatch never reached the server ('start_failed') are safe to
- * retry silently the moment connectivity returns — nothing server-side
- * exists for them yet. Other failures (run_lost, model errors) keep the
- * explicit inbox retry: the user should see WHY a run died.
+ * True when a failed job is safe for the scheduler to re-dispatch on its own:
+ * a transient-looking failure (dispatch never reached the server, or the
+ * server lost the run) that has not exhausted the retry ladder yet. Model /
+ * validation failures stay manual — re-running those without a fix just burns
+ * GPU.
+ */
+export function isAutoRetryable(job: DetectionJob): boolean {
+  return (
+    job.status === 'failed' &&
+    job.errorCode != null &&
+    AUTO_RETRYABLE_ERROR_CODES.has(job.errorCode) &&
+    (job.attempts ?? 0) < MAX_DISPATCH_ATTEMPTS
+  );
+}
+
+/**
+ * Shots whose dispatch never reached the server ('start_failed'), or whose
+ * run the server lost ('run_lost'), are safe to retry silently the moment
+ * connectivity returns — for a start failure nothing server-side exists yet,
+ * and a lost run is by definition gone. Both are backed by the scheduler's
+ * backoff ladder; jobs that exhausted it drop out and keep the explicit
+ * inbox retry so the user sees WHY a run kept dying.
  */
 export function autoRetryableJobs(jobs: DetectionJob[]): DetectionJob[] {
-  return jobs.filter((j) => j.status === 'failed' && j.errorCode === 'start_failed');
+  return jobs.filter(isAutoRetryable);
 }

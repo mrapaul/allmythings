@@ -1,7 +1,9 @@
 import { getDetectStatus } from '@/api/detect-status';
 import { RUN_LOST_ERROR_CODE, isRunNotFoundError } from '@/lib/jobs';
+import { nextRetryDelayMs } from '@/lib/retry-backoff';
 import { getJobsStore, initJobsStore, patchJob } from '@/stores/jobs.store';
 import type { Prefs } from '@/stores/prefs';
+import { runAutoRetries } from './auto-retry';
 import { AppState } from 'react-native';
 
 /**
@@ -49,13 +51,24 @@ export function startJobPolling(prefs: Prefs, deps: JobPollingDeps = {}): () => 
           }
         } catch (err) {
           if (isRunNotFoundError(err)) {
-            // The server no longer knows this run (restart / result TTL):
-            // terminal. The inbox turns it into a one-tap re-dispatch.
-            patchJob(job.runId, { status: 'failed', errorCode: RUN_LOST_ERROR_CODE });
+            // The server no longer knows this run (restart / result TTL).
+            // Not terminal anymore: join the auto-retry ladder — the
+            // scheduler re-dispatches the saved photo with backoff, so a
+            // server restart self-heals instead of stranding the shot.
+            const attempts = (job.attempts ?? 0) + 1;
+            patchJob(job.runId, {
+              status: 'failed',
+              errorCode: RUN_LOST_ERROR_CODE,
+              attempts,
+              nextRetryAt: Date.now() + nextRetryDelayMs(attempts),
+            });
           }
           // Anything else is a transient network failure — retry next tick.
         }
       }
+      // Failed shots heal themselves: the ladder re-dispatches due jobs with
+      // backoff while the app is foregrounded — no tap, no health flip.
+      await runAutoRetries(prefs);
     } finally {
       polling = false;
     }

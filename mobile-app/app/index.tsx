@@ -137,7 +137,10 @@ export default function HomeScreen() {
     if (!cameOnline) return;
     for (const job of autoRetryableJobs(jobs)) {
       removeJob(job.runId);
-      void dispatchShot(prefs, job.photoUri, { roomSessionId: job.roomSessionId });
+      void dispatchShot(prefs, job.photoUri, {
+        roomSessionId: job.roomSessionId,
+        attempts: job.attempts,
+      });
     }
   }, [serverHealth, jobs, prefs]);
   const toggleViewMode = () => {

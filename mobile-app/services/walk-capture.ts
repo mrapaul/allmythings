@@ -1,5 +1,7 @@
 import { startDetection } from '@/api/detect';
 import { precheckFrame } from '@/api/precheck';
+import { resolveApiBaseUrl } from '@/api/base-url';
+import { nextRetryDelayMs } from '@/lib/retry-backoff';
 import type { PrecheckResult } from '@/api/types';
 import type { QualityReport } from '@/lib/image-quality';
 import { nextRoomSessionId } from '@/lib/jobs';
@@ -83,6 +85,8 @@ export interface DispatchOptions {
    * lost/failed job so the retry stays grouped with its original walk.
    */
   roomSessionId?: string;
+  /** Dispatches already attempted (auto-retry ladder); carried across tries. */
+  attempts?: number | undefined;
 }
 
 /**
@@ -130,9 +134,11 @@ export async function dispatchShot(
     // arrives, seconds after the user has already moved on.
     void attachSemanticVerdict(handle.runId, jobUri);
     return { ok: true, runId: handle.runId };
-  } catch {
+  } catch (err) {
     // Never lose a capture: queue the photo AND surface a failed job in the
-    // inbox — retry re-dispatches from there.
+    // inbox — the auto-retry scheduler re-dispatches it with backoff, and a
+    // tap re-dispatches immediately.
+    const attempts = (options.attempts ?? 0) + 1;
     prefs.setPendingCaptures(upsertPendingCapture(prefs.getPendingCaptures(), jobUri));
     addJob({
       runId: `local-${now}`,
@@ -144,9 +150,21 @@ export async function dispatchShot(
       errorCode: 'start_failed',
       reviewed: false,
       advice: null,
+      attempts,
+      // Backoff BEFORE the next retry is legal — the scheduler reads this.
+      nextRetryAt: now + nextRetryDelayMs(attempts),
+      // Self-diagnosing: the NEXT time this fails we can read WHY without a
+      // tethered debugger (ATS block, stale IP, unreachable host, ...).
+      lastError: describeDispatchError(err),
     });
     return { ok: false };
   }
+}
+
+/** One-line, length-capped reason a dispatch died, with the URL it hit. */
+function describeDispatchError(err: unknown): string {
+  const message = err instanceof Error ? err.message : String(err);
+  return `${message.slice(0, 160)} (server: ${resolveApiBaseUrl()})`.slice(0, 240);
 }
 
 /**

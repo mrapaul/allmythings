@@ -119,6 +119,38 @@ describe('dispatchShot', () => {
     expect(getJobsStore().getState().jobs[0]).toMatchObject({ status: 'failed' });
     expect(prefs.getPendingCaptures()).toHaveLength(1);
   });
+
+  it('failure joins the auto-retry ladder: attempt counted, next try delayed, reason recorded', async () => {
+    startDetectionMock.mockRejectedValue(new Error('network request failed'));
+    const prefs = Prefs.makeInMemory();
+    const before = Date.now();
+
+    await dispatchShot(prefs, 'file:///shot.jpg', { attempts: 2 });
+    const job = getJobsStore().getState().jobs[0];
+
+    expect(job).toMatchObject({
+      status: 'failed',
+      errorCode: 'start_failed',
+      attempts: 3,
+    });
+    // Backoff before the next retry is legal, roughly nextRetryDelayMs(3)=40s.
+    expect(job?.nextRetryAt).toBeGreaterThan(before + 30_000);
+    expect(job?.nextRetryAt).toBeLessThan(before + 60_000);
+    // Self-diagnosing: the failure card can show WHY without a console.
+    expect(job?.lastError).toContain('network request failed');
+  });
+
+  it('carries the attempt count across re-dispatches so the ladder converges', async () => {
+    startDetectionMock.mockRejectedValue(new Error('still offline'));
+    const prefs = Prefs.makeInMemory();
+
+    await dispatchShot(prefs, 'file:///shot.jpg', { attempts: 7 });
+    const job = getJobsStore().getState().jobs[0];
+    expect(job?.attempts).toBe(8);
+    // 8th attempt = ladder ceiling: autoRetryableJobs must leave it alone.
+    const { autoRetryableJobs } = await import('@/lib/jobs');
+    expect(autoRetryableJobs(getJobsStore().getState().jobs)).toHaveLength(0);
+  });
 });
 
 describe('checkShotQuality', () => {

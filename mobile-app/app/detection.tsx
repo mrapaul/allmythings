@@ -34,7 +34,7 @@ import {
   getDetectionStore,
   useDetectionStore,
 } from '@/stores/detection-screen.store';
-import { getJobsStore, markJobReviewed, patchJob, removeJob } from '@/stores/jobs.store';
+import { getJobsStore, markJobReviewed, patchJob, removeJob, useJobsStore } from '@/stores/jobs.store';
 import { Prefs } from '@/stores/prefs';
 import { addServerSuggestions } from '@/stores/suggestions.store';
 import { Feather } from '@expo/vector-icons';
@@ -128,6 +128,13 @@ export default function DetectionScreen() {
   const runLost = phase === 'review' && errorCode === 'run_not_found' && rows.length === 0;
   // Bumping the nonce relaunches detection (manual Retry / auto-retry).
   const { retryNonce, retryNow, resetAttempts } = useStartFailedRetry(startFailed);
+  // Self-diagnosing failure detail captured at dispatch time (network reason
+  // + the server URL it hit) — shown on the calm failure card so a retry
+  // loop is explainable without a tethered console.
+  const dispatchErrorDetail = useJobsStore((s) => {
+    if (!startFailed || !resumeRunId) return undefined;
+    return s.jobs.find((j) => j.runId === resumeRunId)?.lastError ?? undefined;
+  });
   // Honest staged wait display (elapsed-keyed copy, no fake percentages).
   const [elapsedMs, setElapsedMs] = useState(0);
   const startedAtRef = useRef(Date.now());
@@ -942,7 +949,11 @@ export default function DetectionScreen() {
                   icon="wifi-off"
                   iconColor={colors.mutedForeground}
                   title="Saved — will catalog when the server is reachable"
-                  body="Your photo is kept safe and will be retried automatically. You can also retry now."
+                  body={
+                    dispatchErrorDetail
+                      ? `${dispatchErrorDetail}\n\nYour photo is kept safe and will be retried automatically.`
+                      : 'Your photo is kept safe and will be retried automatically. You can also retry now.'
+                  }
                   primaryLabel="Retry now"
                   onPrimary={retryNow}
                   secondaryLabel="View collection"
