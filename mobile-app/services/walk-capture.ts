@@ -1,11 +1,11 @@
+import { resolveApiBaseUrl } from '@/api/base-url';
 import { startDetection } from '@/api/detect';
 import { precheckFrame } from '@/api/precheck';
-import { resolveApiBaseUrl } from '@/api/base-url';
-import { nextRetryDelayMs } from '@/lib/retry-backoff';
 import type { PrecheckResult } from '@/api/types';
 import type { QualityReport } from '@/lib/image-quality';
 import { nextRoomSessionId } from '@/lib/jobs';
 import { removePendingCapture, upsertPendingCapture } from '@/lib/pending-captures';
+import { nextRetryDelayMs } from '@/lib/retry-backoff';
 import { addJob, getJobsStore, patchJob } from '@/stores/jobs.store';
 import type { Prefs } from '@/stores/prefs';
 import { prepareJpeg } from './image-prep';

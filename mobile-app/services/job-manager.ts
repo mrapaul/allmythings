@@ -3,8 +3,8 @@ import { RUN_LOST_ERROR_CODE, isRunNotFoundError } from '@/lib/jobs';
 import { nextRetryDelayMs } from '@/lib/retry-backoff';
 import { getJobsStore, initJobsStore, patchJob } from '@/stores/jobs.store';
 import type { Prefs } from '@/stores/prefs';
-import { runAutoRetries } from './auto-retry';
 import { AppState } from 'react-native';
+import { runAutoRetries } from './auto-retry';
 
 /**
  * Central background poller for walk-mode jobs: hydrates the jobs store,

@@ -76,11 +76,10 @@ describe('job manager — lost runs', () => {
     await flush();
     stop();
 
-    expect(dispatchShotMock).toHaveBeenCalledWith(
-      prefs,
-      'file:///local-1.jpg',
-      { roomSessionId: 'session-1', attempts: 1 },
-    );
+    expect(dispatchShotMock).toHaveBeenCalledWith(prefs, 'file:///local-1.jpg', {
+      roomSessionId: 'session-1',
+      attempts: 1,
+    });
     expect(
       getJobsStore()
         .getState()

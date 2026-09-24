@@ -42,11 +42,10 @@ describe('runAutoRetries', () => {
     const ran = await runAutoRetries(prefs, { now: () => now, dispatch });
 
     expect(ran).toBe(1);
-    expect(dispatch).toHaveBeenCalledWith(
-      prefs,
-      'file:///queued.jpg',
-      { roomSessionId: 'session-1', attempts: undefined },
-    );
+    expect(dispatch).toHaveBeenCalledWith(prefs, 'file:///queued.jpg', {
+      roomSessionId: 'session-1',
+      attempts: undefined,
+    });
     // The failed placeholder made way for the re-dispatch.
     expect(getJobsStore().getState().jobs).toHaveLength(0);
   });
@@ -80,9 +79,7 @@ describe('runAutoRetries', () => {
   it('never touches jobs that exhausted the ladder or failed server-side', async () => {
     const prefs = Prefs.makeInMemory();
     addJob(failedJob({ runId: 'exhausted', attempts: MAX_DISPATCH_ATTEMPTS }));
-    addJob(
-      failedJob({ runId: 'model-error', errorCode: 'vlm_timeout', nextRetryAt: 0 }),
-    );
+    addJob(failedJob({ runId: 'model-error', errorCode: 'vlm_timeout', nextRetryAt: 0 }));
     const dispatch = vi.fn();
 
     const ran = await runAutoRetries(prefs, { now: () => 9_999_999, dispatch });
@@ -99,11 +96,10 @@ describe('runAutoRetries', () => {
 
     await runAutoRetries(prefs, { now: () => 1_000_000, dispatch });
 
-    expect(dispatch).toHaveBeenCalledWith(
-      expect.anything(),
-      'file:///queued.jpg',
-      { roomSessionId: 'session-1', attempts: 3 },
-    );
+    expect(dispatch).toHaveBeenCalledWith(expect.anything(), 'file:///queued.jpg', {
+      roomSessionId: 'session-1',
+      attempts: 3,
+    });
   });
 
   it('claims with the real backoff delay, not an instant re-queue', async () => {

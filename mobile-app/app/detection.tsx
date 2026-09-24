@@ -34,7 +34,13 @@ import {
   getDetectionStore,
   useDetectionStore,
 } from '@/stores/detection-screen.store';
-import { getJobsStore, markJobReviewed, patchJob, removeJob, useJobsStore } from '@/stores/jobs.store';
+import {
+  getJobsStore,
+  markJobReviewed,
+  patchJob,
+  removeJob,
+  useJobsStore,
+} from '@/stores/jobs.store';
 import { Prefs } from '@/stores/prefs';
 import { addServerSuggestions } from '@/stores/suggestions.store';
 import { Feather } from '@expo/vector-icons';

@@ -34,7 +34,12 @@ export async function runAutoRetries(prefs: Prefs, deps: AutoRetryDeps = {}): Pr
   for (const job of due) {
     // Claim first: dispatchShot is async and ticks can overlap.
     patchJob(job.runId, { nextRetryAt: now + nextRetryDelayMs((job.attempts ?? 0) + 1) });
-    if (!getJobsStore().getState().jobs.some((j) => j.runId === job.runId)) continue;
+    if (
+      !getJobsStore()
+        .getState()
+        .jobs.some((j) => j.runId === job.runId)
+    )
+      continue;
     removeJob(job.runId);
     void dispatch(prefs, job.photoUri, {
       roomSessionId: job.roomSessionId,
