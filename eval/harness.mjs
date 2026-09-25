@@ -162,6 +162,16 @@ async function runProductionApi(imagePath) {
     const items = [];
     for (const block of sse.split('\n\n')) {
       const lines = block.split('\n');
+      // A terminal error event (e.g. DetectorUnavailableError after a backend
+      // timeout) must surface as a failed run, not a fake 0-item success.
+      if (lines[0] === 'event: error') {
+        const errLine = lines.find((l) => l.startsWith('data: '));
+        let msg = 'stream error';
+        try {
+          msg = JSON.parse(errLine?.slice(6) ?? '{}').error ?? msg;
+        } catch { /* keep default */ }
+        return { text: '', elapsedMs: Date.now() - t0, error: msg, attempt: 1 };
+      }
       if (lines[0] !== 'event: item') continue;
       const dataLine = lines.find((l) => l.startsWith('data: '));
       if (!dataLine) continue;

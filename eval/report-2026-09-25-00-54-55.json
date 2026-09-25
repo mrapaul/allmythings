@@ -1,0 +1,201 @@
+{
+  "api:nim-quality-nemotron": {
+    "perFixture": [
+      {
+        "fixture": "1776173015803",
+        "recall": 0,
+        "itemCount": 0,
+        "expectedMin": 8,
+        "expectedMax": 15,
+        "countWithinRange": false,
+        "matchedCount": 0,
+        "missed": [
+          "tan leather cane-back office chair",
+          "snake plant (sansevieria) large",
+          "snake plant (sansevieria) small",
+          "two-tone ceramic planter",
+          "gold wire plant stand",
+          "wooden stool (plant support)",
+          "sheer white linen curtains",
+          "white venetian window blinds",
+          "dark navy couch / sofa",
+          "framed painting / artwork",
+          "decorative wall plate",
+          "white area rug"
+        ],
+        "elapsedMs": 606733,
+        "attempts": 1
+      },
+      {
+        "fixture": "1776174188547",
+        "recall": 36.4,
+        "itemCount": 8,
+        "expectedMin": 7,
+        "expectedMax": 13,
+        "countWithinRange": true,
+        "matchedCount": 4,
+        "missed": [
+          "snake plant (sansevieria)",
+          "small snake plant",
+          "two-tone ceramic planter",
+          "gold wire plant stand",
+          "wooden stool (plant support)",
+          "sheer white linen curtains",
+          "dark navy couch / sofa"
+        ],
+        "elapsedMs": 187716,
+        "attempts": 1
+      },
+      {
+        "fixture": "1776175427607",
+        "recall": 0,
+        "itemCount": 0,
+        "expectedMin": 10,
+        "expectedMax": 16,
+        "countWithinRange": false,
+        "matchedCount": 0,
+        "missed": [
+          "tan leather cane-back office chair",
+          "black throw blanket",
+          "snake plant (sansevieria) large",
+          "snake plant small",
+          "two-tone ceramic planter",
+          "gold wire plant stand",
+          "wooden stool",
+          "gold candle holder",
+          "wooden side table",
+          "sheer white linen curtains",
+          "white venetian window blinds",
+          "dark navy couch / sofa",
+          "framed painting of figures",
+          "decorative wall plate"
+        ],
+        "elapsedMs": 606801,
+        "attempts": 1
+      },
+      {
+        "fixture": "1776176976030",
+        "recall": 0,
+        "itemCount": 0,
+        "expectedMin": 8,
+        "expectedMax": 14,
+        "countWithinRange": false,
+        "matchedCount": 0,
+        "missed": [
+          "tan leather cane-back office chair",
+          "black throw blanket",
+          "snake plant (sansevieria) large",
+          "snake plant small",
+          "two-tone ceramic planter",
+          "gold wire plant stand",
+          "wooden stool",
+          "gold candle holder",
+          "wooden sideboard / cabinet",
+          "sheer white curtains",
+          "white venetian window blinds",
+          "dark navy couch / sofa",
+          "framed painting"
+        ],
+        "elapsedMs": 606467,
+        "attempts": 1
+      },
+      {
+        "fixture": "bedroom_01",
+        "recall": 0,
+        "itemCount": 0,
+        "expectedMin": 9,
+        "expectedMax": 18,
+        "countWithinRange": false,
+        "matchedCount": 0,
+        "missed": [
+          "wooden dining table",
+          "transparent acrylic chairs",
+          "gold serving tray",
+          "pink ceramic vases",
+          "blue flower in small vase",
+          "red armchair",
+          "black round tray table",
+          "floor lamp with grey shade",
+          "white sideboard cabinet",
+          "framed artwork",
+          "grey curtains",
+          "houndstooth red and white sofa",
+          "red throw pillows",
+          "built-in oven"
+        ],
+        "elapsedMs": 606425,
+        "attempts": 1
+      },
+      {
+        "fixture": "dining_room_01",
+        "recall": 100,
+        "itemCount": 25,
+        "expectedMin": 5,
+        "expectedMax": 10,
+        "countWithinRange": false,
+        "matchedCount": 8,
+        "missed": [],
+        "elapsedMs": 1084524,
+        "attempts": 1
+      },
+      {
+        "fixture": "living_room_02",
+        "recall": 0,
+        "itemCount": 0,
+        "expectedMin": 12,
+        "expectedMax": 24,
+        "countWithinRange": false,
+        "matchedCount": 0,
+        "missed": [
+          "grey loveseat sofa",
+          "wooden coffee table",
+          "wooden bentwood chair",
+          "black mesh office chair",
+          "dark grey daybed / futon",
+          "wooden desk",
+          "laptop computer",
+          "white sideboard cabinet",
+          "books on shelves",
+          "hanging macrame planter with pothos",
+          "monstera potted plant",
+          "fern potted plant",
+          "small potted plant on coffee table",
+          "potted plant in dark pot on rug",
+          "terracotta plant pots",
+          "white area rug",
+          "window blinds",
+          "computer mouse"
+        ],
+        "elapsedMs": 606441,
+        "attempts": 1
+      },
+      {
+        "fixture": "mockup_living_01",
+        "recall": 36.4,
+        "itemCount": 8,
+        "expectedMin": 8,
+        "expectedMax": 14,
+        "countWithinRange": true,
+        "matchedCount": 4,
+        "missed": [
+          "yellow fabric armchair",
+          "framed abstract art print",
+          "brass round side table",
+          "marble decorative cube",
+          "white TV console",
+          "books on console",
+          "gray fringed area rug"
+        ],
+        "elapsedMs": 1738739,
+        "attempts": 1
+      }
+    ],
+    "aggregate": {
+      "avgRecall": 21.6,
+      "avgItems": 5.1,
+      "avgLatencyMs": 755481,
+      "failures": 0,
+      "n": 8
+    }
+  }
+}
