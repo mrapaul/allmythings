@@ -250,3 +250,6 @@ lightning_logs/
 # Training artifacts (datasets, checkpoints) — regenerate, never commit
 training/data/
 training/output/
+
+# --- local tool history (aider) ---
+.aider.*
