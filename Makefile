@@ -90,6 +90,9 @@ logs: ## Tail combined /tmp/allmythings logs
 smoke: ## Full smoke test (happy path, trace, idempotency, degraded, SLO gate)
 	@./scripts/smoke.sh
 
+quality-doctor: ## Probe the QUALITY_VLM_* endpoint + one live tier=quality detect
+	@./scripts/quality-tier-doctor.sh
+
 ## ── Backup / Restore ──────────────────────────────────────────────
 backup: ## Tar ~/allmythings-data to ~/allmythings-backups/YYYY-MM-DD.tar.gz
 	@mkdir -p $(HOME)/allmythings-backups
