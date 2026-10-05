@@ -18,7 +18,7 @@ Supporting directories:
 - `/eval` — accuracy harness scoring detectors against human-labeled oracle photos (`eval/baseline.json` is the gate; `make eval-ci` fails on >1% regression). This is the source of truth for detection quality.
 - `/test_images` — room/shelf photo fixtures.
 - `/db` — dbmate migrations for Postgres (`make db-up`).
-- `/observability` — LGTM stack compose files (Grafana/Loki/Tempo/Prometheus).
+- `/observability` — LGTM stack compose files (Grafana/Loki/Tempo/Prometheus). Since 2026-10-05 the running stack lives on the private nixos box (Tailscale-only, `infra/nixos/observability/deploy.sh`); the API ships telemetry to it via `OTEL_EXPORTER_OTLP_ENDPOINT=http://100.118.15.81:4317`. The Mac runs only Ollama + the API — Docker Desktop is retired from daily use.
 - `/prompts` — VLM prompt template references (runtime prompts live in `api-service/src/services/vlm-detector.parse.ts`).
 - `/docs` — plans and decision history.
 
