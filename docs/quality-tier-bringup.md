@@ -37,7 +37,7 @@ The cloud tier only matters for **offload + speed** (30B in seconds instead of
 |---|---|---|---|---|
 | Local 30B on M4 Pro (current prod) | $0 | none | ~110 s/photo | Default; keep |
 | Azure A100 (`infra/azure/deploy.sh`) | ~$3.06/h on-demand, ~40–60% off spot; at ~300 det/day ≈ 25 GPU-min/day if deallocated | **Portal quota request** for `Standard NCADS_A100_v4 Family` in uksouth — verified 0 on both the work and personal subscriptions (2026-10-05) | ~5–10 s | Ready to run the moment quota is approved |
-| Lambda cloud | ~$1.10–1.65/h A100; **$1000 credit live** (2026-10-05) | create API key → `LAMBDA_API_KEY=... infra/lambda/deploy.sh` | ~5–10 s | **Ready — the funded path.** Credit ≈ 900 A100-hours; at this workload that's months. `infra/lambda/destroy.sh` halts billing |
+| Lambda cloud | ~$1.10–1.65/h A100; **$7500 Inception credits approved 2026-10-06** — activation pending (portal signup + billing info + email CTA) | create API key → `LAMBDA_API_KEY=... infra/lambda/deploy.sh` | ~5–10 s | **Ready — the funded path.** Credit ≈ 6800 A100-hours; at this workload that's years. `infra/lambda/destroy.sh` halts billing; `./credits.sh` checks the balance |
 | GCP ($300/90-day trial if unused) | trial covers it | new billing account + L4/A100 **quota request** (Compute API not enabled on current project) | L4 ~10–20 s | Trial-only; quota asks on trial accounts can be slow |
 | OpenRouter paygo | ~$15/mo at this volume | sign up, copy key | ~10–30 s | Documented paid fallback; zero infra |
 | NVIDIA NIM free tier | $0 | — | — | **Not viable** — pool saturated most of the week (see `eval/results-2026-09-18.md`) |

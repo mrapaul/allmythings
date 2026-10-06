@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
-# Deploy the Home Inventory quality-tier VLM to Lambda Cloud ($1000 credit).
+# Deploy the Home Inventory quality-tier VLM to Lambda Cloud ($7500 Inception
+# credits — approved 2026-10-06, activation: portal signup + billing info + email CTA).
 # One A100 serves qwen3-vl:30b-a3b-instruct; the API reaches it over Tailscale.
 # Idempotent-ish: reuses the registered SSH key, refuses to double-launch if a
 # running instance already exists (use infra/lambda/destroy.sh first).
