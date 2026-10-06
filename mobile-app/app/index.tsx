@@ -61,6 +61,8 @@ const GRID_COLUMNS = 3;
 // Total gap between adjacent tiles (each tile carries half on every side).
 // Gallery-grade: tight seams so the imagery reads as one continuous surface.
 const GRID_GUTTER = 3;
+/** How long a just-ready queue tile lingers for its check-pop. */
+const QUEUE_GHOST_MS = 900;
 
 /** overview → grid → list → overview. */
 function nextViewMode(mode: CollectionViewMode): CollectionViewMode {
@@ -101,6 +103,37 @@ export default function HomeScreen() {
   // In-flight + failed jobs become first-class tiles at the front of the
   // collection, and the header queue button badges the same set.
   const queue = queueJobs(jobs);
+  // A tile whose job just turned ready drops out of `queue` instantly; keep
+  // it on screen briefly so the running → ready moment plays its check-pop
+  // before the grid hands the job to the inbox.
+  const [departedReady, setDepartedReady] = useState<DetectionJob[]>([]);
+  const queueRunIdsRef = useRef<Set<string>>(new Set());
+  const departTimersRef = useRef<ReturnType<typeof setTimeout>[]>([]);
+  useEffect(() => {
+    const current = new Set(queue.map((j) => j.runId));
+    const fresh = jobs.filter(
+      (j) =>
+        j.status === 'ready' &&
+        queueRunIdsRef.current.has(j.runId) &&
+        !departedReady.some((d) => d.runId === j.runId),
+    );
+    queueRunIdsRef.current = current;
+    if (fresh.length === 0) return;
+    setDepartedReady((prev) => [...prev, ...fresh]);
+    for (const job of fresh) {
+      departTimersRef.current.push(
+        setTimeout(() => {
+          setDepartedReady((prev) => prev.filter((d) => d.runId !== job.runId));
+        }, QUEUE_GHOST_MS),
+      );
+    }
+  }, [jobs, queue, departedReady]);
+  useEffect(
+    () => () => {
+      for (const t of departTimersRef.current) clearTimeout(t);
+    },
+    [],
+  );
   // The home pill speaks the same staged vocabulary as the capture tray —
   // one mental model wherever the user meets a processing shot.
   const [pillTick, setPillTick] = useState(() => Date.now());
@@ -578,14 +611,15 @@ export default function HomeScreen() {
           )}
 
           {/* In-flight and failed captures lead the grid: the photo itself is
-              the tile — a spinner ring while it catalogs, a dimmed warning
-              badge when it needs a retry. Tapping opens its detection screen. */}
-          {queue.length > 0 && (
+              the tile — a progress ring while it catalogs, a dimmed warning
+              badge when it needs a retry. Just-ready jobs linger one beat
+              for the check-pop. Tapping opens its detection screen. */}
+          {(queue.length > 0 || departedReady.length > 0) && (
             <View testID="queue-section">
               <View style={styles.sectionHeader}>
                 <Feather name="layers" size={14} color={colors.primary} />
                 <Text style={[styles.sectionCount, { color: colors.foreground }]}>
-                  {queue.length}
+                  {queue.length + departedReady.length}
                 </Text>
                 <Text style={[styles.sectionLabel, { color: colors.mutedForeground }]}>
                   Cataloging
@@ -596,6 +630,16 @@ export default function HomeScreen() {
                 {queue.map((job, i) => (
                   <View key={job.runId} style={styles.overviewTileSlot}>
                     <QueueTile job={job} index={i} colors={colors} onPress={openLiveReview} />
+                  </View>
+                ))}
+                {departedReady.map((job, i) => (
+                  <View key={job.runId} style={styles.overviewTileSlot} pointerEvents="none">
+                    <QueueTile
+                      job={job}
+                      index={queue.length + i}
+                      colors={colors}
+                      onPress={openLiveReview}
+                    />
                   </View>
                 ))}
               </View>

@@ -44,6 +44,9 @@ vi.mock('react-native-reanimated', () => {
       Text: 'AnimatedText',
       Image: 'AnimatedImage',
       ScrollView: 'AnimatedScrollView',
+      // createAnimatedComponent wraps components like react-native-svg's
+      // Circle for animatedProps; the stub passes the component through.
+      createAnimatedComponent: (comp: unknown) => comp,
     },
     Easing: {
       out: (fn: unknown) => fn,
@@ -55,6 +58,8 @@ vi.mock('react-native-reanimated', () => {
     },
     useSharedValue: (initial: number) => ({ value: initial }),
     useAnimatedStyle: (cb: () => Record<string, unknown>) => cb(),
+    useAnimatedProps: (cb: () => Record<string, unknown>) => cb(),
+    cancelAnimation: (_sv: unknown) => undefined,
     interpolate: (_v: number, _input: number[], output: number[]) => output[output.length - 1],
     withTiming: (v: number) => v,
     withSpring: (v: number) => v,
@@ -64,7 +69,9 @@ vi.mock('react-native-reanimated', () => {
     runOnJS: <T extends (...args: unknown[]) => unknown>(fn: T): T => fn,
     FadeIn: { delay: () => ({ duration: () => ({}) }), duration: () => ({}) },
     FadeInDown: { delay: () => ({ duration: () => ({}) }), duration: () => ({}) },
+    FadeInUp: { delay: () => ({ duration: () => ({}) }), duration: () => ({}) },
     FadeOut: { delay: () => ({ duration: () => ({}) }), duration: () => ({}) },
+    ZoomIn: { delay: () => ({ duration: () => ({}) }), springify: () => ({}) },
     Layout: { springify: () => ({ damping: () => ({}) }) },
     LinearTransition: { springify: () => ({ damping: () => ({}) }), duration: () => ({}) },
   };
