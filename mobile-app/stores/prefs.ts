@@ -20,6 +20,7 @@ const KEY_API_BASE_URL = 'api_base_url_override';
 const KEY_DISCOVERED_API_URL = 'discovered_api_url';
 const KEY_PENDING_CAPTURES = 'pending_captures';
 const KEY_RECENT_SEARCHES = 'recent_searches';
+const KEY_RECENT_LOCATIONS = 'recent_locations';
 const KEY_CAPTURE_INTRO_SEEN = 'capture_intro_seen';
 const KEY_VIEWFINDER_GRID = 'viewfinder_grid';
 const KEY_FIRST_REVIEW_DONE = 'first_review_done';
@@ -52,6 +53,15 @@ function isReviewState(value: unknown): value is ReviewState {
 
 export class Prefs {
   constructor(private kv: KVBackend) {}
+
+  /**
+   * Escape hatch for feature-scoped persistence: modules with their own key
+   * namespaces (e.g. the ready-scans notification ledger) read them straight
+   * from the KV backend instead of growing this class by one method per key.
+   */
+  getKvBackend(): KVBackend {
+    return this.kv;
+  }
 
   static makeInMemory(): Prefs {
     const m = new Map<string, string>();
@@ -149,6 +159,22 @@ export class Prefs {
   setRecentSearches(queries: string[]): void {
     if (queries.length === 0) this.kv.delete(KEY_RECENT_SEARCHES);
     else this.kv.set(KEY_RECENT_SEARCHES, JSON.stringify(queries));
+  }
+
+  /** Last locations the user catalogued into, most recent first. */
+  getRecentLocations(): string[] {
+    const raw = this.kv.getString(KEY_RECENT_LOCATIONS);
+    if (!raw) return [];
+    try {
+      const parsed = JSON.parse(raw) as unknown;
+      return Array.isArray(parsed) ? parsed.filter((x): x is string => typeof x === 'string') : [];
+    } catch {
+      return [];
+    }
+  }
+  setRecentLocations(locations: string[]): void {
+    if (locations.length === 0) this.kv.delete(KEY_RECENT_LOCATIONS);
+    else this.kv.set(KEY_RECENT_LOCATIONS, JSON.stringify(locations));
   }
 
   /** Walk-mode detection jobs (capture decoupled from review). */
