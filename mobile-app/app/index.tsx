@@ -23,11 +23,14 @@ import { useWalkCapture } from '@/hooks/useWalkCapture';
 import { isDetectedBox } from '@/lib/bbox-layout';
 import { categoryIcon } from '@/lib/category-icons';
 import { stageTitle } from '@/lib/detect-stages';
+import { buildInventoryCsv, buildInventoryJson } from '@/lib/export';
+import { buildViewCsv, buildViewJson } from '@/lib/export-view';
 import { type DetectionJob, autoRetryableJobs, inboxCount, queueJobs } from '@/lib/jobs';
 import { labelsForDisplay, primaryChips, typeHandle } from '@/lib/labels';
 import { groupByCategory, toggleCollapsed } from '@/lib/overview';
 import { visibilityVerdict } from '@/lib/partial-visibility';
 import { pushRecentSearch } from '@/lib/search-query';
+import { shareExportFile } from '@/services/export-share';
 import { dispatchShot } from '@/services/walk-capture';
 import { useHomeScreenStore } from '@/stores/home-screen.store';
 import { removeJob, useJobsStore } from '@/stores/jobs.store';
@@ -39,6 +42,7 @@ import { useRouter } from 'expo-router';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
+  Alert,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -76,8 +80,8 @@ export default function HomeScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
   const router = useRouter();
-  const { items, isLoading, softDelete, undoDelete, pendingDelete } = useInventory();
-  const { activeHome, activeHomeId } = useHomes();
+  const { items, isLoading, softDelete, undoDelete, pendingDelete, repo } = useInventory();
+  const { homes, activeHome, activeHomeId } = useHomes();
   const { gutter, contentMaxWidth, isCompact } = useResponsive();
   const { health: serverHealth } = useServerHealth();
 
@@ -401,6 +405,76 @@ export default function HomeScreen() {
       ? `${activeCategory} · ${visible.length}`
       : 'Collection';
 
+  // Export in context: the sheet's "current view" builders take `visible` —
+  // the exact hook result on screen after search/category/sort — while the
+  // "everything" variants reuse the Settings flow (lib/export builders +
+  // shareExportFile staging) unchanged.
+  const [isExporting, setIsExporting] = useState(false);
+
+  const handleExportView = async (format: 'json' | 'csv') => {
+    if (isExporting) return;
+    setIsExporting(true);
+    try {
+      const stamp = new Date().toISOString().slice(0, 10);
+      const result = await shareExportFile(
+        `view-${stamp}.${format}`,
+        format === 'json'
+          ? buildViewJson(visible, headerTitle, activeHome?.name)
+          : buildViewCsv(visible, headerTitle, activeHome?.name),
+        format === 'json' ? 'application/json' : 'text/csv',
+      );
+      if (result === 'unavailable') {
+        Alert.alert(
+          'Almost there',
+          'Sharing needs the newest app build. Update the app and your export will be one tap away.',
+        );
+      }
+    } catch {
+      Alert.alert('Export hiccup', "That export didn't go through — mind trying once more?");
+    } finally {
+      setIsExporting(false);
+    }
+  };
+
+  const handleExportAll = async (format: 'json' | 'csv') => {
+    if (isExporting) return;
+    setIsExporting(true);
+    try {
+      const itemsByHome: Record<string, InventoryItem[]> = {};
+      for (const home of homes) {
+        itemsByHome[home.id] = await repo.getItemsByHome(home.id);
+      }
+      const stamp = new Date().toISOString().slice(0, 10);
+      const result = await shareExportFile(
+        `inventory-${stamp}.${format}`,
+        format === 'json'
+          ? buildInventoryJson(homes, itemsByHome)
+          : buildInventoryCsv(homes, itemsByHome),
+        format === 'json' ? 'application/json' : 'text/csv',
+      );
+      if (result === 'unavailable') {
+        Alert.alert(
+          'Almost there',
+          'Sharing needs the newest app build. Update the app and your export will be one tap away.',
+        );
+      }
+    } catch {
+      Alert.alert('Export hiccup', "That export didn't go through — mind trying once more?");
+    } finally {
+      setIsExporting(false);
+    }
+  };
+
+  const openExportSheet = () => {
+    Alert.alert('Export', `${visible.length} item${visible.length === 1 ? '' : 's'} in view`, [
+      { text: 'Export current view (CSV)', onPress: () => void handleExportView('csv') },
+      { text: 'Export current view (JSON)', onPress: () => void handleExportView('json') },
+      { text: 'Export everything (CSV)', onPress: () => void handleExportAll('csv') },
+      { text: 'Export everything (JSON)', onPress: () => void handleExportAll('json') },
+      { text: 'Cancel', style: 'cancel' },
+    ]);
+  };
+
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
       <GlowBackdrop />
@@ -570,6 +644,21 @@ export default function HomeScreen() {
                     ]}
                   >
                     <Feather name="plus" size={16} color={colors.foreground} />
+                  </Pressable>
+                  <Pressable
+                    testID="export-view-button"
+                    accessibilityLabel="Export or share this view"
+                    onPress={openExportSheet}
+                    style={({ pressed }) => [
+                      styles.viewToggle,
+                      {
+                        backgroundColor: colors.card,
+                        borderColor: colors.border,
+                        opacity: pressed ? 0.8 : 1,
+                      },
+                    ]}
+                  >
+                    <Feather name="share-2" size={16} color={colors.foreground} />
                   </Pressable>
                   <Pressable
                     testID="view-toggle"
