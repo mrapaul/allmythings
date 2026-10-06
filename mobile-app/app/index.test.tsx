@@ -285,3 +285,48 @@ describe('HomeScreen queue tiles', () => {
     expect(pushSpy).toHaveBeenCalledWith('/inbox');
   });
 });
+
+/**
+ * Foreground "scans ready" toast: the job manager's announce-once ledger
+ * publishes the batch count through notifications' listener sink; the home
+ * screen shows one toast with a Review affordance into the inbox.
+ */
+describe('HomeScreen ready-scans toast', () => {
+  beforeEach(() => {
+    getJobsStore().setState({ jobs: [] });
+    pushSpy.mockClear();
+  });
+
+  afterEach(() => {
+    getJobsStore().setState({ jobs: [] });
+  });
+
+  it('shows one toast on announcement and Review opens the inbox', async () => {
+    const { notifyReadyScansAnnounced } = await import('@/services/notifications');
+    const view = renderHome();
+
+    await act(async () => {
+      notifyReadyScansAnnounced(3);
+      await new Promise((r) => setTimeout(r, 0));
+    });
+    const toast = findByTestId(view.toJSON(), 'ready-scans-toast');
+    expect(toast).toBeTruthy();
+    expect(JSON.stringify(view.toJSON())).toContain('3 scans are ready');
+
+    await act(async () => {
+      (findByTestId(view.toJSON(), 'ready-scans-review')?.props.onPress as () => void)();
+    });
+    expect(pushSpy).toHaveBeenCalledWith('/inbox');
+    expect(findByTestId(view.toJSON(), 'ready-scans-toast')).toBeNull();
+  });
+
+  it('renders singular copy for a single scan', async () => {
+    const { notifyReadyScansAnnounced } = await import('@/services/notifications');
+    const view = renderHome();
+    await act(async () => {
+      notifyReadyScansAnnounced(1);
+      await new Promise((r) => setTimeout(r, 0));
+    });
+    expect(JSON.stringify(view.toJSON())).toContain('1 scan is ready');
+  });
+});

@@ -133,6 +133,28 @@ export function markReadyScansAnnounced(kv: KVBackend, runIds: readonly string[]
   writeRunIds(kv, KEY_PENDING, pending);
 }
 
+// ── Foreground toast sink ────────────────────────────────────────────
+//
+// A pending batch announced while the app is in the foreground never
+// reaches for the OS banner (it would land on an app the user is already
+// looking at, and be missed): the home screen registers its in-app toast
+// here and the job manager publishes the count on announcement. Same
+// announce-once ledger, same single call for the whole batch.
+
+export type ReadyScansAnnounceListener = (count: number) => void;
+
+let readyScansAnnounceListener: ReadyScansAnnounceListener | null = null;
+
+/** Register (or clear, with null) the foreground toast sink. */
+export function setReadyScansAnnounceListener(fn: ReadyScansAnnounceListener | null): void {
+  readyScansAnnounceListener = fn;
+}
+
+/** Publish an announced batch count to the foreground toast, if one listens. */
+export function notifyReadyScansAnnounced(count: number): void {
+  readyScansAnnounceListener?.(count);
+}
+
 /** Drop ledger entries whose jobs no longer exist (retention prune, removal). */
 export function pruneReadyScansLedger(kv: KVBackend, liveRunIds: readonly string[]): void {
   const live = new Set(liveRunIds);

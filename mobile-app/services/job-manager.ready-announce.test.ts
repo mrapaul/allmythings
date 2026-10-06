@@ -4,7 +4,9 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
  * Ready-scan announcements: a running→ready transition observed while the
  * app is active is haptic-only (the inbox updates under the user's nose), a
  * transition observed while backgrounded is remembered and announced once on
- * the next foreground — and the same batch never notifies twice.
+ * the next foreground — via the in-app toast when the app is active at
+ * announcement time (the OS banner path remains for anything announced while
+ * backgrounded) — and the same batch never announces twice.
  */
 
 const dispatchShotMock = vi.hoisted(() => vi.fn());
@@ -36,7 +38,10 @@ const { Prefs } = await import('@/stores/prefs');
 const { getJobsStore, initJobsStore, addJob, markJobReviewed } = await import(
   '@/stores/jobs.store'
 );
-const { startJobPolling, runBackgroundJobTick } = await import('./job-manager');
+const { setReadyScansAnnounceListener } = await import('./notifications');
+const { startJobPolling, runBackgroundJobTick, announcePendingReadyScans } = await import(
+  './job-manager'
+);
 
 const flush = () => new Promise((r) => setTimeout(r, 0));
 const flushAll = async () => {
@@ -78,6 +83,7 @@ const completedFor = (runIds: string[]) =>
 
 describe('job manager — ready-scan announcements', () => {
   let prefs: ReturnType<typeof Prefs.makeInMemory>;
+  const toastListener = vi.fn();
 
   beforeEach(() => {
     vi.clearAllMocks();
@@ -91,11 +97,13 @@ describe('job manager — ready-scan announcements', () => {
       return { remove: () => undefined };
     };
     appState.currentState = 'active';
+    setReadyScansAnnounceListener(toastListener);
   });
 
   afterEach(() => {
     appState.addEventListener = originalAddEventListener;
     appState.currentState = 'active';
+    setReadyScansAnnounceListener(null);
   });
 
   const goForeground = async () => {
@@ -120,9 +128,11 @@ describe('job manager — ready-scan announcements', () => {
     ).toBe('ready');
     expect(haptics.notificationAsync).toHaveBeenCalledWith('success');
     expect(notif.scheduleNotificationAsync).not.toHaveBeenCalled();
+    expect(toastListener).not.toHaveBeenCalled();
     // Marked announced: a later foreground has nothing pending.
     await goForeground();
     expect(notif.scheduleNotificationAsync).not.toHaveBeenCalled();
+    expect(toastListener).not.toHaveBeenCalled();
   });
 
   it('remembers backgrounded transitions and announces them once on foreground', async () => {
@@ -140,21 +150,24 @@ describe('job manager — ready-scan announcements', () => {
     ).toBe('ready');
     expect(haptics.notificationAsync).not.toHaveBeenCalled();
     expect(notif.scheduleNotificationAsync).not.toHaveBeenCalled();
+    expect(toastListener).not.toHaveBeenCalled();
 
     await goForeground();
-    expect(notif.scheduleNotificationAsync).toHaveBeenCalledTimes(1);
-    expect(notif.scheduleNotificationAsync.mock.calls[0]?.[0].content.body).toBe(
-      '1 scan is ready to review',
-    );
+    // Foreground announcement: the in-app toast carries the batch (with the
+    // success haptic) — the OS banner would land on an app the user is
+    // already looking at and be missed.
+    expect(toastListener).toHaveBeenCalledTimes(1);
+    expect(toastListener).toHaveBeenCalledWith(1);
+    expect(notif.scheduleNotificationAsync).not.toHaveBeenCalled();
     expect(haptics.notificationAsync).toHaveBeenCalledWith('success');
 
-    // The announce-once guard: another foreground must not re-notify.
+    // The announce-once guard: another foreground must not re-announce.
     await goForeground();
-    expect(notif.scheduleNotificationAsync).toHaveBeenCalledTimes(1);
+    expect(toastListener).toHaveBeenCalledTimes(1);
     stop();
   });
 
-  it('announces one notification for the whole pending batch', async () => {
+  it('announces one toast for the whole pending batch', async () => {
     addJob(runningJob('r-a'));
     addJob(runningJob('r-b'));
     const stop = startJobPolling(prefs, {
@@ -165,10 +178,26 @@ describe('job manager — ready-scan announcements', () => {
     await runBackgroundJobTick(prefs, { getStatus: completedFor(['r-a', 'r-b']) });
     await goForeground();
 
+    expect(toastListener).toHaveBeenCalledTimes(1);
+    expect(toastListener).toHaveBeenCalledWith(2);
+    expect(notif.scheduleNotificationAsync).not.toHaveBeenCalled();
+    stop();
+  });
+
+  it('falls back to the OS banner when the app is not active at announcement time', async () => {
+    addJob(runningJob('r-os'));
+    const stop = startJobPolling(prefs, { getStatus: completedFor(['r-os']), intervalMs: 60_000 });
+    appState.currentState = 'background';
+    await runBackgroundJobTick(prefs, { getStatus: completedFor(['r-os']) });
+
+    // Announcement attempted while still backgrounded: the original
+    // OS-notification path, untouched.
+    await announcePendingReadyScans(prefs);
     expect(notif.scheduleNotificationAsync).toHaveBeenCalledTimes(1);
     expect(notif.scheduleNotificationAsync.mock.calls[0]?.[0].content.body).toBe(
-      '2 scans are ready to review',
+      '1 scan is ready to review',
     );
+    expect(toastListener).not.toHaveBeenCalled();
     stop();
   });
 

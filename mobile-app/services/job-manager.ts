@@ -10,6 +10,7 @@ import {
   hapticReadyScans,
   markReadyScansAnnounced,
   noteReadyScansBackgrounded,
+  notifyReadyScansAnnounced,
   pendingReadyScans,
   pruneReadyScansLedger,
 } from './notifications';
@@ -46,8 +47,12 @@ function notifyReadyTransitions(prefs: Prefs, runIds: string[]): void {
 }
 
 /**
- * Foreground entry point for remembered transitions: one notification for
- * every pending runId that is still an unreviewed ready job, plus a haptic.
+ * Foreground entry point for remembered transitions. Active at announcement
+ * time (the normal foreground case): the in-app toast carries the batch —
+ * an OS banner would land on an app the user is already looking at and be
+ * missed — plus the success haptic. Not active (defensive; announcements
+ * are normally only triggered from the foreground listener): the original
+ * OS-notification path, unchanged, including its schedule-failure retry.
  * Best-effort — a failed announce stays pending for the next foreground.
  */
 export async function announcePendingReadyScans(prefs: Prefs): Promise<void> {
@@ -57,7 +62,15 @@ export async function announcePendingReadyScans(prefs: Prefs): Promise<void> {
       .getState()
       .jobs.filter((j) => j.status === 'ready' && !j.reviewed)
       .map((j) => j.runId);
-    await announceReadyScans(kv, pendingReadyScans(kv, readyRunIds));
+    const pending = pendingReadyScans(kv, readyRunIds);
+    if (pending.length === 0) return;
+    if (AppState.currentState === 'active') {
+      notifyReadyScansAnnounced(pending.length);
+      hapticReadyScans();
+      markReadyScansAnnounced(kv, pending);
+    } else {
+      await announceReadyScans(kv, pending);
+    }
   } catch {
     // best-effort: never let an announcement break the foreground path
   }

@@ -32,6 +32,7 @@ import { groupByCategory, toggleCollapsed } from '@/lib/overview';
 import { visibilityVerdict } from '@/lib/partial-visibility';
 import { pushRecentSearch } from '@/lib/search-query';
 import { shareExportFile } from '@/services/export-share';
+import { setReadyScansAnnounceListener } from '@/services/notifications';
 import { dispatchShot } from '@/services/walk-capture';
 import { useHomeScreenStore } from '@/stores/home-screen.store';
 import { removeJob, useJobsStore } from '@/stores/jobs.store';
@@ -60,10 +61,12 @@ import Animated, {
   FadeOut,
   FadeInUp,
   interpolate,
+  runOnJS,
   useAnimatedStyle,
   useSharedValue,
   withRepeat,
   withSequence,
+  withSpring,
   withTiming,
 } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -119,6 +122,78 @@ function BreathingStatusDot({ color }: { color: string }) {
     opacity: interpolate(pulse.value, [1, 1.4], [0.55, 1]),
   }));
   return <Animated.View style={[styles.pillDot, { backgroundColor: color }, dotStyle]} />;
+}
+
+/** How long the ready-scans toast stays up before putting itself away. */
+const READY_TOAST_MS = 3_500;
+
+/**
+ * Foreground twin of the OS "scans ready" banner: springs down from just
+ * above its resting spot, offers Review, and fades out after a few seconds.
+ * The home screen mounts at most one, keyed by an incrementing id, so a new
+ * announcement replaces (and replays) rather than stacks. The single
+ * runOnJS hop fires once on the way out — never per frame.
+ */
+function ReadyScansToast({
+  count,
+  onReview,
+  onDismissed,
+}: {
+  count: number;
+  onReview: () => void;
+  onDismissed: () => void;
+}) {
+  const colors = useColors();
+  const reduceMotion = useReduceMotion();
+  const translateY = useSharedValue(reduceMotion ? 0 : -20);
+  const opacity = useSharedValue(0);
+  const onDismissedRef = useRef(onDismissed);
+  useEffect(() => {
+    onDismissedRef.current = onDismissed;
+  }, [onDismissed]);
+
+  useEffect(() => {
+    translateY.value = withSpring(0, { damping: 16, stiffness: 220 });
+    opacity.value = withTiming(1, { duration: 220 });
+    const timer = setTimeout(() => {
+      opacity.value = withTiming(0, { duration: 180 }, (finished) => {
+        if (finished) runOnJS(onDismissedRef.current)();
+      });
+    }, READY_TOAST_MS);
+    return () => clearTimeout(timer);
+  }, [translateY, opacity]);
+
+  const toastStyle = useAnimatedStyle(() => ({
+    opacity: opacity.value,
+    transform: [{ translateY: translateY.value }],
+  }));
+
+  return (
+    <View style={styles.readyToastWrap} pointerEvents="box-none">
+      <Animated.View
+        testID="ready-scans-toast"
+        style={[
+          styles.readyToast,
+          { backgroundColor: colors.card, borderColor: colors.border },
+          toastStyle,
+        ]}
+      >
+        <View style={[styles.readyToastDot, { backgroundColor: colors.success }]} />
+        <Text style={[styles.readyToastText, { color: colors.foreground }]} numberOfLines={1}>
+          {count === 1 ? '1 scan is ready' : `${count} scans are ready`}
+        </Text>
+        <Pressable
+          testID="ready-scans-review"
+          accessibilityLabel="Review ready scans"
+          onPress={onReview}
+          hitSlop={6}
+          style={({ pressed }) => [styles.readyToastAction, { opacity: pressed ? 0.7 : 1 }]}
+        >
+          <Text style={[styles.readyToastActionText, { color: colors.primary }]}>Review</Text>
+        </Pressable>
+      </Animated.View>
+    </View>
+  );
 }
 
 export default function HomeScreen() {
@@ -177,6 +252,21 @@ export default function HomeScreen() {
     },
     [],
   );
+
+  // Foreground "scans ready" toast, driven by the same announce-once ledger
+  // as the OS notification: the job manager publishes the batch count when
+  // it announces while the app is active. One slot — a new announcement
+  // replaces the current toast (keyed remount replays the spring) instead
+  // of stacking a second one.
+  const [readyToast, setReadyToast] = useState<{ id: number; count: number } | null>(null);
+  const readyToastSeq = useRef(0);
+  useEffect(() => {
+    setReadyScansAnnounceListener((count) => {
+      readyToastSeq.current += 1;
+      setReadyToast({ id: readyToastSeq.current, count });
+    });
+    return () => setReadyScansAnnounceListener(null);
+  }, []);
   // The home pill speaks the same staged vocabulary as the capture tray —
   // one mental model wherever the user meets a processing shot. The clock
   // ticks once a second while a job runs so the mm:ss readout counts up.
@@ -892,6 +982,18 @@ export default function HomeScreen() {
         </ScrollView>
       </View>
 
+      {readyToast && (
+        <ReadyScansToast
+          key={readyToast.id}
+          count={readyToast.count}
+          onReview={() => {
+            setReadyToast(null);
+            router.push('/inbox');
+          }}
+          onDismissed={() => setReadyToast(null)}
+        />
+      )}
+
       <View style={styles.walkRow} pointerEvents="box-none">
         {sendingCount > 0 && !runningJob && (
           <View
@@ -1195,6 +1297,48 @@ const styles = StyleSheet.create({
     width: 7,
     height: 7,
     borderRadius: 3.5,
+  },
+  readyToastWrap: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    // Just above the processing-pill row.
+    bottom: 164,
+    alignItems: 'center',
+    zIndex: 6,
+  },
+  readyToast: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    paddingHorizontal: 14,
+    height: 38,
+    borderRadius: 19,
+    borderWidth: 1,
+    shadowColor: '#000',
+    shadowOpacity: 0.12,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 4,
+  },
+  readyToastDot: {
+    width: 7,
+    height: 7,
+    borderRadius: 3.5,
+  },
+  readyToastText: {
+    fontFamily: 'Inter_600SemiBold',
+    fontSize: 12,
+    letterSpacing: 0.2,
+  },
+  readyToastAction: {
+    paddingHorizontal: 2,
+    paddingVertical: 4,
+  },
+  readyToastActionText: {
+    fontFamily: 'Inter_700Bold',
+    fontSize: 12,
+    letterSpacing: 0.3,
   },
   manualAddBtn: {
     backgroundColor: 'transparent',
