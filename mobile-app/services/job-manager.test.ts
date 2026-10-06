@@ -120,4 +120,39 @@ describe('job manager — lost runs', () => {
         .jobs.find((j) => j.runId === 'r-ok'),
     ).toMatchObject({ status: 'ready', itemCount: 2 });
   });
+
+  it('patches streamed partial counts while the run is still going', async () => {
+    addJob(runningJob('r-live'));
+    const getStatus = vi.fn().mockResolvedValue({
+      status: 'running',
+      workflowId: 'r-live',
+      scene: { estimatedTotalItems: 8 },
+      result: { items: [{}, {}] },
+    });
+
+    const stop = startJobPolling(prefs, { getStatus, intervalMs: 5 });
+    await flush();
+    stop();
+
+    const job = getJobsStore()
+      .getState()
+      .jobs.find((j) => j.runId === 'r-live');
+    expect(job).toMatchObject({ status: 'running', progressItems: 2, sceneEstimate: 8 });
+  });
+
+  it('leaves the job untouched when a running poll carries no counts', async () => {
+    addJob(runningJob('r-quiet'));
+    const getStatus = vi.fn().mockResolvedValue({ status: 'running', workflowId: 'r-quiet' });
+
+    const stop = startJobPolling(prefs, { getStatus, intervalMs: 5 });
+    await flush();
+    stop();
+
+    const job = getJobsStore()
+      .getState()
+      .jobs.find((j) => j.runId === 'r-quiet');
+    expect(job).toMatchObject({ status: 'running' });
+    expect(job?.progressItems).toBeUndefined();
+    expect(job?.sceneEstimate).toBeUndefined();
+  });
 });

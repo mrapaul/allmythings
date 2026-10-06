@@ -10,6 +10,7 @@ import {
   nextRoomSessionId,
   queueCount,
   queueJobs,
+  queueProgress,
   sessionDisplayName,
 } from './jobs';
 
@@ -121,5 +122,22 @@ describe('queueJobs / queueCount', () => {
     const reviewed = job({ status: 'ready', reviewed: true, runId: 'r4', itemCount: 2 });
     expect(queueJobs([running, ready, failed, reviewed])).toEqual([running, failed]);
     expect(queueCount([running, ready, failed, reviewed])).toBe(2);
+  });
+});
+
+describe('queueProgress', () => {
+  it('is null until both the streamed count and the estimate exist', () => {
+    expect(queueProgress(job({}))).toBeNull();
+    expect(queueProgress(job({ progressItems: 2 }))).toBeNull();
+    expect(queueProgress(job({ sceneEstimate: 8 }))).toBeNull();
+    expect(queueProgress(job({ progressItems: 2, sceneEstimate: 0 }))).toBeNull();
+  });
+
+  it('computes the fraction of the estimate, clamped below done', () => {
+    expect(queueProgress(job({ progressItems: 2, sceneEstimate: 8 }))).toBe(0.25);
+    // 8/8 would read as finished — the ring must never get there pre-ready.
+    expect(queueProgress(job({ progressItems: 8, sceneEstimate: 8 }))).toBe(0.95);
+    expect(queueProgress(job({ progressItems: 12, sceneEstimate: 8 }))).toBe(0.95);
+    expect(queueProgress(job({ progressItems: 0, sceneEstimate: 8 }))).toBe(0);
   });
 });

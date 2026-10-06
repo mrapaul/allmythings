@@ -82,7 +82,24 @@ async function tickJobs(prefs: Prefs, getStatus: typeof getDetectStatus): Promis
           itemCount: status.result?.items.length ?? 0,
         });
         readyTransitions.push(job.runId);
-      } else if (status.status !== 'running') {
+      } else if (status.status === 'running') {
+        // Streamed partial progress: patch the counts the status payload
+        // carries so the queue tile can switch to a determinate ring while
+        // the run is still in flight. Only write on a real change — the
+        // store mirrors into MMKV on every commit.
+        const progressItems = status.result?.items.length;
+        const sceneEstimate = status.scene?.estimatedTotalItems ?? undefined;
+        if (
+          (progressItems !== undefined && progressItems !== job.progressItems) ||
+          (sceneEstimate !== undefined && sceneEstimate !== job.sceneEstimate)
+        ) {
+          patchJob(job.runId, {
+            ...(progressItems !== undefined ? { progressItems } : {}),
+            ...(sceneEstimate !== undefined ? { sceneEstimate } : {}),
+          });
+        }
+      } else {
+        // Terminal server-side states: failed / cancelled / timed_out.
         patchJob(job.runId, {
           status: 'failed',
           errorCode: status.errorCode ?? status.status,

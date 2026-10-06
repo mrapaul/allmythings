@@ -26,6 +26,14 @@ export interface DetectionJob {
   advice?: string | null;
   /** True when the server judged the frame not worth processing. */
   unprocessable?: boolean;
+  /**
+   * Streamed partial counts while the run is still in flight (patched from
+   * the /v1/detect/status poll): items received so far, and the server's
+   * estimate of the scene's total. Together they drive the queue tile's
+   * determinate ring; absent = the arc stays indeterminate.
+   */
+  progressItems?: number;
+  sceneEstimate?: number;
   /** Dispatches attempted so far (auto-retry ladder). Undefined = first try. */
   attempts?: number;
   /** Earliest time the auto-retry scheduler may re-dispatch this job. */
@@ -122,6 +130,17 @@ export function queueJobs(jobs: DetectionJob[]): DetectionJob[] {
 
 export function queueCount(jobs: DetectionJob[]): number {
   return queueJobs(jobs).length;
+}
+
+/**
+ * Determinate progress for a running job, or null when the server has not
+ * streamed enough to say (the caller keeps an indeterminate arc instead).
+ * Clamped to [0, 0.95] so the ring never reads "done" before the job is.
+ */
+export function queueProgress(job: DetectionJob): number | null {
+  const { progressItems, sceneEstimate } = job;
+  if (progressItems == null || sceneEstimate == null || sceneEstimate <= 0) return null;
+  return Math.min(0.95, Math.max(0, progressItems / sceneEstimate));
 }
 
 export function inboxCount(jobs: DetectionJob[]): number {
