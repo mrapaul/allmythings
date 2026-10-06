@@ -1,7 +1,10 @@
 import GlowBackdrop from '@/components/GlowBackdrop';
+import LocationField from '@/components/LocationField';
 import { useInventory } from '@/contexts/InventoryContext';
 import { useColors } from '@/hooks/useColors';
 import { buildLabels } from '@/lib/labels';
+import { pushRecentLocation } from '@/lib/recent-locations';
+import { Prefs } from '@/stores/prefs';
 import { Feather } from '@expo/vector-icons';
 import { Image } from 'expo-image';
 import * as ImagePicker from 'expo-image-picker';
@@ -39,6 +42,18 @@ export default function AddItemScreen() {
   const [category, setCategory] = useState('Other');
   const [photoUri, setPhotoUri] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
+  // Whereabouts: chips from recent locations plus free text ('' → unset).
+  const prefs = useMemo(() => {
+    try {
+      return Prefs.makeMmkv();
+    } catch {
+      return Prefs.makeInMemory();
+    }
+  }, []);
+  const [location, setLocation] = useState('');
+  const [recentLocations, setRecentLocations] = useState<string[]>(() =>
+    prefs.getRecentLocations(),
+  );
 
   // The collection's own categories first, defaults filling the gaps.
   const categories = useMemo(() => {
@@ -88,6 +103,7 @@ export default function AddItemScreen() {
     if (!canSave) return;
     setIsSaving(true);
     try {
+      const chosenLocation = location.trim();
       // Label stored exactly as typed — user words win over taxonomy.
       await addItems([
         {
@@ -99,11 +115,17 @@ export default function AddItemScreen() {
           thumbnailUri: null,
           attributes: null,
           labels: buildLabels({ label: name, category }),
+          location: chosenLocation || null,
           additionalPhotoUris: [],
           notes: '',
           box: FULL_FRAME_BOX,
         },
       ]);
+      if (chosenLocation) {
+        const next = pushRecentLocation(prefs.getRecentLocations(), chosenLocation);
+        prefs.setRecentLocations(next);
+        setRecentLocations(next);
+      }
       router.replace('/');
     } finally {
       setIsSaving(false);
@@ -180,6 +202,9 @@ export default function AddItemScreen() {
             </Pressable>
           ))}
         </View>
+
+        <Text style={[styles.fieldLabel, { color: colors.mutedForeground }]}>LOCATION</Text>
+        <LocationField value={location} onChange={setLocation} recents={recentLocations} />
 
         <Text style={[styles.fieldLabel, { color: colors.mutedForeground }]}>PHOTO (OPTIONAL)</Text>
         {photoUri ? (

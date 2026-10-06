@@ -6,6 +6,7 @@ import { BoundingBoxOverlay } from '@/components/BoundingBoxOverlay';
 import { DetectionRow } from '@/components/DetectionRow';
 import { DrawBoxOverlay, type NormBox } from '@/components/DrawBoxOverlay';
 import { GlowBackdrop } from '@/components/GlowBackdrop';
+import LocationField from '@/components/LocationField';
 import { QualityCard } from '@/components/QualityCard';
 import { Snackbar } from '@/components/Snackbar';
 import { useHomes } from '@/contexts/HomesContext';
@@ -22,6 +23,7 @@ import { RUN_LOST_ERROR_CODE } from '@/lib/jobs';
 import { buildLabels, labelsForDisplay } from '@/lib/labels';
 import { startsExcluded, visibilityNote, visibilityVerdict } from '@/lib/partial-visibility';
 import { removePendingCapture, upsertPendingCapture } from '@/lib/pending-captures';
+import { pushRecentLocation } from '@/lib/recent-locations';
 import { buildItemPayload, effectiveTags } from '@/lib/review-payload';
 import { groupRows } from '@/lib/row-groups';
 import { withSpan } from '@/observability/otel';
@@ -110,6 +112,12 @@ export default function DetectionScreen() {
   const [savingIds, setSavingIds] = useState<Set<string>>(() => new Set());
   const [autoFocusByRow, setAutoFocusByRow] = useState<Record<string, boolean>>({});
   const [tagsByRow, setTagsByRow] = useState<Record<string, string[]>>({});
+  // One location for the whole review: whatever the user picks lands on
+  // every row saved from this screen ("everything on this shelf → garage").
+  const [location, setLocation] = useState('');
+  const [recentLocations, setRecentLocations] = useState<string[]>(() =>
+    prefs.getRecentLocations(),
+  );
   const [qaSuspect, setQaSuspect] = useState(false);
   /** Which fault the pre-upload gate found, in the user's words. */
   const [qaAdvice, setQaAdvice] = useState<string | null>(null);
@@ -186,6 +194,7 @@ export default function DetectionScreen() {
     setAnnotatedUri(null);
     annotatedAttemptRef.current = null;
     setTagsByRow({});
+    setLocation('');
     setAutoFocusByRow({});
     setQaSuspect(false);
     setQaAdvice(null);
@@ -480,6 +489,17 @@ export default function DetectionScreen() {
     getDetectionStore().getState().toggleInclude(rowId);
   };
 
+  /** Chosen location for this review ('' → none); recorded on save. */
+  const chosenLocation = location.trim();
+
+  /** A saved location joins the recents list — one-tap next time. */
+  const recordLocation = () => {
+    if (!chosenLocation) return;
+    const next = pushRecentLocation(prefs.getRecentLocations(), chosenLocation);
+    prefs.setRecentLocations(next);
+    setRecentLocations(next);
+  };
+
   const makeThumbnail = (box: DetectionStoreRow['item']['box']) =>
     imageUri ? renderThumbnail(imageUri, box) : Promise.resolve(null);
 
@@ -495,10 +515,17 @@ export default function DetectionScreen() {
     try {
       getDetectionStore().getState().beginSave([row.id]);
       const ids = await addItems([
-        buildItemPayload(row, tags, primaryPhotoUri, await makeThumbnail(row.item.box)),
+        buildItemPayload(
+          row,
+          tags,
+          primaryPhotoUri,
+          await makeThumbnail(row.item.box),
+          chosenLocation || null,
+        ),
       ]);
       if (ids[0]) {
         getDetectionStore().getState().endSave([row.id]);
+        recordLocation();
       }
     } catch (err) {
       getDetectionStore().getState().failSave([row.id]);
@@ -531,11 +558,18 @@ export default function DetectionScreen() {
       for (const row of pending) {
         const tags = effectiveTags(row, tagsByRow[row.id]);
         payloads.push(
-          buildItemPayload(row, tags, primaryPhotoUri, await makeThumbnail(row.item.box)),
+          buildItemPayload(
+            row,
+            tags,
+            primaryPhotoUri,
+            await makeThumbnail(row.item.box),
+            chosenLocation || null,
+          ),
         );
       }
       const itemIds = await addItems(payloads);
       getDetectionStore().getState().endSave(ids);
+      recordLocation();
       submitCorrections();
       // Walk mode: reviewing + saving clears this job from the inbox.
       const reviewedRunId = runId ?? resumeRunId;
@@ -1000,6 +1034,17 @@ export default function DetectionScreen() {
                   </Text>
                 </View>
 
+                <View style={styles.locationSection} testID="review-location">
+                  <Text style={[styles.locationLabel, { color: colors.mutedForeground }]}>
+                    Location for these items
+                  </Text>
+                  <LocationField
+                    value={location}
+                    onChange={setLocation}
+                    recents={recentLocations}
+                  />
+                </View>
+
                 {displayRows.map(({ row, group }, idx) => (
                   <View key={row.id}>
                     {dupRowIds.has(row.id) && (
@@ -1257,6 +1302,17 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(255,255,255,0.5)',
   },
   rowsSection: { paddingTop: 2 },
+  locationSection: {
+    paddingBottom: 10,
+  },
+  locationLabel: {
+    fontFamily: 'Inter_600SemiBold',
+    fontSize: 10,
+    letterSpacing: 0.6,
+    textTransform: 'uppercase',
+    marginBottom: 8,
+    opacity: 0.7,
+  },
   helperWrap: {
     paddingTop: 24,
     alignItems: 'center',

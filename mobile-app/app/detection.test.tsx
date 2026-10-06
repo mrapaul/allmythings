@@ -168,8 +168,16 @@ vi.mock('@/stores/prefs', () => ({
       setDiscoveredApiUrl: () => undefined,
       getReviewState: () => null,
       setReviewState: () => undefined,
+      getRecentLocations: () => [...prefsMock.locations],
+      setRecentLocations: (next: string[]) => {
+        prefsMock.locations = next;
+      },
     }),
   },
+}));
+
+const prefsMock = vi.hoisted(() => ({
+  locations: [] as string[],
 }));
 
 const DetectionScreen = (await import('./detection')).default;
@@ -180,12 +188,70 @@ describe('DetectionScreen', () => {
     quality.report = null;
     annotated.uri = null;
     inventory.addItems.mockClear();
+    prefsMock.locations = [];
     routeParams.current = { imageUri: 'file:///fake.jpg' };
   });
 
   it('renders without throwing', () => {
     const tree = render(<DetectionScreen />).toJSON();
     expect(tree).toBeTruthy();
+  });
+
+  it('shows the review location field, seeded with recent locations', async () => {
+    prefsMock.locations = ['garage', 'hallway closet — top shelf'];
+    const view = render(<DetectionScreen />);
+    await act(async () => {
+      await new Promise((r) => setTimeout(r, 0));
+    });
+    const texts = collectStrings(view.toJSON());
+    expect(texts).toContain('Location for these items');
+    expect(findNode(view.toJSON(), 'review-location')).toBeTruthy();
+    // Recent chips are offered one-tap; custom entry via the small input.
+    expect(findNode(view.toJSON(), 'location-chip-garage')).toBeTruthy();
+    expect(findNode(view.toJSON(), 'location-input')).toBeTruthy();
+  });
+
+  it('applies the chosen location to every saved row and records it as recent', async () => {
+    const view = render(<DetectionScreen />);
+    await act(async () => {
+      await new Promise((r) => setTimeout(r, 0));
+    });
+
+    await act(async () => {
+      (findNode(view.toJSON(), 'location-input')?.props.onChangeText as (v: string) => void)(
+        'hallway closet — top shelf',
+      );
+    });
+    await act(async () => {
+      (findNode(view.toJSON(), 'save-all')?.props.onPress as () => void)();
+      await new Promise((r) => setTimeout(r, 0));
+    });
+
+    expect(inventory.addItems).toHaveBeenCalledTimes(1);
+    const payloads = inventory.addItems.mock.calls[0]?.[0] as unknown as Array<{
+      location: string | null;
+    }>;
+    // Both review rows (Sofa + Lamp) inherit the one chosen location.
+    expect(payloads).toHaveLength(2);
+    for (const p of payloads) expect(p.location).toBe('hallway closet — top shelf');
+    // The choice joins the recents list for the next review.
+    expect(prefsMock.locations).toEqual(['hallway closet — top shelf']);
+  });
+
+  it('saves rows without a location when none was chosen', async () => {
+    const view = render(<DetectionScreen />);
+    await act(async () => {
+      await new Promise((r) => setTimeout(r, 0));
+    });
+    await act(async () => {
+      (findNode(view.toJSON(), 'save-all')?.props.onPress as () => void)();
+      await new Promise((r) => setTimeout(r, 0));
+    });
+    const payloads = inventory.addItems.mock.calls[0]?.[0] as unknown as Array<{
+      location: string | null;
+    }>;
+    for (const p of payloads) expect(p.location).toBeNull();
+    expect(prefsMock.locations).toEqual([]);
   });
 
   it('renders overlay labels for detected boxes', async () => {

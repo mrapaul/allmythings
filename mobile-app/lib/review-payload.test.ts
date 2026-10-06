@@ -40,4 +40,11 @@ describe('buildItemPayload', () => {
   it('falls back to the model label when no tags survive', () => {
     expect(buildItemPayload(row, [], 'file:///p.jpg', null).label).toBe('navy velvet sofa');
   });
+
+  it('carries the chosen review location, defaulting to null', () => {
+    expect(buildItemPayload(row, ['sofa'], 'file:///p.jpg', null).location).toBeNull();
+    expect(
+      buildItemPayload(row, ['sofa'], 'file:///p.jpg', null, 'hallway closet — top shelf').location,
+    ).toBe('hallway closet — top shelf');
+  });
 });

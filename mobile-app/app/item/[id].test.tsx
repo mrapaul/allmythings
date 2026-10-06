@@ -1,5 +1,5 @@
 import { act, render } from '@testing-library/react-native';
-import { describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 // Detail-screen tests with lean fixtures rather than real Drizzle/PhotoStorage
 // providers — same pattern as `components/TopBar.test.tsx`. The fixture holder
@@ -8,6 +8,26 @@ import { describe, expect, it, vi } from 'vitest';
 const fixture = vi.hoisted(() => ({
   paramId: 'nonexistent',
   items: [] as unknown[],
+  locations: [] as string[],
+  updateItem: vi.fn(async (_id: string, _patch: Record<string, unknown>) => {}),
+}));
+
+// The detail sheet reads recent locations from Prefs.
+vi.mock('@/stores/prefs', () => ({
+  Prefs: {
+    makeMmkv: () => ({
+      getRecentLocations: () => [...fixture.locations],
+      setRecentLocations: (next: string[]) => {
+        fixture.locations = next;
+      },
+    }),
+    makeInMemory: () => ({
+      getRecentLocations: () => [...fixture.locations],
+      setRecentLocations: (next: string[]) => {
+        fixture.locations = next;
+      },
+    }),
+  },
 }));
 
 // `expo-image-picker` reaches into `expo-modules-core` at import time, which
@@ -35,7 +55,7 @@ vi.mock('@/contexts/InventoryContext', () => ({
     items: fixture.items,
     counts: {},
     addItems: async () => [],
-    updateItem: async () => {},
+    updateItem: fixture.updateItem,
     softDelete: () => undefined,
     undoDelete: () => undefined,
     pendingDelete: null,
@@ -124,5 +144,61 @@ describe('ItemDetailScreen (detected item)', () => {
     expect(findByTestId(view.toJSON(), 'label-chip-category-Decor')).toBeTruthy();
     // Chip editor affordance present; raw stored label no longer a heading.
     expect(findByTestId(view.toJSON(), 'label-editor-open')).toBeTruthy();
+  });
+});
+
+describe('ItemDetailScreen (location)', () => {
+  beforeEach(() => {
+    fixture.paramId = 'item-1';
+    fixture.items = [GOLD_PAINTING];
+    fixture.locations = ['garage', 'attic — blue bin'];
+    fixture.updateItem.mockClear();
+  });
+
+  it('seeds the location field from the stored value with recent chips', async () => {
+    const view = render(<ItemDetailScreen />);
+    await act(async () => {
+      await new Promise((r) => setTimeout(r, 0));
+    });
+    expect(findByTestId(view.toJSON(), 'detail-location')).toBeTruthy();
+    // GOLD_PAINTING has no location yet — the field starts empty.
+    expect(findByTestId(view.toJSON(), 'location-input')?.props.value).toBe('');
+    // Recents are offered as one-tap chips.
+    expect(findByTestId(view.toJSON(), 'location-chip-garage')).toBeTruthy();
+    expect(findByTestId(view.toJSON(), 'location-chip-attic — blue bin')).toBeTruthy();
+  });
+
+  it('commits an edited location once, on submit', async () => {
+    const view = render(<ItemDetailScreen />);
+    await act(async () => {
+      await new Promise((r) => setTimeout(r, 0));
+    });
+
+    await act(async () => {
+      (findByTestId(view.toJSON(), 'location-input')?.props.onChangeText as (v: string) => void)(
+        'hallway closet — top shelf',
+      );
+    });
+    await act(async () => {
+      (findByTestId(view.toJSON(), 'location-input')?.props.onSubmitEditing as () => void)();
+    });
+
+    expect(fixture.updateItem).toHaveBeenCalledTimes(1);
+    expect(fixture.updateItem).toHaveBeenCalledWith('item-1', {
+      location: 'hallway closet — top shelf',
+    });
+    // The committed location joins the recents list.
+    expect(fixture.locations[0]).toBe('hallway closet — top shelf');
+  });
+
+  it('tapping a recent chip commits it immediately without typing', async () => {
+    const view = render(<ItemDetailScreen />);
+    await act(async () => {
+      await new Promise((r) => setTimeout(r, 0));
+    });
+    await act(async () => {
+      (findByTestId(view.toJSON(), 'location-chip-garage')?.props.onPress as () => void)();
+    });
+    expect(fixture.updateItem).toHaveBeenCalledWith('item-1', { location: 'garage' });
   });
 });

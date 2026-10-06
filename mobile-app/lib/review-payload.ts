@@ -13,13 +13,15 @@ export function effectiveTags(row: DetectionRow, edited: string[] | undefined): 
 /**
  * The inventory record for one accepted review row. The first tag is the
  * label (user words win); the model's raw tags still feed attributes and
- * search labels so a relabel never loses what the model saw.
+ * search labels so a relabel never loses what the model saw. `location`
+ * (when the user picked one for this review) lands on every saved row.
  */
 export function buildItemPayload(
   row: DetectionRow,
   tags: string[],
   primaryPhotoUri: string,
   thumbnailUri: string | null,
+  location?: string | null,
 ): ReviewItemPayload {
   const label = tags[0] ?? row.item.label;
   const description = row.item.description ?? '';
@@ -33,6 +35,7 @@ export function buildItemPayload(
     thumbnailUri,
     attributes: extractAttributes(row.item.tags),
     labels: buildLabels({ label, description, category, tags: row.item.tags }),
+    location: location ?? null,
     additionalPhotoUris: [],
     notes: '',
     box: row.item.box,

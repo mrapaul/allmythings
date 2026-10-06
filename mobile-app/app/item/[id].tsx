@@ -1,5 +1,6 @@
 import GlowBackdrop from '@/components/GlowBackdrop';
 import KeyboardAwareScrollViewCompat from '@/components/KeyboardAwareScrollViewCompat';
+import LocationField from '@/components/LocationField';
 import { useInventory } from '@/contexts/InventoryContext';
 import { useColors } from '@/hooks/useColors';
 import { boxToViewRect, computeCoverLayout, isDetectedBox } from '@/lib/bbox-layout';
@@ -13,13 +14,15 @@ import {
   typeHandle,
 } from '@/lib/labels';
 import { visibilityNote, visibilityVerdict } from '@/lib/partial-visibility';
+import { pushRecentLocation } from '@/lib/recent-locations';
 import { getHomeScreenStore } from '@/stores/home-screen.store';
+import { Prefs } from '@/stores/prefs';
 import { Feather } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import { Image } from 'expo-image';
 import * as ImagePicker from 'expo-image-picker';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import {
   Alert,
   Dimensions,
@@ -49,6 +52,23 @@ export default function ItemDetailScreen() {
   // Chip editor: input accepts "color: red" or a plain free label.
   const [isAddingLabel, setIsAddingLabel] = useState(false);
   const [labelInput, setLabelInput] = useState('');
+
+  // Location edits are drafted locally and written on commit (submit/blur/
+  // chip tap) — never per keystroke.
+  const prefs = useMemo(() => {
+    try {
+      return Prefs.makeMmkv();
+    } catch {
+      return Prefs.makeInMemory();
+    }
+  }, []);
+  const [locationDraft, setLocationDraft] = useState('');
+  const [recentLocations, setRecentLocations] = useState<string[]>(() =>
+    prefs.getRecentLocations(),
+  );
+  useEffect(() => {
+    setLocationDraft(item?.location ?? '');
+  }, [item?.location]);
 
   // Natural size for box mapping. expo-image's onLoad can fail to fire for
   // file:// sources on release builds, which silently hid the overlay — so
@@ -193,6 +213,20 @@ export default function ItemDetailScreen() {
 
   // Partial visibility, derived from the stored box (retroactive, no migration).
   const partialNote = visibilityNote(visibilityVerdict(item.box));
+
+  // Whereabouts: free text the user can change any time. Writing null clears
+  // the row; a set location joins the recents offered across the app.
+  const commitLocation = (next: string) => {
+    const trimmed = next.trim();
+    setLocationDraft(trimmed);
+    if (trimmed === (item.location ?? '')) return;
+    void updateItem(item.id, { location: trimmed || null });
+    if (trimmed) {
+      const recents = pushRecentLocation(prefs.getRecentLocations(), trimmed);
+      prefs.setRecentLocations(recents);
+      setRecentLocations(recents);
+    }
+  };
 
   // Label chip → collection filtered by that term.
   const searchAttribute = (term: string) => {
@@ -379,6 +413,17 @@ export default function ItemDetailScreen() {
               </Text>
             </View>
           )}
+
+          <View style={styles.locationSection} testID="detail-location">
+            <Text style={[styles.locationLabel, { color: colors.mutedForeground }]}>LOCATION</Text>
+            <LocationField
+              value={locationDraft}
+              onChange={setLocationDraft}
+              onSelectChip={commitLocation}
+              onCommit={commitLocation}
+              recents={recentLocations}
+            />
+          </View>
 
           <View style={styles.tagsWrap}>
             {labels.map((chip) => (
@@ -638,6 +683,16 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 6,
     marginTop: 6,
+  },
+  locationSection: {
+    marginTop: 18,
+  },
+  locationLabel: {
+    fontFamily: 'Inter_600SemiBold',
+    fontSize: 10,
+    letterSpacing: 0.6,
+    marginBottom: 8,
+    opacity: 0.7,
   },
   tagsWrap: {
     flexDirection: 'row',
