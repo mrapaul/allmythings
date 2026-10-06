@@ -19,8 +19,10 @@ API="https://cloud.lambda.ai/api/v1"
 SSH_KEY="${HOME}/.ssh/id_ed25519.pub"
 KEY_NAME="allmythings-lambda"
 TS_AUTHKEY="${TS_AUTHKEY:-TS_AUTHKEY_PLACEHOLDER}"
-# Value picks for 30B-A3B Q4 (~19GB weights); cheapest first.
-PREFER=("gpu_1x_a100" "gpu_1x_a100_sxm4" "gpu_1x_a100_pcie" "gpu_1x_h100")
+# Value picks for 30B-A3B Q4 (~19GB weights); cheapest-comfortable first.
+# (Names verified against /instance-types 2026-10-06; a100 40GB often has no
+# capacity — sxm4 80GB is the usual winner. A10 24GB is OOM-tight, last resort.)
+PREFER=("gpu_1x_a100" "gpu_1x_a100_sxm4" "gpu_1x_h100_pcie" "gpu_1x_a10")
 
 LAMBDA_API_KEY="${LAMBDA_API_KEY:-}"
 [ -n "$LAMBDA_API_KEY" ] || {
@@ -60,7 +62,7 @@ PICK=""
 for NAME in "${PREFER[@]}"; do
   REGION=$(echo "$IT" | jq -r --arg n "$NAME" '
     .data[$n].regions_with_capacity_available // empty
-    | map(select(.available > 0)) | .[0].name // empty' 2>/dev/null || true)
+    | .[0].name // empty' 2>/dev/null || true)
   [ -n "$REGION" ] && { PICK="$NAME"; break; }
 done
 [ -n "$PICK" ] || { echo "none of ${PREFER[*]} available right now — retry later." >&2; exit 1; }
@@ -69,10 +71,10 @@ if [ "$PRICE" != "?" ]; then printf -v PRICE_H '%d.%02d/h' $((10#$PRICE / 100)) 
 echo "launching $PICK in $REGION ($PRICE_H, billed from Lambda credit)"
 
 echo "== launching =="
-RESP=$(auth_json "$API/instances" -d "$(jq -n \
+RESP=$(auth_json "$API/instance-operations/launch" -d "$(jq -n \
   --arg r "$REGION" --arg t "$PICK" --arg k "$KEY_NAME" \
   '{region_name:$r, instance_type_name:$t, ssh_key_names:[$k]}')")
-ID=$(echo "$RESP" | jq -r '.data.id')
+ID=$(echo "$RESP" | jq -r '.data.instance_ids[0]')
 echo "instance id: $ID"
 
 echo "== waiting for active + ssh =="
