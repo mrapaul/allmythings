@@ -9,6 +9,7 @@ function makeItem(overrides: Partial<InventoryItem> = {}): InventoryItem {
     label: 'sofa',
     description: 'brown leather sofa',
     category: 'Furniture',
+    location: null,
     tags: ['leather', 'brown'],
     primaryPhotoUri: 'file:///a.jpg',
     thumbnailUri: null,
@@ -22,17 +23,17 @@ function makeItem(overrides: Partial<InventoryItem> = {}): InventoryItem {
 }
 
 describe('buildViewCsv', () => {
-  it('writes the agreed header with NO location column', () => {
+  it('writes the agreed header including the location column', () => {
     const csv = buildViewCsv([], 'Collection');
     expect(csv.trimEnd().split('\n')).toHaveLength(1);
     expect(csv.trimEnd().split('\n')[0]).toBe(
-      'home,label,description,category,tags,notes,created,updated',
+      'home,label,description,category,location,tags,notes,created,updated',
     );
   });
 
   it('exports exactly the items passed — the filtered view, in order', () => {
     const view = [
-      makeItem({ id: 'i2', label: 'vase', createdAt: 5 }),
+      makeItem({ id: 'i2', label: 'vase', createdAt: 5, location: 'attic box 3' }),
       makeItem({ id: 'i9', label: 'lamp', createdAt: 9 }),
     ];
     const csv = buildViewCsv(view, 'Results · 2', 'My Home');
@@ -44,6 +45,7 @@ describe('buildViewCsv', () => {
         'vase',
         'brown leather sofa',
         'Furniture',
+        'attic box 3',
         'leather|brown',
         '',
         new Date(5).toISOString(),
@@ -110,12 +112,14 @@ describe('buildViewJson', () => {
       label: 'sofa',
       description: 'brown leather sofa',
       category: 'Furniture',
+      location: null,
       tags: ['leather', 'brown'],
       notes: '',
       createdAt: new Date(1_700_000_100_000).toISOString(),
       updatedAt: new Date(1_700_000_200_000).toISOString(),
     });
     expect(parsed.items[1]?.label).toBe('lamp');
+    expect(parsed.items[1]?.location).toBeNull();
   });
 
   it('omits home when unnamed and handles an empty view', () => {

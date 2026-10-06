@@ -1,4 +1,5 @@
 import GlowBackdrop from '@/components/GlowBackdrop';
+import ItemShareButton from '@/components/ItemShareButton';
 import KeyboardAwareScrollViewCompat from '@/components/KeyboardAwareScrollViewCompat';
 import LocationField from '@/components/LocationField';
 import { useInventory } from '@/contexts/InventoryContext';
@@ -260,6 +261,7 @@ export default function ItemDetailScreen() {
           <Text style={[styles.doneText, { color: colors.foreground }]}>Done</Text>
         </Pressable>
         <Text style={[styles.headerTitle, { color: colors.mutedForeground }]}>{item.category}</Text>
+        <ItemShareButton item={item} />
         <Pressable
           onPress={handleDelete}
           style={({ pressed }) => [

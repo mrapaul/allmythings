@@ -7,9 +7,9 @@ import { EXPORT_SCHEMA_VERSION, csvEscape } from './export';
  * Pure string builders; file staging + the share sheet live in
  * `services/export-share.ts`.
  *
- * Deliberately NO `location` column yet: the location work lands on a sibling
- * branch and the two are reconciled there. Columns: home/label/description/
- * category/tags/notes/created/updated.
+ * Columns: home/label/description/category/location/tags/notes/created/
+ * updated. `location` joined the schema with the location feature; rows keep
+ * the whole-inventory CSV's column order for both exports.
  */
 
 const VIEW_CSV_HEADER = [
@@ -17,6 +17,7 @@ const VIEW_CSV_HEADER = [
   'label',
   'description',
   'category',
+  'location',
   'tags',
   'notes',
   'created',
@@ -47,6 +48,7 @@ export function buildViewCsv(
         item.label,
         item.description,
         item.category,
+        item.location ?? '',
         item.tags.join('|'),
         item.notes,
         iso(item.createdAt),
@@ -80,6 +82,7 @@ export function buildViewJson(
       label: item.label,
       description: item.description,
       category: item.category,
+      location: item.location ?? null,
       tags: item.tags,
       notes: item.notes,
       createdAt: iso(item.createdAt),

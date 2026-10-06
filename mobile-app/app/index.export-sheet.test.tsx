@@ -178,7 +178,7 @@ describe('home screen in-context export', () => {
     expect(fileName).toBe(`view-${new Date().toISOString().slice(0, 10)}.csv`);
     expect(mimeType).toBe('text/csv');
     const lines = content.trimEnd().split('\n');
-    expect(lines[0]).toBe('home,label,description,category,tags,notes,created,updated');
+    expect(lines[0]).toBe('home,label,description,category,location,tags,notes,created,updated');
     expect(lines).toHaveLength(3);
     // Sort default 'newest': armchair (createdAt 20) leads the view.
     expect(lines[1]).toContain('armchair');
