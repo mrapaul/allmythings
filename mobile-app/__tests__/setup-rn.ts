@@ -258,7 +258,40 @@ vi.mock('expo', () => ({
   reloadAppAsync: () => Promise.resolve(),
 }));
 
+// `expo-notifications` needs native bindings + the modules core event emitter.
+// The stub grants nothing by default (ensurePermissions drives the request
+// path); individual test files override with spies where behaviour matters.
+vi.mock('expo-notifications', () => ({
+  getPermissionsAsync: async () => ({ granted: false, canAskAgain: true, status: 'undetermined' }),
+  requestPermissionsAsync: async () => ({ granted: true, canAskAgain: true, status: 'granted' }),
+  scheduleNotificationAsync: async () => 'notification-id',
+  setNotificationHandler: () => undefined,
+  addNotificationResponseReceivedListener: () => ({ remove: () => undefined }),
+}));
+
+// Background poll registration is a no-op in tests; behaviour tests mock the
+// surface with spies (see services/background-poll.test.ts).
+vi.mock('expo-background-fetch', () => ({
+  registerTaskAsync: async () => undefined,
+  unregisterTaskAsync: async () => undefined,
+  getStatusAsync: async () => 3, // BackgroundFetchStatus.Available
+  BackgroundFetchStatus: { Denied: 1, Restricted: 2, Available: 3 },
+  BackgroundFetchResult: { NoData: 1, NewData: 2, Failed: 3 },
+}));
+
+vi.mock('expo-task-manager', () => ({
+  defineTask: () => undefined,
+  isTaskDefined: () => true,
+  isTaskRegisteredAsync: async () => false,
+  unregisterTaskAsync: async () => undefined,
+}));
+
 vi.mock('expo-router', () => ({
+  router: {
+    push: () => undefined,
+    replace: () => undefined,
+    back: () => undefined,
+  },
   useRouter: () => ({
     push: () => undefined,
     replace: () => undefined,

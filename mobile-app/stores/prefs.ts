@@ -54,6 +54,15 @@ function isReviewState(value: unknown): value is ReviewState {
 export class Prefs {
   constructor(private kv: KVBackend) {}
 
+  /**
+   * Escape hatch for feature-scoped persistence: modules with their own key
+   * namespaces (e.g. the ready-scans notification ledger) read them straight
+   * from the KV backend instead of growing this class by one method per key.
+   */
+  getKvBackend(): KVBackend {
+    return this.kv;
+  }
+
   static makeInMemory(): Prefs {
     const m = new Map<string, string>();
     return new Prefs({

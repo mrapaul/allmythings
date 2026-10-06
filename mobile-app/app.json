@@ -57,6 +57,7 @@
       "expo-router",
       "expo-font",
       "expo-sqlite",
+      "expo-notifications",
       "@sentry/react-native",
       "./plugins/withUIScene",
       "./plugins/withAndroidCleartext"
