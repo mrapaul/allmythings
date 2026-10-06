@@ -46,7 +46,15 @@ describe('ftsNeedsRebuild', () => {
       ftsNeedsRebuild(['item_id', 'label', 'description', 'category', 'tags', 'attributes']),
     ).toBe(true);
     expect(
-      ftsNeedsRebuild(['item_id', 'label', 'description', 'category', 'tags', 'attributes', 'labels']),
+      ftsNeedsRebuild([
+        'item_id',
+        'label',
+        'description',
+        'category',
+        'tags',
+        'attributes',
+        'labels',
+      ]),
     ).toBe(true);
   });
 });

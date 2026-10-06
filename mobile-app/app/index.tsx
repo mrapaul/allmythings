@@ -365,6 +365,18 @@ export default function HomeScreen() {
         <Text numberOfLines={1} style={[styles.listName, { color: colors.foreground }]}>
           {typeHandle(labelsForDisplay(item))}
         </Text>
+        {item.location ? (
+          <View style={styles.listLocationRow}>
+            <Feather name="map-pin" size={11} color={colors.mutedForeground} />
+            <Text
+              numberOfLines={1}
+              testID={`list-location-${index}`}
+              style={[styles.listMeta, styles.listLocationText, { color: colors.mutedForeground }]}
+            >
+              {item.location}
+            </Text>
+          </View>
+        ) : null}
         <Text numberOfLines={1} style={[styles.listMeta, { color: colors.mutedForeground }]}>
           {[
             ...(chipsById.get(item.id) ?? []).filter((c) => c.key !== 'type').map((c) => c.value),
@@ -905,6 +917,16 @@ const styles = StyleSheet.create({
     fontSize: 12,
     marginTop: 3,
     letterSpacing: 0.2,
+  },
+  listLocationRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    marginTop: 3,
+  },
+  listLocationText: {
+    marginTop: 0,
+    flexShrink: 1,
   },
   tidyBadge: {
     flexDirection: 'row',

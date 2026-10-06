@@ -29,6 +29,7 @@ export function buildInventoryJson(
         label: item.label,
         description: item.description,
         category: item.category,
+        location: item.location ?? null,
         tags: item.tags,
         attributes: item.attributes ?? null,
         // Label-first chips: persisted when present, derived otherwise, so
@@ -54,6 +55,7 @@ const CSV_HEADER = [
   'label',
   'description',
   'category',
+  'location',
   'tags',
   'notes',
   'created',
@@ -83,6 +85,7 @@ export function buildInventoryCsv(
           item.label,
           item.description,
           item.category,
+          item.location ?? '',
           item.tags.join('|'),
           item.notes,
           new Date(item.createdAt).toISOString(),

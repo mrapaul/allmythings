@@ -44,6 +44,17 @@ describe('buildInventoryJson', () => {
     // Label-first: every exported item carries chips (derived when absent).
     expect(item?.labels).toContainEqual({ key: 'type', value: 'sofa' });
   });
+
+  it('carries the location, null when unset', () => {
+    const json = buildInventoryJson([home], {
+      h1: [makeItem({ location: 'hallway closet — top shelf' }), makeItem({ id: 'i2' })],
+    });
+    const items = (
+      JSON.parse(json) as { homes: Array<{ items: Array<{ location: string | null }> }> }
+    ).homes[0]?.items;
+    expect(items?.[0]?.location).toBe('hallway closet — top shelf');
+    expect(items?.[1]?.location).toBeNull();
+  });
 });
 
 describe('csvEscape', () => {
@@ -61,7 +72,9 @@ describe('buildInventoryCsv', () => {
       h1: [makeItem(), makeItem({ id: 'i2', label: 'vase, ceramic', description: '' })],
     });
     const lines = csv.trimEnd().split('\n');
-    expect(lines[0]).toBe('home,type,labels,label,description,category,tags,notes,created,updated');
+    expect(lines[0]).toBe(
+      'home,type,labels,label,description,category,location,tags,notes,created,updated',
+    );
     expect(lines).toHaveLength(3);
     expect(lines[2]).toContain('"vase, ceramic"');
     expect(lines[1]).toContain('leather|brown');
@@ -69,6 +82,22 @@ describe('buildInventoryCsv', () => {
     expect(lines[1]).toContain('sofa');
     expect(lines[1]).toContain('type:sofa');
     expect(lines[1]).toContain('color:brown');
+  });
+
+  it('writes the location column after category, empty when unset', () => {
+    const csv = buildInventoryCsv([home], {
+      h1: [
+        makeItem({ location: 'hallway closet — top shelf' }),
+        makeItem({ id: 'i2', label: 'rug' }),
+      ],
+    });
+    const lines = csv.trimEnd().split('\n');
+    const placed = lines[1]?.split(',');
+    // Fixed column order: home,type,labels,label,description,category,location,…
+    expect(placed?.[5]).toBe('Furniture');
+    expect(placed?.[6]).toBe('hallway closet — top shelf');
+    const unset = lines[2]?.split(',');
+    expect(unset?.[6]).toBe('');
   });
 
   it('handles empty inventories', () => {
