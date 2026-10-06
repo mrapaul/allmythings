@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { stageSubline, stageTitle } from './detect-stages';
+import { formatElapsedClock, stageSubline, stageTitle } from './detect-stages';
 
 describe('stageTitle', () => {
   it('walks the staged copy as time passes with no items yet', () => {
@@ -31,5 +31,18 @@ describe('stageSubline', () => {
   it('formats seconds then minutes', () => {
     expect(stageSubline(5_000)).toBe("5s — we're on it");
     expect(stageSubline(95_000)).toBe('1m 35s — still with you');
+  });
+});
+
+describe('formatElapsedClock', () => {
+  it('counts up in mm:ss', () => {
+    expect(formatElapsedClock(0)).toBe('0:00');
+    expect(formatElapsedClock(5_000)).toBe('0:05');
+    expect(formatElapsedClock(65_000)).toBe('1:05');
+    expect(formatElapsedClock(10 * 60_000 + 9_000)).toBe('10:09');
+  });
+
+  it('never renders negative time', () => {
+    expect(formatElapsedClock(-3_000)).toBe('0:00');
   });
 });

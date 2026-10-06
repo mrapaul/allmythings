@@ -16,13 +16,14 @@ import { useHomes } from '@/contexts/HomesContext';
 import { useInventory } from '@/contexts/InventoryContext';
 import { useArrangeMode } from '@/hooks/useArrangeMode';
 import { useColors } from '@/hooks/useColors';
+import { useReduceMotion } from '@/hooks/useReduceMotion';
 import { useResponsive } from '@/hooks/useResponsive';
 import { useSearch } from '@/hooks/useSearch';
 import { useServerHealth } from '@/hooks/useServerHealth';
 import { useWalkCapture } from '@/hooks/useWalkCapture';
 import { isDetectedBox } from '@/lib/bbox-layout';
 import { categoryIcon } from '@/lib/category-icons';
-import { stageTitle } from '@/lib/detect-stages';
+import { formatElapsedClock, stageTitle } from '@/lib/detect-stages';
 import { buildInventoryCsv, buildInventoryJson } from '@/lib/export';
 import { buildViewCsv, buildViewJson } from '@/lib/export-view';
 import { type DetectionJob, autoRetryableJobs, inboxCount, queueJobs } from '@/lib/jobs';
@@ -38,11 +39,13 @@ import { type CollectionViewMode, Prefs } from '@/stores/prefs';
 import { refreshLocalSuggestions, useSuggestionsStore } from '@/stores/suggestions.store';
 import type { InventoryItem } from '@/types/inventory';
 import { Feather } from '@expo/vector-icons';
+import * as Haptics from 'expo-haptics';
 import { useRouter } from 'expo-router';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
+  Platform,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -50,6 +53,19 @@ import {
   type TextInput,
   View,
 } from 'react-native';
+import Animated, {
+  cancelAnimation,
+  Easing,
+  FadeIn,
+  FadeOut,
+  FadeInUp,
+  interpolate,
+  useAnimatedStyle,
+  useSharedValue,
+  withRepeat,
+  withSequence,
+  withTiming,
+} from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 const ALL = '__all__';
@@ -76,6 +92,33 @@ function nextViewMode(mode: CollectionViewMode): CollectionViewMode {
 // has to know about the other's vocabulary.
 function toCategorySort(s: 'newest' | 'oldest' | 'alpha'): SortMode {
   return s === 'alpha' ? 'az' : s;
+}
+
+/**
+ * The processing pill's status dot: one shared value drives both scale and
+ * opacity through a ~1.6s breath (single worklet style — no per-frame JS),
+ * cancelled on unmount and stilled entirely under reduce-motion.
+ */
+function BreathingStatusDot({ color }: { color: string }) {
+  const reduceMotion = useReduceMotion();
+  const pulse = useSharedValue(1);
+  useEffect(() => {
+    if (reduceMotion) return;
+    pulse.value = withRepeat(
+      withSequence(
+        withTiming(1.4, { duration: 800, easing: Easing.inOut(Easing.quad) }),
+        withTiming(1, { duration: 800, easing: Easing.inOut(Easing.quad) }),
+      ),
+      -1,
+      true,
+    );
+    return () => cancelAnimation(pulse);
+  }, [reduceMotion, pulse]);
+  const dotStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: pulse.value }],
+    opacity: interpolate(pulse.value, [1, 1.4], [0.55, 1]),
+  }));
+  return <Animated.View style={[styles.pillDot, { backgroundColor: color }, dotStyle]} />;
 }
 
 export default function HomeScreen() {
@@ -135,13 +178,48 @@ export default function HomeScreen() {
     [],
   );
   // The home pill speaks the same staged vocabulary as the capture tray —
-  // one mental model wherever the user meets a processing shot.
+  // one mental model wherever the user meets a processing shot. The clock
+  // ticks once a second while a job runs so the mm:ss readout counts up.
   const [pillTick, setPillTick] = useState(() => Date.now());
   useEffect(() => {
     if (!runningJob) return;
-    const timer = setInterval(() => setPillTick(Date.now()), 5_000);
+    const timer = setInterval(() => setPillTick(Date.now()), 1_000);
     return () => clearInterval(timer);
   }, [runningJob]);
+
+  const pillElapsedMs = runningJob ? Math.max(0, pillTick - runningJob.startedAt) : 0;
+  // The staged copy now includes the streamed counts: "Found 3 of ~8…" the
+  // moment the server says it, not at completion.
+  const pillStage = runningJob
+    ? stageTitle({
+        elapsedMs: pillElapsedMs,
+        itemCount: runningJob.progressItems ?? 0,
+        expectedTotal: runningJob.sceneEstimate ?? null,
+      })
+    : null;
+  // One light haptic per stage change. The copy changing is an event worth
+  // a tap; the per-second clock re-render is not — track the stage, and
+  // never fire for the pill's first appearance.
+  const lastPillStageRef = useRef<string | null>(null);
+  useEffect(() => {
+    if (pillStage == null) {
+      lastPillStageRef.current = null;
+      return;
+    }
+    if (lastPillStageRef.current === pillStage) return;
+    const isFirstAppearance = lastPillStageRef.current === null;
+    lastPillStageRef.current = pillStage;
+    if (isFirstAppearance || Platform.OS === 'web') return;
+    void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+  }, [pillStage]);
+
+  // First ready-scan arrival of the session slides the inbox badge in;
+  // later count changes leave it be — a badge that re-announces itself is
+  // noise.
+  const [inboxBadgeGreeted, setInboxBadgeGreeted] = useState(false);
+  useEffect(() => {
+    if (inboxBadgeCount > 0 && !inboxBadgeGreeted) setInboxBadgeGreeted(true);
+  }, [inboxBadgeCount, inboxBadgeGreeted]);
 
   // Quiet duplicate scan across the WHOLE inventory — recomputed in the
   // background whenever the collection changes; never interrupts anything.
@@ -838,43 +916,52 @@ export default function HomeScreen() {
               },
             ]}
           >
-            <ActivityIndicator size="small" color={colors.primary} />
-            <Text style={[styles.walkPillText, { color: colors.foreground }]}>
-              {stageTitle({
-                elapsedMs: Math.max(0, pillTick - runningJob.startedAt),
-                itemCount: 0,
-                expectedTotal: null,
-              })}
+            <BreathingStatusDot color={colors.primary} />
+            {pillStage != null && (
+              <Animated.Text
+                key={pillStage}
+                entering={FadeIn.duration(180)}
+                exiting={FadeOut.duration(180)}
+                numberOfLines={1}
+                style={[styles.walkPillText, { color: colors.foreground }]}
+              >
+                {pillStage}
+              </Animated.Text>
+            )}
+            <Text style={[styles.walkPillClock, { color: colors.mutedForeground }]}>
+              {formatElapsedClock(pillElapsedMs)}
             </Text>
           </Pressable>
         )}
         {inboxBadgeCount > 0 && (
-          <Pressable
-            testID="inbox-badge"
-            accessibilityLabel={`Review inbox, ${inboxBadgeCount} waiting`}
-            onPress={() => router.push('/inbox')}
-            style={({ pressed }) => [
-              styles.glyphButton,
-              {
-                backgroundColor: colors.card,
-                borderColor: colors.border,
-                opacity: pressed ? 0.8 : 1,
-              },
-            ]}
-          >
-            <Feather name="inbox" size={16} color={colors.foreground} />
-            <View
-              style={[
-                styles.countDot,
-                styles.countDotFloating,
-                { backgroundColor: colors.primary },
+          <Animated.View {...(inboxBadgeGreeted ? {} : { entering: FadeInUp.duration(240) })}>
+            <Pressable
+              testID="inbox-badge"
+              accessibilityLabel={`Review inbox, ${inboxBadgeCount} waiting`}
+              onPress={() => router.push('/inbox')}
+              style={({ pressed }) => [
+                styles.glyphButton,
+                {
+                  backgroundColor: colors.card,
+                  borderColor: colors.border,
+                  opacity: pressed ? 0.8 : 1,
+                },
               ]}
             >
-              <Text style={[styles.countDotText, { color: colors.primaryForeground }]}>
-                {inboxBadgeCount}
-              </Text>
-            </View>
-          </Pressable>
+              <Feather name="inbox" size={16} color={colors.foreground} />
+              <View
+                style={[
+                  styles.countDot,
+                  styles.countDotFloating,
+                  { backgroundColor: colors.primary },
+                ]}
+              >
+                <Text style={[styles.countDotText, { color: colors.primaryForeground }]}>
+                  {inboxBadgeCount}
+                </Text>
+              </View>
+            </Pressable>
+          </Animated.View>
         )}
       </View>
 
@@ -1098,6 +1185,16 @@ const styles = StyleSheet.create({
     fontFamily: 'Inter_600SemiBold',
     fontSize: 12,
     letterSpacing: 0.2,
+  },
+  walkPillClock: {
+    fontFamily: 'Inter_500Medium',
+    fontSize: 11,
+    letterSpacing: 0.2,
+  },
+  pillDot: {
+    width: 7,
+    height: 7,
+    borderRadius: 3.5,
   },
   manualAddBtn: {
     backgroundColor: 'transparent',

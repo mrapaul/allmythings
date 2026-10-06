@@ -3,7 +3,8 @@ import { MAX_REEL_FRAMES, type QueueShot, shotStatusLine } from '@/lib/capture-q
 import { Feather } from '@expo/vector-icons';
 import { Image } from 'expo-image';
 import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
-import Animated, { FadeInDown, FadeOut, LinearTransition } from 'react-native-reanimated';
+import Animated, { FadeInUp, FadeOut, LinearTransition } from 'react-native-reanimated';
+import { AnimatedStatusGlyph } from '../AnimatedStatusGlyph';
 
 /**
  * The shot strip: a full-width row above the shutter, the way messaging
@@ -33,7 +34,8 @@ export function CaptureReel({ shots, now, readyCount, shotCount = 0, onPress }: 
   const frameAnim = reduceMotion
     ? {}
     : {
-        entering: FadeInDown.duration(220),
+        // New shots slide up into the strip, from where the shutter lives.
+        entering: FadeInUp.duration(220),
         exiting: FadeOut.duration(180),
         layout: LinearTransition,
       };
@@ -77,17 +79,21 @@ export function CaptureReel({ shots, now, readyCount, shotCount = 0, onPress }: 
           <Animated.View key={shot.key} testID="reel-frame" {...frameAnim} style={styles.frame}>
             <View style={styles.thumbFrame}>
               <Image source={shot.uri} style={styles.thumb} contentFit="cover" />
-              <View style={[styles.statusDot, dotStyle(shot)]}>
-                {shot.phase === 'sending' || shot.phase === 'processing' ? (
-                  <ActivityIndicator size={9} color="#ffffff" />
-                ) : (
-                  <Feather
-                    name={shot.phase === 'done' ? 'check' : 'alert-circle'}
-                    size={10}
-                    color="#ffffff"
-                  />
-                )}
-              </View>
+              {/* The glyph pops (scale 0.6→1 spring) whenever the phase
+                  flips — spinner → ✓ / ⚠ reads as a moment, not a swap. */}
+              <AnimatedStatusGlyph stateKey={shot.phase} style={styles.statusDotWrap}>
+                <View style={[styles.statusDot, dotStyle(shot)]}>
+                  {shot.phase === 'sending' || shot.phase === 'processing' ? (
+                    <ActivityIndicator size={9} color="#ffffff" />
+                  ) : (
+                    <Feather
+                      name={shot.phase === 'done' ? 'check' : 'alert-circle'}
+                      size={10}
+                      color="#ffffff"
+                    />
+                  )}
+                </View>
+              </AnimatedStatusGlyph>
             </View>
             <Text style={[styles.statusLine, lineStyle(shot)]} numberOfLines={1}>
               {shotStatusLine(shot, now)}
@@ -173,10 +179,12 @@ const styles = StyleSheet.create({
     height: '100%',
     borderRadius: 10.5,
   },
-  statusDot: {
+  statusDotWrap: {
     position: 'absolute',
     right: -5,
     bottom: -5,
+  },
+  statusDot: {
     width: 18,
     height: 18,
     borderRadius: 9,

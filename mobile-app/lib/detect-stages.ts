@@ -36,3 +36,10 @@ export function stageSubline(elapsedMs: number): string {
   const m = Math.floor(s / 60);
   return `${m}m ${s % 60}s — still with you`;
 }
+
+/** Compact clock for inline pill copy: 65s → "1:05". */
+export function formatElapsedClock(elapsedMs: number): string {
+  const s = Math.max(0, Math.floor(elapsedMs / 1_000));
+  const m = Math.floor(s / 60);
+  return `${m}:${String(s % 60).padStart(2, '0')}`;
+}

@@ -1,11 +1,13 @@
 import { useHomes } from '@/contexts/HomesContext';
 import { useInventory } from '@/contexts/InventoryContext';
 import { useColors } from '@/hooks/useColors';
+import { useReduceMotion } from '@/hooks/useReduceMotion';
 import { useResponsive } from '@/hooks/useResponsive';
 import { Feather } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import { useRouter } from 'expo-router';
 import { Platform, Pressable, StyleSheet, Text, View } from 'react-native';
+import Animated, { ZoomIn } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 export function TopBar({
@@ -15,6 +17,7 @@ export function TopBar({
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const colors = useColors();
+  const reduceMotion = useReduceMotion();
   const { activeHome, profile } = useHomes();
   const { items } = useInventory();
   const { gutter, isCompact } = useResponsive();
@@ -97,11 +100,19 @@ export function TopBar({
       >
         <Feather name="inbox" size={18} color={colors.foreground} />
         {queueCount > 0 && (
-          <View style={[styles.queueCountDot, { backgroundColor: colors.primary }]}>
+          // Keyed by the count: a change (or first appearance) remounts the
+          // dot and it springs from 0; hiding is a plain unmount — instant,
+          // no exit animation. Purely decorative, so reduce-motion skips it.
+          <Animated.View
+            key={queueCount}
+            {...(reduceMotion ? {} : { entering: ZoomIn.springify() })}
+            style={[styles.queueCountDot, { backgroundColor: colors.primary }]}
+            pointerEvents="none"
+          >
             <Text style={[styles.queueCountText, { color: colors.primaryForeground }]}>
               {queueCount}
             </Text>
-          </View>
+          </Animated.View>
         )}
       </Pressable>
 
