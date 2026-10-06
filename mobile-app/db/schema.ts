@@ -38,6 +38,11 @@ export const inventoryItems = sqliteTable(
      * columns, which stay untouched as non-editable internals.
      */
     labels: text('labels', { mode: 'json' }).$type<ItemLabel[] | null>(),
+    /**
+     * Free-text whereabouts ('hallway closet — top shelf'). Nullable: most
+     * legacy rows predate the column; the UI treats null as "not set".
+     */
+    location: text('location'),
     additionalPhotoUris: text('additional_photo_uris', { mode: 'json' })
       .$type<string[]>()
       .notNull()

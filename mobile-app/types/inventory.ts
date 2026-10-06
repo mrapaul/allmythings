@@ -34,6 +34,8 @@ export interface InventoryItem {
   attributes?: ItemAttributes | null;
   /** Label-first chips; null/absent → derived from legacy columns. */
   labels?: ItemLabel[] | null;
+  /** Free-text whereabouts ('hallway closet — top shelf'); null → not set. */
+  location?: string | null;
   additionalPhotoUris: string[];
   notes: string;
   box: BoundingBox;

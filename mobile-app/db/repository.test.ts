@@ -234,6 +234,67 @@ describe('Repo', () => {
     expect((await repo.searchItems(h.id, 'navy')).map((i) => i.id)).toEqual([id]);
   });
 
+  it('persists location (null by default) and returns it from every read path', async () => {
+    const h = await repo.addHome({ name: 'A', icon: '🏠' });
+    const [plainId, placedId] = await repo.addItems(h.id, [
+      {
+        label: 'lamp',
+        description: '',
+        category: 'Lighting',
+        tags: [],
+        primaryPhotoUri: '',
+        additionalPhotoUris: [],
+        notes: '',
+        box: { x: 0, y: 0, width: 0.2, height: 0.2 },
+      },
+      {
+        label: 'scarf',
+        description: '',
+        category: 'Clothing',
+        tags: [],
+        primaryPhotoUri: '',
+        location: 'hallway closet — top shelf',
+        additionalPhotoUris: [],
+        notes: '',
+        box: { x: 0.2, y: 0.2, width: 0.2, height: 0.2 },
+      },
+    ]);
+    if (!plainId || !placedId) throw new Error('expected ids');
+
+    expect((await repo.getItem(plainId))?.location ?? null).toBeNull();
+    expect((await repo.getItem(placedId))?.location).toBe('hallway closet — top shelf');
+    const fromHome = (await repo.getItemsByHome(h.id)).find((i) => i.id === placedId);
+    expect(fromHome?.location).toBe('hallway closet — top shelf');
+
+    await repo.updateItem(placedId, { location: null });
+    expect((await repo.getItem(placedId))?.location ?? null).toBeNull();
+  });
+
+  it('finds items by location via FTS, including after a move', async () => {
+    const h = await repo.addHome({ name: 'A', icon: '🏠' });
+    const [id] = await repo.addItems(h.id, [
+      {
+        label: 'umbrella',
+        description: '',
+        category: 'Other',
+        tags: [],
+        primaryPhotoUri: '',
+        location: 'hallway closet — top shelf',
+        additionalPhotoUris: [],
+        notes: '',
+        box: { x: 0, y: 0, width: 0.2, height: 0.2 },
+      },
+    ]);
+    if (!id) throw new Error('expected id');
+
+    // "closet" appears nowhere but the location column.
+    expect((await repo.searchItems(h.id, 'closet')).map((i) => i.id)).toEqual([id]);
+
+    await repo.updateItem(id, { location: 'garage — left wall' });
+    expect(await repo.searchItems(h.id, 'closet')).toEqual([]);
+    expect((await repo.searchItems(h.id, 'garage')).map((i) => i.id)).toEqual([id]);
+  });
+
   it('search survives FTS syntax in the query instead of throwing', async () => {
     const h = await repo.addHome({ name: 'A', icon: '🏠' });
     await expect(repo.searchItems(h.id, 'sofa" OR label:*')).resolves.toEqual([]);

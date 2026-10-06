@@ -2,9 +2,10 @@
 // is required for any SQLite client that runs single-statement prepared
 // statements (most of them).
 //
-// The FTS corpus indexes label, description, category, tags, and the VALUES
-// of the `attributes` JSON ({color: "gold"} indexes "gold", not "color"), so
-// searching an attribute finds items whose visible title never mentions it.
+// The FTS corpus indexes label, description, category, tags, the VALUES
+// of the `attributes` JSON ({color: "gold"} indexes "gold", not "color"), and
+// the free-text `location`, so searching a whereabouts finds the items kept
+// there even when the visible title never mentions it.
 
 /** Attribute JSON → space-joined values ('' when null/absent). */
 const ATTRIBUTE_VALUES = (col: string) =>
@@ -33,13 +34,14 @@ export const FTS_STATEMENTS: string[] = [
      tags,
      attributes,
      labels,
+     location,
      tokenize = 'porter unicode61'
    );`,
 
   `CREATE TRIGGER IF NOT EXISTS inventory_items_ai
    AFTER INSERT ON inventory_items
    BEGIN
-     INSERT INTO inventory_fts (item_id, label, description, category, tags, attributes, labels)
+     INSERT INTO inventory_fts (item_id, label, description, category, tags, attributes, labels, location)
      VALUES (
        NEW.id,
        NEW.label,
@@ -47,7 +49,8 @@ export const FTS_STATEMENTS: string[] = [
        NEW.category,
        COALESCE((SELECT GROUP_CONCAT(tag, ' ') FROM item_tags WHERE item_id = NEW.id), ''),
        ${ATTRIBUTE_VALUES('NEW.attributes')},
-       ${LABEL_TERMS('NEW.labels')}
+       ${LABEL_TERMS('NEW.labels')},
+       COALESCE(NEW.location, '')
      );
    END;`,
 
@@ -55,7 +58,7 @@ export const FTS_STATEMENTS: string[] = [
    AFTER UPDATE ON inventory_items
    BEGIN
      DELETE FROM inventory_fts WHERE item_id = OLD.id;
-     INSERT INTO inventory_fts (item_id, label, description, category, tags, attributes, labels)
+     INSERT INTO inventory_fts (item_id, label, description, category, tags, attributes, labels, location)
      VALUES (
        NEW.id,
        NEW.label,
@@ -63,7 +66,8 @@ export const FTS_STATEMENTS: string[] = [
        NEW.category,
        COALESCE((SELECT GROUP_CONCAT(tag, ' ') FROM item_tags WHERE item_id = NEW.id), ''),
        ${ATTRIBUTE_VALUES('NEW.attributes')},
-       ${LABEL_TERMS('NEW.labels')}
+       ${LABEL_TERMS('NEW.labels')},
+       COALESCE(NEW.location, '')
      );
    END;`,
 
@@ -110,15 +114,16 @@ export const FTS_DROP_STATEMENTS: string[] = [
 
 /** Refills the index from the source tables after a shape rebuild. */
 export const FTS_REPOPULATE = `
-  INSERT INTO inventory_fts (item_id, label, description, category, tags, attributes, labels)
+  INSERT INTO inventory_fts (item_id, label, description, category, tags, attributes, labels, location)
   SELECT id, label, description, category,
     COALESCE((SELECT GROUP_CONCAT(tag, ' ') FROM item_tags WHERE item_id = inventory_items.id), ''),
     ${ATTRIBUTE_VALUES('inventory_items.attributes')},
-    ${LABEL_TERMS('inventory_items.labels')}
+    ${LABEL_TERMS('inventory_items.labels')},
+    COALESCE(inventory_items.location, '')
   FROM inventory_items;`;
 
 /** Columns any current-shape FTS table must carry. */
-const FTS_REQUIRED_COLUMNS = ['attributes', 'labels'];
+const FTS_REQUIRED_COLUMNS = ['attributes', 'labels', 'location'];
 
 /** True when an existing FTS table predates the current column set. */
 export function ftsNeedsRebuild(existingColumns: string[]): boolean {
@@ -134,9 +139,10 @@ export interface FtsSqlite {
 }
 
 /**
- * Idempotent FTS bootstrap: detects a stale table shape (pre-`attributes`
- * installs), drops table + triggers, recreates the current shape, and
- * repopulates from the source tables. Fresh installs just create.
+ * Idempotent FTS bootstrap: detects a stale table shape (installs that
+ * predate the current column set), drops table + triggers, recreates the
+ * current shape, and repopulates from the source tables. Fresh installs
+ * just create.
  */
 export function ensureFtsSchema(sqlite: FtsSqlite): void {
   const cols = (

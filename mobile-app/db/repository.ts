@@ -41,6 +41,8 @@ export interface AddItemInput {
   attributes?: ItemAttributes | null;
   /** Label-first chips; null → render-time derivation. */
   labels?: ItemLabel[] | null;
+  /** Free-text whereabouts; null/undefined → not set (UI hides the row). */
+  location?: string | null;
   additionalPhotoUris: string[];
   notes: string;
   box: { x: number; y: number; width: number; height: number };
@@ -79,6 +81,7 @@ interface RawItemRow {
   thumbnailUri: string | null;
   attributes: ItemAttributes | null;
   labels: ItemLabel[] | null;
+  location: string | null;
   additionalPhotoUris: string[];
   notes: string;
   boxX: number;
@@ -132,6 +135,7 @@ export class Repo {
         thumbnailUri: it.thumbnailUri ?? null,
         attributes: it.attributes ?? null,
         labels: it.labels ?? null,
+        location: it.location ?? null,
         additionalPhotoUris: it.additionalPhotoUris,
         notes: it.notes,
         boxX: it.box.x,
@@ -178,6 +182,7 @@ export class Repo {
       'thumbnailUri',
       'attributes',
       'labels',
+      'location',
       'additionalPhotoUris',
       'notes',
     ] as const) {
@@ -295,6 +300,7 @@ export class Repo {
       thumbnailUri: row.thumbnailUri,
       attributes: row.attributes,
       labels: row.labels,
+      location: row.location,
       additionalPhotoUris: row.additionalPhotoUris,
       notes: row.notes,
       tags,
