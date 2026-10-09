@@ -253,3 +253,6 @@ training/output/
 
 # --- local tool history (aider) ---
 .aider.*
+
+# agent worktrees (parallel dev scratch)
+.worktrees/
