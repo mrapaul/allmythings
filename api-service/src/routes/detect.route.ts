@@ -13,6 +13,7 @@ import {
 import { mapSceneToItems } from './detect.mapper';
 import { parseDetectTier, qualityTierUnavailableMessage } from './detect-tier';
 import { parseDetectMode } from './detect-mode';
+import { parseDetectVocab } from './detect-vocab';
 import type { DetectOptions, Detector } from '../services/vlm-detector';
 import type { VlmRunStore } from '../services/vlm-run-store';
 import { annotatePhotoFireAndForget } from '../services/photo-annotator';
@@ -46,8 +47,9 @@ export async function detectRoute(app: FastifyInstance): Promise<void> {
       schema: {
         summary: 'Detect home objects in 1–3 image frames',
         description:
-          'Query params: `tier` (standard|quality) selects the VLM engine; `mode` (full|scout, default full) selects the detection depth — scout runs pass 1 + adaptive tiles only, skipping the pass-2 audit (cheaper, less exhaustive); `async=1` registers a background run and returns 202. The annotated render of a detection photo is derivable as `${base}/photos/<photoSha256>.jpg?annotated=1` (photoSha256 is in the 202 body and the SSE meta event); it 404s until rendered, so clients fall back to the raw photo.',
+          'Query params: `tier` (standard|quality) selects the VLM engine; `mode` (full|scout, default full) selects the detection depth — scout runs pass 1 + adaptive tiles only, skipping the pass-2 audit (cheaper, less exhaustive); `async=1` registers a background run and returns 202. Multipart parts: 1–3 image files plus an optional `vocab` text field (JSON array of strings or comma-separated) with the owner\'s existing inventory names; when it matches a detected object the VLM uses that exact name (VLM path only, ignored by the legacy pipeline path). The annotated render of a detection photo is derivable as `${base}/photos/<photoSha256>.jpg?annotated=1` (photoSha256 is in the 202 body and the SSE meta event); it 404s until rendered, so clients fall back to the raw photo.',
         tags: ['vision'],
+        consumes: ['multipart/form-data'],
         response: {
           200: {
             type: 'object',
@@ -105,8 +107,17 @@ export async function detectRoute(app: FastifyInstance): Promise<void> {
       // drained and discarded.
       const frames: Array<{ buffer: Buffer; mime: string; sha256: string }> = [];
       let rejected: PayloadTooLargeError | BadRequestError | null = null;
+      // First `vocab` text field wins; extras are drained and ignored.
+      let vocabRaw: string | undefined;
       for await (const part of request.parts()) {
-        if (part.type !== 'file') continue;
+        if (part.type !== 'file') {
+          // The optional `vocab` field (owner's existing inventory names)
+          // primes the VLM prompts; ignored by the legacy pipeline path.
+          if (vocabRaw === undefined && part.fieldname === 'vocab') {
+            vocabRaw = typeof part.value === 'string' ? part.value : '';
+          }
+          continue;
+        }
         const buf = await part.toBuffer();
         if (frames.length >= 3) continue;
         if (rejected) continue;
@@ -134,6 +145,14 @@ export async function detectRoute(app: FastifyInstance): Promise<void> {
         throw new BadRequestError('No image file uploaded');
       }
 
+      // Owner-vocabulary priming (optional multipart `vocab` field). Bad JSON
+      // shape is a 400 invalid_body; everything else is cleaned silently.
+      const vocabParsed = parseDetectVocab(vocabRaw);
+      if (!vocabParsed.ok) {
+        return reply.code(400).send({ error: 'invalid_body', message: vocabParsed.message });
+      }
+      const vocab = vocabParsed.vocab.length > 0 ? vocabParsed.vocab : undefined;
+
       // Quality-tier selection (?tier=quality routes to the env-configured
       // quality VLM) and scout-mode selection (?mode=scout runs a single
       // VLM pass, skipping the pass-2 audit). Both reject unservable/unknown
@@ -148,7 +167,7 @@ export async function detectRoute(app: FastifyInstance): Promise<void> {
       // default. Only an explicit scout mode narrows the run (never widens a
       // configured single-pass detector).
       const detectOpts: DetectOptions | undefined =
-        mode === 'scout' ? { twoPass: false } : undefined;
+        mode === 'scout' ? { twoPass: false, vocab } : vocab ? { vocab } : undefined;
 
       // Idempotency formula (must match mobile detection_repository
       // exactly, see scene_observation §7): sha256 of concatenated

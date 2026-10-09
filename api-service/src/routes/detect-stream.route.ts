@@ -12,6 +12,7 @@ import {
 import { mapPipelineDetectionToItem } from './detect.mapper';
 import { parseDetectTier, qualityTierUnavailableMessage } from './detect-tier';
 import { parseDetectMode } from './detect-mode';
+import { parseDetectVocab } from './detect-vocab';
 import { encodeSseEvent, SSE_KEEPALIVE } from '../utils/sse';
 import type { DetectOptions, Detector } from '../services/vlm-detector';
 import type { DetectedItem } from '../types/detected-item';
@@ -37,7 +38,7 @@ export async function detectStreamRoute(app: FastifyInstance): Promise<void> {
       schema: {
         summary: 'Detect home objects, streaming items via SSE',
         description:
-          'SSE event types: `meta` (runId/traceId), `scene` (pass-1 assessment), `item` (one DetectedItem), `merge-suggestion` ({itemIndexA, itemIndexB, reason, confidence} indexing the emitted item sequence — a pair the pipeline suspects is one object but did not merge), `error`, `done`. Query params: `tier` (standard|quality) selects the VLM engine; `mode` (full|scout, default full) — scout runs pass 1 + adaptive tiles only, skipping the pass-2 audit. The annotated render of the frame is derivable as `${base}/photos/<photoSha256>.jpg?annotated=1` (photoSha256 is in the meta event); it 404s until rendered, so clients fall back to the raw photo.',
+          'SSE event types: `meta` (runId/traceId), `scene` (pass-1 assessment), `item` (one DetectedItem), `merge-suggestion` ({itemIndexA, itemIndexB, reason, confidence} indexing the emitted item sequence — a pair the pipeline suspects is one object but did not merge), `error`, `done`. Query params: `tier` (standard|quality) selects the VLM engine; `mode` (full|scout, default full) — scout runs pass 1 + adaptive tiles only, skipping the pass-2 audit. Multipart parts: one image file plus an optional `vocab` text field (JSON array of strings or comma-separated) with the owner\'s existing inventory names; when it matches a detected object the VLM uses that exact name (VLM path only, ignored by the legacy pipeline path). The annotated render of the frame is derivable as `${base}/photos/<photoSha256>.jpg?annotated=1` (photoSha256 is in the meta event); it 404s until rendered, so clients fall back to the raw photo.',
         tags: ['vision'],
         consumes: ['multipart/form-data'],
         produces: ['text/event-stream'],
@@ -56,8 +57,17 @@ export async function detectStreamRoute(app: FastifyInstance): Promise<void> {
       // accepts exactly one frame; extra parts are drained and discarded.
       const frames: Array<{ buffer: Buffer; mime: string; sha256: string }> = [];
       let rejected: { code: number; body: Record<string, unknown> } | null = null;
+      // First `vocab` text field wins; extras are drained and ignored.
+      let vocabRaw: string | undefined;
       for await (const part of request.parts()) {
-        if (part.type !== 'file') continue;
+        if (part.type !== 'file') {
+          // The optional `vocab` field (owner's existing inventory names)
+          // primes the VLM prompts; ignored by the legacy pipeline path.
+          if (vocabRaw === undefined && part.fieldname === 'vocab') {
+            vocabRaw = typeof part.value === 'string' ? part.value : '';
+          }
+          continue;
+        }
         const buf = await part.toBuffer();
         if (frames.length >= 1) continue;
         if (rejected) continue;
@@ -78,6 +88,14 @@ export async function detectStreamRoute(app: FastifyInstance): Promise<void> {
       }
       if (rejected) return reply.code(rejected.code).send(rejected.body);
       if (frames.length === 0) return reply.code(400).send({ error: 'no_frame' });
+      // Owner-vocabulary priming (optional multipart `vocab` field). Bad JSON
+      // shape is a 400 invalid_body BEFORE headers flush (stays a plain 4xx,
+      // not an SSE error event); everything else is cleaned silently.
+      const vocabParsed = parseDetectVocab(vocabRaw);
+      if (!vocabParsed.ok) {
+        return reply.code(400).send({ error: 'invalid_body', message: vocabParsed.message });
+      }
+      const vocab = vocabParsed.vocab.length > 0 ? vocabParsed.vocab : undefined;
       // Quality-tier selection. Rejected before headers are flushed (so this
       // stays a plain 4xx, not an SSE error event) and before the frame is
       // persisted or sent to any detector. Same for the scout `mode` param.
@@ -89,7 +107,7 @@ export async function detectStreamRoute(app: FastifyInstance): Promise<void> {
           .send({ error: 'quality_tier_unavailable', message: qualityTierUnavailableMessage() });
       }
       const detectOpts: DetectOptions | undefined =
-        mode === 'scout' ? { twoPass: false } : undefined;
+        mode === 'scout' ? { twoPass: false, vocab } : vocab ? { vocab } : undefined;
       const useVlm = envConfig.detector === 'vlm';
       const detector = tier === 'quality' ? qualityVlmDetector : vlmDetector;
       if (useVlm && !detector)
