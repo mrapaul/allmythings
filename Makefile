@@ -93,6 +93,18 @@ smoke: ## Full smoke test (happy path, trace, idempotency, degraded, SLO gate)
 quality-doctor: ## Probe the QUALITY_VLM_* endpoint + one live tier=quality detect
 	@./scripts/quality-tier-doctor.sh
 
+apk-release: ## Signed release APK (self-contained JS; Sentry upload opt-out)
+	@cd mobile-app/android && SENTRY_DISABLE_AUTO_UPLOAD=true \
+	  ANDROID_HOME=$${ANDROID_HOME:-$$HOME/Library/Android/sdk} \
+	  JAVA_HOME=$$(/usr/libexec/java_home -v 21) \
+	  ./gradlew assembleRelease --console=plain
+	@echo "APK: mobile-app/android/app/build/outputs/apk/release/app-release.apk"
+
+apk-serve: ## Serve the release APK on the Mac's Tailscale IP :8642
+	@cp mobile-app/android/app/build/outputs/apk/release/app-release.apk /tmp/allmythings-apk/ 2>/dev/null || true
+	@lsof -ti :8642 | xargs kill 2>/dev/null || true
+	@python3 -m http.server 8642 --bind 100.99.186.121 --directory /tmp/allmythings-apk
+
 ## ── Backup / Restore ──────────────────────────────────────────────
 backup: ## Tar ~/allmythings-data to ~/allmythings-backups/YYYY-MM-DD.tar.gz
 	@mkdir -p $(HOME)/allmythings-backups
