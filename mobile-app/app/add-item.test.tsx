@@ -1,11 +1,18 @@
 import { act, render } from '@testing-library/react-native';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 const replaceSpy = vi.fn();
+const pushSpy = vi.fn();
 
 const prefsMock = vi.hoisted(() => ({
   locations: [] as string[],
 }));
+
+const guardMock = vi.hoisted(() => ({
+  matches: [] as Array<{ id: string; label: string; location: string | null }>,
+}));
+
+const findSimilarSpy = vi.hoisted(() => vi.fn(async () => guardMock.matches));
 
 vi.mock('@/stores/prefs', () => ({
   Prefs: {
@@ -25,11 +32,13 @@ vi.mock('@/stores/prefs', () => ({
 }));
 
 vi.mock('expo-router', () => ({
-  useRouter: () => ({ push: vi.fn(), replace: replaceSpy, back: vi.fn() }),
+  useRouter: () => ({ push: pushSpy, replace: replaceSpy, back: vi.fn() }),
   useLocalSearchParams: () => ({}),
 }));
 
 const addItemsSpy = vi.fn(async () => ['new-1']);
+
+const repoMock = { findSimilarItems: findSimilarSpy };
 
 vi.mock('@/contexts/InventoryContext', () => ({
   useInventory: () => ({
@@ -50,6 +59,7 @@ vi.mock('@/contexts/InventoryContext', () => ({
       },
     ],
     addItems: addItemsSpy,
+    repo: repoMock,
   }),
 }));
 
@@ -70,7 +80,10 @@ describe('AddItemScreen', () => {
   beforeEach(() => {
     addItemsSpy.mockClear();
     replaceSpy.mockClear();
+    pushSpy.mockClear();
     prefsMock.locations = [];
+    guardMock.matches = [];
+    findSimilarSpy.mockClear();
   });
 
   it('offers the collection categories plus defaults', () => {
@@ -176,5 +189,114 @@ describe('AddItemScreen', () => {
     ]);
     // Choosing an existing recent does not duplicate it.
     expect(prefsMock.locations).toEqual(['attic — blue bin']);
+  });
+
+  describe('duplicate-purchase guard', () => {
+    beforeEach(() => {
+      vi.useFakeTimers();
+    });
+
+    afterEach(() => {
+      vi.useRealTimers();
+    });
+
+    async function typeAndSettle(view: ReturnType<typeof render>, text: string) {
+      const nameInput = findByTestId(view.toJSON(), 'manual-add-name');
+      await act(async () => {
+        (nameInput?.props.onChangeText as (v: string) => void)(text);
+      });
+      // Debounce + the repo promise resolution.
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(350);
+      });
+    }
+
+    it('shows the banner with the matched item and its location', async () => {
+      guardMock.matches = [{ id: 'm1', label: 'Lamp', location: 'garage' }];
+      const view = render(<AddItemScreen />);
+      await typeAndSettle(view, 'lamp');
+
+      expect(findSimilarSpy).toHaveBeenCalledWith('lamp');
+      const banner = findByTestId(view.toJSON(), 'dup-guard-banner');
+      expect(banner).toBeTruthy();
+      const bannerText = JSON.stringify(banner);
+      expect(bannerText).toContain('You already have ');
+      expect(bannerText).toContain('Lamp');
+      expect(bannerText).toContain(' — ');
+      expect(bannerText).toContain('garage');
+    });
+
+    it('says "no location set" when the match has none', async () => {
+      guardMock.matches = [{ id: 'm1', label: 'Lamp', location: null }];
+      const view = render(<AddItemScreen />);
+      await typeAndSettle(view, 'lamp');
+      const bannerText = JSON.stringify(findByTestId(view.toJSON(), 'dup-guard-banner'));
+      expect(bannerText).toContain('no location set');
+    });
+
+    it('adds a count when more than one item matches', async () => {
+      guardMock.matches = [
+        { id: 'm1', label: 'Lamp', location: 'garage' },
+        { id: 'm2', label: 'lamp shade', location: null },
+      ];
+      const view = render(<AddItemScreen />);
+      await typeAndSettle(view, 'lamp');
+      const bannerText = JSON.stringify(findByTestId(view.toJSON(), 'dup-guard-banner'));
+      expect(bannerText).toContain('(+1 more)');
+    });
+
+    it('shows no banner when nothing similar exists', async () => {
+      guardMock.matches = [];
+      const view = render(<AddItemScreen />);
+      await typeAndSettle(view, 'lamp');
+      expect(findSimilarSpy).toHaveBeenCalledWith('lamp');
+      expect(findByTestId(view.toJSON(), 'dup-guard-banner')).toBeNull();
+    });
+
+    it('skips the lookup for queries under 3 chars, then recovers', async () => {
+      guardMock.matches = [{ id: 'm1', label: 'Lamp', location: 'garage' }];
+      const view = render(<AddItemScreen />);
+      await typeAndSettle(view, 'la');
+      expect(findSimilarSpy).not.toHaveBeenCalled();
+      expect(findByTestId(view.toJSON(), 'dup-guard-banner')).toBeNull();
+
+      await typeAndSettle(view, 'lamp');
+      expect(findSimilarSpy).toHaveBeenCalledWith('lamp');
+      expect(findByTestId(view.toJSON(), 'dup-guard-banner')).toBeTruthy();
+    });
+
+    it('hides the banner again when the name is cleared', async () => {
+      guardMock.matches = [{ id: 'm1', label: 'Lamp', location: 'garage' }];
+      const view = render(<AddItemScreen />);
+      await typeAndSettle(view, 'lamp');
+      expect(findByTestId(view.toJSON(), 'dup-guard-banner')).toBeTruthy();
+      await typeAndSettle(view, '');
+      expect(findByTestId(view.toJSON(), 'dup-guard-banner')).toBeNull();
+    });
+
+    it('opens the existing item when the banner is tapped', async () => {
+      guardMock.matches = [{ id: 'm1', label: 'Lamp', location: 'garage' }];
+      const view = render(<AddItemScreen />);
+      await typeAndSettle(view, 'lamp');
+      await act(async () => {
+        (findByTestId(view.toJSON(), 'dup-guard-banner')?.props.onPress as () => void)();
+      });
+      expect(pushSpy).toHaveBeenCalledWith('/item/m1');
+    });
+
+    it('never blocks saving — the banner is advisory only', async () => {
+      guardMock.matches = [{ id: 'm1', label: 'Lamp', location: 'garage' }];
+      const view = render(<AddItemScreen />);
+      await typeAndSettle(view, 'lamp');
+      expect(findByTestId(view.toJSON(), 'dup-guard-banner')).toBeTruthy();
+
+      await act(async () => {
+        (findByTestId(view.toJSON(), 'manual-add-save')?.props.onPress as () => void)();
+        await vi.advanceTimersByTimeAsync(0);
+      });
+      expect(addItemsSpy).toHaveBeenCalledWith([
+        expect.objectContaining({ label: 'lamp', location: null }),
+      ]);
+    });
   });
 });

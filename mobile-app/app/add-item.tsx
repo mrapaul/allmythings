@@ -5,11 +5,12 @@ import { useColors } from '@/hooks/useColors';
 import { buildLabels } from '@/lib/labels';
 import { pushRecentLocation } from '@/lib/recent-locations';
 import { Prefs } from '@/stores/prefs';
+import type { InventoryItem } from '@/types/inventory';
 import { Feather } from '@expo/vector-icons';
 import { Image } from 'expo-image';
 import * as ImagePicker from 'expo-image-picker';
 import { useRouter } from 'expo-router';
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   Alert,
   Platform,
@@ -28,6 +29,9 @@ const DEFAULT_CATEGORIES = ['Furniture', 'Decor', 'Kitchen', 'Electronics', 'Boo
 /** Manual items carry a full-frame box — no detection localization. */
 const FULL_FRAME_BOX = { x: 0, y: 0, width: 1, height: 1 };
 
+/** Debounce for the duplicate-purchase lookup below the name field. */
+const DUP_GUARD_DEBOUNCE_MS = 300;
+
 /**
  * Add an item by hand — no photo or detection round-trip required (§8: not
  * everything needs detection). The typed name is stored VERBATIM.
@@ -36,12 +40,44 @@ export default function AddItemScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
   const router = useRouter();
-  const { items, addItems } = useInventory();
+  const { items, addItems, repo } = useInventory();
+  // Mirrored into a ref so the debounced lookup only re-arms on name changes
+  // — the context value itself may be re-created by consumers (and by test
+  // mocks), which must not restart the effect loop.
+  const repoRef = useRef(repo);
+  repoRef.current = repo;
 
   const [name, setName] = useState('');
   const [category, setCategory] = useState('Other');
   const [photoUri, setPhotoUri] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
+  // Duplicate-purchase guard: existing items whose label matches what is
+  // being typed (repo.findSimilarItems). Advisory only — saving is never
+  // blocked. [] also covers "nothing similar" and "query too short".
+  const [similar, setSimilar] = useState<InventoryItem[]>([]);
+
+  useEffect(() => {
+    const q = name.trim();
+    if (q.length < 3) {
+      setSimilar([]);
+      return;
+    }
+    let cancelled = false;
+    const timer = setTimeout(() => {
+      repoRef.current
+        .findSimilarItems(q)
+        .then((found) => {
+          if (!cancelled) setSimilar(found);
+        })
+        .catch(() => {
+          if (!cancelled) setSimilar([]);
+        });
+    }, DUP_GUARD_DEBOUNCE_MS);
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+    };
+  }, [name]);
   // Whereabouts: chips from recent locations plus free text ('' → unset).
   const prefs = useMemo(() => {
     try {
@@ -98,6 +134,10 @@ export default function AddItemScreen() {
   };
 
   const canSave = name.trim().length > 0 && !isSaving;
+
+  // Best duplicate-guard match — banner shows this one (tap opens its
+  // detail) plus a count when more matched.
+  const bestMatch = similar[0];
 
   const handleSave = async () => {
     if (!canSave) return;
@@ -174,6 +214,28 @@ export default function AddItemScreen() {
             { backgroundColor: colors.card, borderColor: colors.border, color: colors.foreground },
           ]}
         />
+
+        {bestMatch ? (
+          <Pressable
+            testID="dup-guard-banner"
+            accessibilityRole="button"
+            onPress={() => router.push(`/item/${bestMatch.id}`)}
+            style={({ pressed }) => [
+              styles.dupBanner,
+              {
+                backgroundColor: colors.card,
+                borderColor: colors.border,
+                opacity: pressed ? 0.85 : 1,
+              },
+            ]}
+          >
+            <Feather name="alert-circle" size={16} color={colors.primary} />
+            <Text style={[styles.dupBannerText, { color: colors.foreground }]}>
+              You already have {bestMatch.label} — {bestMatch.location ?? 'no location set'}
+              {similar.length > 1 ? ` (+${similar.length - 1} more)` : ''}
+            </Text>
+          </Pressable>
+        ) : null}
 
         <Text style={[styles.fieldLabel, { color: colors.mutedForeground }]}>CATEGORY</Text>
         <View style={styles.chipRow}>
@@ -310,6 +372,22 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     fontFamily: 'Inter_500Medium',
     fontSize: 15,
+  },
+  dupBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    marginTop: 10,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    borderRadius: 14,
+    borderWidth: 1,
+  },
+  dupBannerText: {
+    flex: 1,
+    fontFamily: 'Inter_500Medium',
+    fontSize: 13,
+    lineHeight: 18,
   },
   chipRow: {
     flexDirection: 'row',
