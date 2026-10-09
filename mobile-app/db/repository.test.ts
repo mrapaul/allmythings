@@ -1,6 +1,6 @@
 import type { BetterSQLite3Database } from 'drizzle-orm/better-sqlite3';
 import { beforeEach, describe, expect, it } from 'vitest';
-import { Repo } from './repository';
+import { type AddItemInput, Repo } from './repository';
 import type * as schema from './schema';
 import { makeTestDb } from './test-helpers';
 
@@ -426,4 +426,134 @@ describe('Repo', () => {
     expect((await repo.counts())[h1.id]).toBe(1);
     expect((await repo.counts())[h2.id] ?? 0).toBe(0);
   });
+
+  describe('topLabels', () => {
+    it('groups case-insensitively and orders by count desc', async () => {
+      const h = await repo.addHome({ name: 'A', icon: '🏠' });
+      await repo.addItems(h.id, [
+        item('Lamp'),
+        item('lamp'),
+        item('LAMP'),
+        item('sofa'),
+        item('  '),
+      ]);
+      const labels = await repo.topLabels(10);
+      expect(labels[0]?.toLowerCase()).toBe('lamp');
+      expect(labels.filter((l) => l.toLowerCase() === 'lamp')).toHaveLength(1);
+      expect(labels).toContain('sofa');
+      expect(labels).not.toContain('  ');
+    });
+
+    it('respects the limit and breaks ties alphabetically', async () => {
+      const h = await repo.addHome({ name: 'A', icon: '🏠' });
+      await repo.addItems(h.id, [item('b'), item('a'), item('c')]);
+      expect(await repo.topLabels(2)).toEqual(['a', 'b']);
+      expect(await repo.topLabels(0)).toEqual([]);
+    });
+
+    it('spans homes — the vocabulary is everything the user owns', async () => {
+      const h1 = await repo.addHome({ name: 'A', icon: '🏠' });
+      const h2 = await repo.addHome({ name: 'B', icon: '🏡' });
+      await repo.addItems(h1.id, [item('sofa')]);
+      await repo.addItems(h2.id, [item('sofa'), item('drill')]);
+      const labels = await repo.topLabels(10);
+      expect(labels[0]?.toLowerCase()).toBe('sofa'); // 3 copies across homes
+      expect(labels).toContain('drill');
+    });
+  });
+
+  describe('findSimilarItems', () => {
+    it('matches exact-insensitive and both prefix directions', async () => {
+      const h = await repo.addHome({ name: 'A', icon: '🏠' });
+      await repo.addItems(h.id, [item('Lamp'), item('lamp shade'), item('floor lamp')]);
+
+      expect((await repo.findSimilarItems('lamp')).map((i) => i.label.toLowerCase())).toContain(
+        'lamp',
+      );
+      // Label is a prefix of the query.
+      expect((await repo.findSimilarItems('lamps')).map((i) => i.label.toLowerCase())).toContain(
+        'lamp',
+      );
+      // Query is a prefix of the label.
+      expect((await repo.findSimilarItems('lamp sh')).map((i) => i.label)).toContain('lamp shade');
+      // "shade" is a bare substring of "lamp shade"/"floor lamp" — never matches.
+      expect((await repo.findSimilarItems('floor lamp')).map((i) => i.label)).toEqual([
+        'floor lamp',
+      ]);
+    });
+
+    it('FTS-matches the whole name word-by-word beyond prefix', async () => {
+      const h = await repo.addHome({ name: 'A', icon: '🏠' });
+      await repo.addItems(h.id, [item('gold lamp shade')]);
+      // Neither LIKE direction matches; the FTS whole-name path does.
+      expect((await repo.findSimilarItems('lamp shade')).map((i) => i.label)).toContain(
+        'gold lamp shade',
+      );
+    });
+
+    it('does not substring-match generic short words', async () => {
+      const h = await repo.addHome({ name: 'A', icon: '🏠' });
+      await repo.addItems(h.id, [item('toolbox'), item('closet organizer'), item('boxing gloves')]);
+      expect(await repo.findSimilarItems('box')).toEqual([]);
+      expect(await repo.findSimilarItems('set')).toEqual([]);
+      // …but "box" still word-matches a label that STARTS with the word.
+      await repo.addItems(h.id, [item('box set')]);
+      expect((await repo.findSimilarItems('box')).map((i) => i.label)).toEqual(['box set']);
+    });
+
+    it('skips lookups under 3 chars', async () => {
+      const h = await repo.addHome({ name: 'A', icon: '🏠' });
+      await repo.addItems(h.id, [item('lamp')]);
+      expect(await repo.findSimilarItems('la')).toEqual([]);
+      expect(await repo.findSimilarItems('')).toEqual([]);
+      expect(await repo.findSimilarItems('   ')).toEqual([]);
+    });
+
+    it('ranks exact before prefix before FTS-only hits', async () => {
+      const h = await repo.addHome({ name: 'A', icon: '🏠' });
+      await repo.addItems(h.id, [
+        item('gold lamp shade'), // FTS-only for "lamp" — neither LIKE direction matches
+        item('lamp'), // exact
+        item('lamp shade'), // prefix
+      ]);
+      const hits = await repo.findSimilarItems('lamp', 10);
+      expect(hits[0]?.label).toBe('lamp');
+      expect(hits[1]?.label).toBe('lamp shade');
+      expect(hits.map((i) => i.label)).toContain('gold lamp shade');
+    });
+
+    it('matches across homes', async () => {
+      const h1 = await repo.addHome({ name: 'A', icon: '🏠' });
+      const h2 = await repo.addHome({ name: 'B', icon: '🏡' });
+      await repo.addItems(h1.id, [item('sofa')]);
+      await repo.addItems(h2.id, [item('sofa')]);
+      const hits = await repo.findSimilarItems('sofa');
+      expect(hits.length).toBe(2);
+    });
+
+    it('respects the limit', async () => {
+      const h = await repo.addHome({ name: 'A', icon: '🏠' });
+      await repo.addItems(h.id, [item('lamp a'), item('lamp b'), item('lamp c')]);
+      expect(await repo.findSimilarItems('lamp', 2)).toHaveLength(2);
+    });
+
+    it('ignores empty labels even though they prefix-match everything', async () => {
+      const h = await repo.addHome({ name: 'A', icon: '🏠' });
+      await repo.addItems(h.id, [item('')]);
+      expect(await repo.findSimilarItems('lamp')).toEqual([]);
+    });
+  });
 });
+
+function item(label: string): AddItemInput {
+  return {
+    label,
+    description: '',
+    category: 'Misc',
+    tags: [],
+    primaryPhotoUri: '',
+    additionalPhotoUris: [],
+    notes: '',
+    box: { x: 0, y: 0, width: 0.1, height: 0.1 },
+  };
+}

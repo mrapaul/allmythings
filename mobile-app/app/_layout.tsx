@@ -1,3 +1,4 @@
+import { DETECT_VOCAB_LIMIT, setDetectVocabProvider } from '@/api/vocab';
 import { HomesProvider } from '@/contexts/HomesContext';
 import { InventoryProvider } from '@/contexts/InventoryContext';
 import { getDb } from '@/db/client';
@@ -40,6 +41,15 @@ function RootLayout() {
   const prefs = useMemo(() => Prefs.makeMmkv(), []);
   const photoStorage = useMemo(() => PhotoStorage.fromExpo(), []);
   const queryClient = useMemo(() => new QueryClient(), []);
+
+  // Detect dispatches (capture walk, manual detection, live scout) carry the
+  // inventory's own top labels so the server can ground names in the user's
+  // real vocabulary. Resolved per dispatch — the query is cheap, so renames
+  // and new items are reflected with no cache invalidation.
+  useEffect(() => {
+    setDetectVocabProvider(() => repo.topLabels(DETECT_VOCAB_LIMIT));
+    return () => setDetectVocabProvider(null);
+  }, [repo]);
 
   useEffect(() => {
     if (loaded) SplashScreen.hideAsync().catch(() => {});

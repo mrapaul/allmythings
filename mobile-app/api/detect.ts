@@ -1,5 +1,6 @@
 import { apiFetch, makeTraceparent } from './client';
 import type { DetectedItem } from './types';
+import { appendDetectVocab, resolveDetectVocab } from './vocab';
 
 interface DetectInput {
   fileUri: string;
@@ -13,13 +14,16 @@ export interface DetectionRunHandle {
   statusUrl: string;
 }
 
-function buildFrameForm(input: DetectInput): FormData {
+async function buildFrameForm(input: DetectInput): Promise<FormData> {
   const form = new FormData();
   form.append('frame', {
     uri: input.fileUri,
     name: input.fileName,
     type: input.mimeType,
   } as unknown as Blob);
+  // The inventory's own vocabulary, resolved at dispatch time — shared with
+  // the scout path (api/scout.ts), which builds its FormData separately.
+  appendDetectVocab(form, await resolveDetectVocab());
   return form;
 }
 
@@ -30,7 +34,7 @@ export async function detectImage(
   const traceparent = makeTraceparent();
   const data = await apiFetch<{ items: DetectedItem[] }>('/v1/detect', {
     method: 'POST',
-    body: buildFrameForm(input),
+    body: await buildFrameForm(input),
     headers: { traceparent },
   });
   return { items: data.items, traceparent };
@@ -45,7 +49,7 @@ export async function detectImage(
 export async function startDetection(input: DetectInput): Promise<DetectionRunHandle> {
   return apiFetch<DetectionRunHandle>('/v1/detect?async=1', {
     method: 'POST',
-    body: buildFrameForm(input),
+    body: await buildFrameForm(input),
     headers: { traceparent: makeTraceparent() },
   });
 }

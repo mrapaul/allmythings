@@ -2,6 +2,7 @@ import { resolveApiBaseUrl, resolveApiKey } from './base-url';
 import { makeTraceparent } from './client';
 import { createSseParser } from './sse';
 import type { DetectStreamEvent } from './types';
+import { appendDetectVocab, resolveDetectVocab } from './vocab';
 
 /**
  * Fast single-pass detect over a held-open SSE stream (mode=scout), consumed
@@ -128,12 +129,22 @@ export function streamScoutEvents(
     const onAbort = (): void => xhr.abort();
     opts?.signal?.addEventListener('abort', onAbort, { once: true });
 
-    const form = new FormData();
-    form.append('frame', {
-      uri: input.fileUri,
-      name: input.fileName,
-      type: input.mimeType,
-    } as unknown as Blob);
-    xhr.send(form);
+    // Vocab resolution is async (local SQLite) — the send waits on it, never
+    // on the network. resolveDetectVocab never rejects and resolves fast, so
+    // the stream open takes no meaningful extra latency.
+    resolveDetectVocab()
+      .then((vocab) => {
+        // Aborted while resolving: onAbort already finished the promise.
+        if (settled) return;
+        const form = new FormData();
+        form.append('frame', {
+          uri: input.fileUri,
+          name: input.fileName,
+          type: input.mimeType,
+        } as unknown as Blob);
+        appendDetectVocab(form, vocab);
+        xhr.send(form);
+      })
+      .catch((err: unknown) => finish(err instanceof Error ? err : new Error(String(err))));
   });
 }
