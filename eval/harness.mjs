@@ -142,12 +142,42 @@ async function runGemini(model, imagePath, apiKey) {
 // Score the PRODUCTION detector (two-pass + adaptive tiling + dedupe) via the
 // live api-service, instead of a raw single model call. Tag: api:<anything>.
 // DETECT_TIER=quality routes through the API's quality VLM tier (?tier=quality).
+//
+// VOCAB_FILE optionally points at a JSON array of strings (the owner's
+// existing inventory names). When set — and valid — api: runs attach it as
+// the multipart `vocab` field so the production detector primes its prompts
+// with that vocabulary. Unset or unreadable: requests are byte-identical to
+// before (no vocab part is ever attached).
+let vocabState = null; // null = not loaded yet; {vocab: string[] | null}
+async function loadVocab() {
+  if (vocabState) return vocabState;
+  const file = process.env.VOCAB_FILE;
+  if (!file) {
+    vocabState = { vocab: null };
+    return vocabState;
+  }
+  try {
+    const parsed = JSON.parse(await fs.readFile(path.resolve(file), 'utf-8'));
+    if (!Array.isArray(parsed) || !parsed.every((e) => typeof e === 'string')) {
+      throw new Error('expected a JSON array of strings');
+    }
+    console.log(`VOCAB: ${parsed.length} entries from ${file}`);
+    vocabState = { vocab: parsed };
+  } catch (err) {
+    console.warn(`VOCAB_FILE not used: ${err instanceof Error ? err.message : String(err)}`);
+    vocabState = { vocab: null };
+  }
+  return vocabState;
+}
+
 async function runProductionApi(imagePath) {
   const t0 = Date.now();
   const apiUrl = process.env.API_URL ?? 'http://localhost:14000';
   const tierQs = process.env.DETECT_TIER ? `?tier=${process.env.DETECT_TIER}` : '';
   const form = new FormData();
   form.append('frame', new Blob([await fs.readFile(imagePath)], { type: 'image/jpeg' }), 'frame.jpg');
+  const { vocab } = await loadVocab();
+  if (vocab) form.append('vocab', JSON.stringify(vocab));
   try {
     // The SSE endpoint sends headers immediately, so long detections don't
     // trip undici's 300s response-headers timeout like sync /v1/detect does.

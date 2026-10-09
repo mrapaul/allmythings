@@ -30,3 +30,7 @@ Edit the model list in the `eval` / `eval-ci` / `eval-baseline` targets in `Make
 ## Hybrid pipeline (after Task 19)
 
 Prefix model name with `hybrid:` (e.g. `hybrid:owlv2-qwen7b`) to route through the api-service `/v1/detect` endpoint instead of direct Ollama. Requires `HYBRID_ENABLED=true` in `api-service/.env`.
+
+## Vocabulary priming (api: runs)
+
+Set `VOCAB_FILE=/path/to/vocab.json` (a JSON array of strings, e.g. `["navy blue couch", "brass floor lamp"]`) to attach the owner's inventory names as the multipart `vocab` field on `api:` runs. The production detector then primes its prompts to reuse those exact names when they match a detected object. Unset (or unreadable/invalid) means no `vocab` part is attached — requests are identical to a run without this flag, so results stay comparable to the existing baseline.
