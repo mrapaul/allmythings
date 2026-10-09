@@ -58,6 +58,12 @@ export interface VlmDetectorOptions {
 export interface DetectOptions {
   /** false = scout: pass 1 + adaptive tiles only, skip the pass-2 audit. */
   twoPass?: boolean;
+  /**
+   * Owner's existing inventory names (the multipart `vocab` field). When
+   * non-empty, every detection pass is primed to reuse these exact names
+   * for matching objects.
+   */
+  vocab?: string[];
 }
 
 /**
@@ -137,10 +143,11 @@ export class VlmDetector {
   async *detectStream(imageBuffer: Buffer, opts?: DetectOptions): AsyncGenerator<DetectorEvent> {
     const img = await this.prepareImage(imageBuffer);
     const twoPass = opts?.twoPass ?? this.opts.twoPass;
+    const vocab = opts?.vocab;
 
     // --- Pass 1: detect everything + assess the scene ---
     const pass1Raw = await this.client.generateJson(
-      buildPass1Prompt(img.width, img.height),
+      buildPass1Prompt(img.width, img.height, vocab),
       img.base64,
     );
     const pass1Items = await this.parsePass(pass1Raw, img, 'items');
@@ -164,7 +171,7 @@ export class VlmDetector {
 
     // --- Tile passes: only for dense wide-room scenes (model-output-driven) ---
     if (shouldTile(scene, seen.items.length)) {
-      yield* this.tilePasses(img, seen);
+      yield* this.tilePasses(img, seen, vocab);
     }
 
     if (!twoPass) return;
@@ -172,7 +179,7 @@ export class VlmDetector {
     // --- Pass 2: audit for missed items ---
     try {
       const pass2Raw = await this.client.generateJson(
-        buildPass2Prompt(img.width, img.height, pass1Items.rawForAudit),
+        buildPass2Prompt(img.width, img.height, pass1Items.rawForAudit, vocab),
         img.base64,
       );
       const pass2Items = await this.parsePass(pass2Raw, img, 'new_items');
@@ -234,6 +241,7 @@ export class VlmDetector {
   private async *tilePasses(
     img: PreparedImage,
     seen: ItemAccumulator,
+    vocab?: readonly string[],
   ): AsyncGenerator<DetectorEvent> {
     const rects = computeTileRects(img.width, img.height);
     logger.info({ tiles: rects.length }, 'vlm_tiling_started');
@@ -252,7 +260,7 @@ export class VlmDetector {
           buffer: tileJpeg,
         };
         const raw = await this.client.generateJson(
-          buildPass1Prompt(rect.width, rect.height),
+          buildPass1Prompt(rect.width, rect.height, vocab),
           tileImg.base64,
         );
         const parsed = await this.parsePass(raw, tileImg, 'items');

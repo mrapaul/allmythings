@@ -105,6 +105,50 @@ describe('VlmDetector', () => {
     expect(items).toHaveLength(2);
   });
 
+  it('threads opts.vocab into the pass prompts, and leaves them untouched without it', async () => {
+    const promptsWith: string[] = [];
+    const clientWith = {
+      modelName: 'qwen2.5vl:7b',
+      generateJson: async (prompt: string): Promise<string> => {
+        promptsWith.push(prompt);
+        return '{"items":[]}';
+      },
+    } as unknown as OllamaVlmClient;
+    const primed = new VlmDetector(clientWith, {
+      twoPass: true,
+      maxImageSize: 1024,
+      coordMode: 'auto',
+    });
+    await primed.detect(image, { vocab: ['navy blue couch'] });
+    // Scene stays 'unknown' on the empty response, so exactly pass 1 + pass 2
+    // run (no tile passes between them).
+    expect(promptsWith).toHaveLength(2);
+    for (const p of promptsWith) {
+      expect(p).toContain(
+        'The owner is known to already own items including: navy blue couch.',
+      );
+    }
+
+    const promptsWithout: string[] = [];
+    const clientWithout = {
+      modelName: 'qwen2.5vl:7b',
+      generateJson: async (prompt: string): Promise<string> => {
+        promptsWithout.push(prompt);
+        return '{"items":[]}';
+      },
+    } as unknown as OllamaVlmClient;
+    const plain = new VlmDetector(clientWithout, {
+      twoPass: true,
+      maxImageSize: 1024,
+      coordMode: 'auto',
+    });
+    await plain.detect(image);
+    expect(promptsWithout).toHaveLength(2);
+    for (const p of promptsWithout) {
+      expect(p).not.toContain('The owner is known to already own items including');
+    }
+  });
+
   it('normalizes absolute pixel coordinates (Qwen2.5-VL convention)', async () => {
     const pixelPass = JSON.stringify({
       items: [

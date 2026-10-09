@@ -955,9 +955,53 @@ Contrasts to calibrate on: a lamp you could carry out is a possession — the ce
 
 When unsure, decide by asking whether it leaves with the owner.`;
 
-export function buildPass1Prompt(imgW: number, imgH: number): string {
+/**
+ * Character budget for the owner's-vocabulary list inside the priming block.
+ * Enough for ~120 typical names while staying small against the full prompt.
+ */
+export const VOCAB_LIST_CHAR_BUDGET = 1500;
+
+/**
+ * Cut a ', '-joined vocabulary list to the budget. The cut lands on the last
+ * space inside the budget window so no word is left half-written; callers
+ * that cap entries at VOCAB_MAX_ENTRY_CHARS (detect-vocab.ts) guarantee a
+ * space exists well inside any realistic window.
+ */
+export function truncateVocabList(
+  list: string,
+  budget: number = VOCAB_LIST_CHAR_BUDGET,
+): string {
+  if (list.length <= budget) return list;
+  const window = list.slice(0, budget);
+  const cut = window.lastIndexOf(' ');
+  const head = cut > 0 ? window.slice(0, cut) : window.trimEnd();
+  return `${head} …`;
+}
+
+/**
+ * Owner-vocabulary priming block, appended to the detection passes when the
+ * caller supplies the owner's existing inventory names: the VLM is more
+ * accurate reusing a name the owner already has than coining a fresh label.
+ */
+export function buildVocabPrimingBlock(
+  vocab: readonly string[],
+  budget: number = VOCAB_LIST_CHAR_BUDGET,
+): string {
+  const list = truncateVocabList(vocab.join(', '), budget);
+  return `The owner is known to already own items including: ${list}. When a detected object clearly matches one of these names, use that exact name.`;
+}
+
+function appendVocabPriming(base: string, vocab: readonly string[] | undefined): string {
+  return vocab && vocab.length > 0 ? `${base}\n\n${buildVocabPrimingBlock(vocab)}` : base;
+}
+
+export function buildPass1Prompt(
+  imgW: number,
+  imgH: number,
+  vocab?: readonly string[],
+): string {
   const categories = VALID_CATEGORIES.join('|');
-  return `You are a precise home inventory vision system. Analyze this photograph (${imgW}x${imgH} pixels) and list EVERY distinct physical home object visible.
+  return appendVocabPriming(`You are a precise home inventory vision system. Analyze this photograph (${imgW}x${imgH} pixels) and list EVERY distinct physical home object visible.
 
 Output exactly ONE JSON object with this structure and NOTHING else:
 {"scene": {"type": "shelf|drawer|room|closeup", "estimated_total_items": <int>, "photo_quality": {"verdict": "ok|too_dark|too_blurry|too_far|not_a_scene", "reason": null}}, "items": [{"id": 1, "object": "specific object name", "category": "<one of ${categories}>", "is_possession": true, "bbox_2d": [x1, y1, x2, y2], "tags": {"color": "...", "material": "..."}}, ...]}
@@ -973,7 +1017,7 @@ Detection rules:
 - Be exhaustive: list EVERY movable object, including small decorative items — throw pillows, vases, plants and their pots, lamps, wall art (each frame is its own entry), rugs (even partially covered), books, candles, bowls, trays, remotes, coasters, figurines. Include stands/stools under plants as separate items, transparent/acrylic furniture, and window blinds behind curtains.
 - DO include window treatments (curtains, blinds), light fixtures, and wall-mounted objects (mirrors, art, sconces) — these are possessions.
 - Count clustered decorative objects separately, not as one.
-- "scene".type is "room" when the frame shows a wide view of a whole room. "estimated_total_items" is your best estimate of ALL distinct objects present, including ones you could not list. Use a non-ok "photo_quality" verdict only when the photo is unusable for inventory (severely dark/blurry, subject too far to identify objects, or not a home scene at all).`;
+- "scene".type is "room" when the frame shows a wide view of a whole room. "estimated_total_items" is your best estimate of ALL distinct objects present, including ones you could not list. Use a non-ok "photo_quality" verdict only when the photo is unusable for inventory (severely dark/blurry, subject too far to identify objects, or not a home scene at all).`, vocab);
 }
 
 export function buildLabelPrompt(): string {
@@ -990,11 +1034,12 @@ export function buildPass2Prompt(
   imgW: number,
   imgH: number,
   found: Array<{ id?: number; object?: string }>,
+  vocab?: readonly string[],
 ): string {
   const summary = JSON.stringify(found.map((i, idx) => ({ id: i.id ?? idx + 1, object: i.object })));
   const nextId = found.length + 1;
   const categories = VALID_CATEGORIES.join('|');
-  return `You are a meticulous home inventory auditor. A first pass found these ${found.length} items in this room photo (${imgW}x${imgH} pixels):
+  return appendVocabPriming(`You are a meticulous home inventory auditor. A first pass found these ${found.length} items in this room photo (${imgW}x${imgH} pixels):
 
 ${summary}
 
@@ -1009,5 +1054,5 @@ Schema rules (MANDATORY):
 - "bbox_2d" is [x1, y1, x2, y2]: exactly four integers on a 0-1000 scale (0,0 = top-left, 1000,1000 = bottom-right of the image). Do NOT use any other box format or key.
 ${POSSESSION_RULE}
 - Continue IDs from ${nextId}. If nothing was missed, output {"new_items": []}.
-- No markdown, no explanation, no keys other than those shown.`;
+- No markdown, no explanation, no keys other than those shown.`, vocab);
 }

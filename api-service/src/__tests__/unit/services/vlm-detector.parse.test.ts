@@ -14,6 +14,9 @@ import {
   buildPass1Prompt,
   buildPass2Prompt,
   buildLabelPrompt,
+  buildVocabPrimingBlock,
+  truncateVocabList,
+  VOCAB_LIST_CHAR_BUDGET,
   POSSESSION_RULE,
   POSSESSION_RULE_DETAILED,
   parseSceneInfo,
@@ -882,5 +885,72 @@ describe('prompt builders', () => {
     // labels across the 8-fixture oracle.
     expect(POSSESSION_RULE.split('\n')).toHaveLength(1);
     expect(POSSESSION_RULE_DETAILED.length).toBeGreaterThan(POSSESSION_RULE.length);
+  });
+});
+
+describe('vocabulary priming block', () => {
+  const VOCAB = ['navy blue couch', 'brass floor lamp', 'oak bookshelf'];
+  const PRIMING_PREFIX = 'The owner is known to already own items including: ';
+  const PRIMING_SUFFIX =
+    '. When a detected object clearly matches one of these names, use that exact name.';
+
+  it('appends the priming block to the pass-1 prompt, base text untouched', () => {
+    const base = buildPass1Prompt(1024, 768);
+    const primed = buildPass1Prompt(1024, 768, VOCAB);
+    expect(primed.startsWith(base)).toBe(true);
+    expect(primed).toBe(`${base}\n\n${PRIMING_PREFIX}${VOCAB.join(', ')}${PRIMING_SUFFIX}`);
+  });
+
+  it('appends the priming block to the pass-2 prompt too', () => {
+    const base = buildPass2Prompt(1024, 768, [{ id: 1, object: 'sofa' }]);
+    const primed = buildPass2Prompt(1024, 768, [{ id: 1, object: 'sofa' }], VOCAB);
+    expect(primed.startsWith(base)).toBe(true);
+    expect(primed).toContain(`${PRIMING_PREFIX}${VOCAB.join(', ')}${PRIMING_SUFFIX}`);
+  });
+
+  it('leaves every prompt byte-identical when vocab is absent or empty', () => {
+    const base1 = buildPass1Prompt(1024, 768);
+    expect(buildPass1Prompt(1024, 768, [])).toBe(base1);
+    expect(buildPass1Prompt(1024, 768, undefined)).toBe(base1);
+
+    const found = [{ id: 1, object: 'sofa' }];
+    const base2 = buildPass2Prompt(1024, 768, found);
+    expect(buildPass2Prompt(1024, 768, found, [])).toBe(base2);
+    expect(buildPass2Prompt(1024, 768, found, undefined)).toBe(base2);
+  });
+
+  it('truncates an over-budget list with an ellipsis, never mid-word', () => {
+    const words = Array.from({ length: 400 }, (_, i) => `itemword${i}`);
+    const joined = words.join(', ');
+    expect(joined.length).toBeGreaterThan(VOCAB_LIST_CHAR_BUDGET);
+
+    const block = buildVocabPrimingBlock(words);
+    const list = block.slice(
+      block.indexOf(PRIMING_PREFIX) + PRIMING_PREFIX.length,
+      block.indexOf(PRIMING_SUFFIX),
+    );
+    expect(list.endsWith(' …')).toBe(true);
+    // ' …' replaces nothing: the head itself stays within the budget and is
+    // an exact prefix of the full list, i.e. the cut landed on a boundary.
+    const head = list.slice(0, -2);
+    expect(joined.startsWith(head)).toBe(true);
+    expect(head.length).toBeLessThanOrEqual(VOCAB_LIST_CHAR_BUDGET);
+    // The character after the cut is a space, not a letter: no half-word.
+    expect(joined[head.length]).toBe(' ');
+  });
+
+  it('short lists pass through untruncated', () => {
+    expect(buildVocabPrimingBlock(['sofa'])).toBe(`${PRIMING_PREFIX}sofa${PRIMING_SUFFIX}`);
+    expect(truncateVocabList('sofa, lamp')).toBe('sofa, lamp');
+  });
+
+  it('respects a custom budget', () => {
+    const full = 'alpha, beta, gamma, delta';
+    const truncated = truncateVocabList(full, 12);
+    const head = truncated.slice(0, -2);
+    expect(truncated.endsWith(' …')).toBe(true);
+    expect(head.length).toBeLessThanOrEqual(12);
+    expect(full.startsWith(head)).toBe(true);
+    expect(full[head.length]).toBe(' ');
   });
 });
