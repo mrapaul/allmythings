@@ -3,7 +3,7 @@ import type { ItemLabel } from '@/lib/labels';
 import { resolveMerge } from '@/lib/merge';
 import { buildFtsMatchQuery } from '@/lib/search-query';
 import type { Home, InventoryItem } from '@/types/inventory';
-import { and, desc, eq, sql } from 'drizzle-orm';
+import { and, desc, eq, or, sql } from 'drizzle-orm';
 import { homes, inventoryItems, itemTags } from './schema';
 
 function newId(): string {
@@ -256,6 +256,77 @@ export class Repo {
     const out: Record<string, number> = {};
     for (const r of rows) out[r.homeId] = Number(r.n);
     return out;
+  }
+
+  /**
+   * The inventory's own vocabulary: most-used labels, grouped
+   * case-insensitively, most frequent first (alphabetical breaks ties so the
+   * result is deterministic). Cross-home — the vocabulary that guides
+   * detection is everything the user owns, not one home's slice. Cheap
+   * enough to compute at dispatch time.
+   */
+  async topLabels(limit: number): Promise<string[]> {
+    const rows = (await this.db.all(sql`
+      SELECT MIN(${inventoryItems.label}) AS label
+      FROM ${inventoryItems}
+      WHERE length(trim(${inventoryItems.label})) > 0
+      GROUP BY lower(${inventoryItems.label})
+      ORDER BY COUNT(*) DESC, lower(MIN(${inventoryItems.label})) ASC
+      LIMIT ${limit}
+    `)) as { label: string }[];
+    return rows.map((r) => r.label);
+  }
+
+  /**
+   * Duplicate-purchase guard: items whose label plausibly IS the thing being
+   * typed — exact-insensitive, a prefix of the query (either direction, so
+   * "lamp" surfaces for "lamp shade" and vice versa), or a whole-name FTS
+   * word-prefix match. Cross-home on purpose: the pain is re-buying
+   * something you already own, wherever it lives.
+   *
+   * Deliberately NO bare substring match — typing the generic short words
+   * owners actually use ("box", "set") must not surface "toolbox"/"closet".
+   * Callers skip queries under 3 chars; under-4-char queries additionally
+   * only match at word boundaries (so "box" hits "box set" but not "boxing
+   * gloves") and skip the FTS word-prefix tier entirely. LIKE patterns
+   * escape %/_ so typed or labeled wildcards can't silently widen a match.
+   */
+  async findSimilarItems(query: string, limit = 5): Promise<InventoryItem[]> {
+    const q = query.trim();
+    if (q.length < 3) return [];
+    const lower = q.toLowerCase();
+    const escaped = lower.replace(/[\\%_]/g, (c) => `\\${c}`);
+    const fts = buildFtsMatchQuery(q);
+    // Short generic words only match as whole words ("box" → "box set", not
+    // "boxing gloves"); FTS word-prefix would over-match them.
+    const short = q.length < 4;
+    const tail = short ? ' %' : '%';
+
+    const conditions = [
+      sql`lower(${inventoryItems.label}) = ${lower}`,
+      sql`lower(${inventoryItems.label}) LIKE ${escaped + tail} ESCAPE '\\'`,
+      sql`${lower} LIKE replace(replace(replace(lower(${inventoryItems.label}), '\\', '\\\\'), '%', '\\%'), '_', '\\_') || ${tail} ESCAPE '\\'`,
+    ];
+    if (fts && !short) {
+      conditions.push(
+        sql`${inventoryItems.id} IN (SELECT item_id FROM inventory_fts WHERE inventory_fts MATCH ${fts})`,
+      );
+    }
+    const rows = (await this.db
+      .select()
+      .from(inventoryItems)
+      .where(
+        and(sql`length(trim(${inventoryItems.label})) > 0`, or(...conditions)),
+      )) as RawItemRow[];
+
+    const tierOf = (row: RawItemRow): number => {
+      const label = row.label.toLowerCase();
+      if (label === lower) return 0;
+      if (label.startsWith(lower) || lower.startsWith(label)) return 1;
+      return 2;
+    };
+    const ranked = rows.sort((a, b) => tierOf(a) - tierOf(b) || b.createdAt - a.createdAt);
+    return Promise.all(ranked.slice(0, limit).map((r) => this.hydrateItem(r)));
   }
 
   /**
