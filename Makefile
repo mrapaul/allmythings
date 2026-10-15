@@ -187,16 +187,23 @@ generate:
 	@echo "${GREEN}Regenerating mobile API client from openapi.json...${NC}"
 	@cd $(MOBILE_DIR) && pnpm codegen:api
 
-# Cleanup
-clean: clean-api clean-mobile
+# Cleanup — remove every build/install/generated artifact; leaves only source,
+# config (.env, credentials) and non-regenerable data (design/, datasets/, eval/runs).
+clean: clean-api clean-mobile clean-training
+	@find . -name __pycache__ -type d -prune -exec rm -rf {} + 2>/dev/null || true
+	@rm -rf .pytest_cache .mypy_cache .ruff_cache
 
 clean-api:
 	@echo "${GREEN}Cleaning API...${NC}"
-	@cd $(API_DIR) && rm -rf dist node_modules
+	@cd $(API_DIR) && rm -rf dist build node_modules coverage .nyc_output *.log *.tsbuildinfo
 
 clean-mobile:
 	@echo "${GREEN}Cleaning mobile app...${NC}"
-	@cd $(MOBILE_DIR) && rm -rf node_modules .expo
+	@cd $(MOBILE_DIR) && rm -rf node_modules .expo dist web-build coverage android ios api/generated expo-env.d.ts *.log
+
+clean-training: ## Remove built datasets + checkpoints (regenerate with train-dataset-* / train-*)
+	@echo "${GREEN}Cleaning training artifacts...${NC}"
+	@rm -rf training/data training/output
 
 # Database migrations (dbmate)
 DBMATE := docker run --rm --network allmythings-dev_allmythings-dev \
@@ -212,7 +219,7 @@ db-down:
 db-new:
 	$(DBMATE) new $(NAME)
 
-.PHONY: help setup install install-api install-mobile dev dev-api dev-mobile start start-deps stop status logs smoke backup restore install-supervisor uninstall-supervisor build build-api build-mobile test test-api test-mobile lint lint-api lint-mobile format format-api format-mobile generate clean clean-api clean-mobile build-api-raw build-mobile-raw verify db-up db-down db-new
+.PHONY: help setup install install-api install-mobile dev dev-api dev-mobile start start-deps stop status logs smoke backup restore install-supervisor uninstall-supervisor build build-api build-mobile test test-api test-mobile lint lint-api lint-mobile format format-api format-mobile generate clean clean-api clean-mobile clean-training build-api-raw build-mobile-raw verify db-up db-down db-new
 
 .PHONY: eval eval-ci eval-baseline dataset-export eval-promote
 
