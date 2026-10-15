@@ -1,0 +1,141 @@
+{
+  "api:vlm-30b-a3b-vocab": {
+    "perFixture": [
+      {
+        "fixture": "1776173015803",
+        "recall": 91.7,
+        "itemCount": 30,
+        "expectedMin": 8,
+        "expectedMax": 15,
+        "countWithinRange": false,
+        "matchedCount": 11,
+        "missed": [
+          "wooden stool (plant support)"
+        ],
+        "elapsedMs": 244648,
+        "attempts": 1
+      },
+      {
+        "fixture": "1776174188547",
+        "recall": 72.7,
+        "itemCount": 29,
+        "expectedMin": 7,
+        "expectedMax": 13,
+        "countWithinRange": false,
+        "matchedCount": 8,
+        "missed": [
+          "small snake plant",
+          "wooden stool (plant support)",
+          "dark navy couch / sofa"
+        ],
+        "elapsedMs": 187024,
+        "attempts": 1
+      },
+      {
+        "fixture": "1776175427607",
+        "recall": 85.7,
+        "itemCount": 35,
+        "expectedMin": 10,
+        "expectedMax": 16,
+        "countWithinRange": false,
+        "matchedCount": 12,
+        "missed": [
+          "black throw blanket",
+          "wooden stool"
+        ],
+        "elapsedMs": 221193,
+        "attempts": 1
+      },
+      {
+        "fixture": "1776176976030",
+        "recall": 76.9,
+        "itemCount": 28,
+        "expectedMin": 8,
+        "expectedMax": 14,
+        "countWithinRange": false,
+        "matchedCount": 10,
+        "missed": [
+          "tan leather cane-back office chair",
+          "black throw blanket",
+          "wooden stool"
+        ],
+        "elapsedMs": 305708,
+        "attempts": 1
+      },
+      {
+        "fixture": "bedroom_01",
+        "recall": 64.3,
+        "itemCount": 39,
+        "expectedMin": 9,
+        "expectedMax": 18,
+        "countWithinRange": false,
+        "matchedCount": 9,
+        "missed": [
+          "pink ceramic vases",
+          "black round tray table",
+          "framed artwork",
+          "grey curtains",
+          "built-in oven"
+        ],
+        "elapsedMs": 313282,
+        "attempts": 1
+      },
+      {
+        "fixture": "dining_room_01",
+        "recall": 75,
+        "itemCount": 15,
+        "expectedMin": 5,
+        "expectedMax": 10,
+        "countWithinRange": false,
+        "matchedCount": 6,
+        "missed": [
+          "black fabric sofa",
+          "white mug"
+        ],
+        "elapsedMs": 171489,
+        "attempts": 1
+      },
+      {
+        "fixture": "living_room_02",
+        "recall": 66.7,
+        "itemCount": 61,
+        "expectedMin": 12,
+        "expectedMax": 24,
+        "countWithinRange": false,
+        "matchedCount": 12,
+        "missed": [
+          "grey loveseat sofa",
+          "dark grey daybed / futon",
+          "laptop computer",
+          "hanging macrame planter with pothos",
+          "fern potted plant",
+          "small potted plant on coffee table"
+        ],
+        "elapsedMs": 502676,
+        "attempts": 1
+      },
+      {
+        "fixture": "mockup_living_01",
+        "recall": 81.8,
+        "itemCount": 13,
+        "expectedMin": 8,
+        "expectedMax": 14,
+        "countWithinRange": true,
+        "matchedCount": 9,
+        "missed": [
+          "framed abstract art print",
+          "marble decorative cube"
+        ],
+        "elapsedMs": 137447,
+        "attempts": 1
+      }
+    ],
+    "aggregate": {
+      "avgRecall": 76.8,
+      "avgItems": 31.3,
+      "avgLatencyMs": 260433,
+      "failures": 0,
+      "n": 8
+    }
+  }
+}

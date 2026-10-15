@@ -256,3 +256,6 @@ training/output/
 
 # agent worktrees (parallel dev scratch)
 .worktrees/
+
+# serena (local LSP tool config)
+.serena/
