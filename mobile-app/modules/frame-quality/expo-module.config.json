@@ -1,0 +1,9 @@
+{
+  "platforms": ["ios", "android"],
+  "ios": {
+    "modules": ["FrameQualityModule"]
+  },
+  "android": {
+    "modules": ["expo.modules.framequality.FrameQualityModule"]
+  }
+}

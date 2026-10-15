@@ -1,0 +1,62 @@
+name: Unified Build, Integration & Regression Suite
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verify-monorepo:
+    name: Build, Unit, Integration & Eval Gates
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: pgvector/pgvector:pg16
+        env:
+          POSTGRES_USER: inventory
+          POSTGRES_PASSWORD: inventory_password
+          POSTGRES_DB: allmythings
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 5
+    env:
+      DATABASE_URL: postgres://inventory:inventory_password@localhost:5432/allmythings?sslmode=disable
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9.12.0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: 'pnpm'
+
+      - name: Install Dependencies
+        run: pnpm install --no-frozen-lockfile
+
+      - name: Apply Database Migrations
+        run: |
+          psql "$DATABASE_URL" -f db/migrations/20260408120000_base_schema.sql
+          psql "$DATABASE_URL" -f db/migrations/20261015000000_zero_enum_slm_flywheel.sql
+
+      - name: Run API & Chained SLM Integration Tests
+        working-directory: api-service
+        run: pnpm test
+
+      - name: Run Mobile Unit & Burst Selector Tests
+        working-directory: mobile-app
+        run: npx vitest run lib/burst-lucky-selector.test.ts
+
+      - name: Run Eval Scoring & Regression Gate
+        run: |
+          node --test eval/scoring.test.mjs
+          node eval/regression-gate.mjs
